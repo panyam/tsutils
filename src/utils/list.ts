@@ -37,7 +37,11 @@ export class List<V> {
 
   equals(another: List<V>, eqlFunc: (val1: V, val2: V) => boolean): boolean {
     if (this.size != another.size) return false;
-    for (let tmp = this.first, tmp2 = another.first; tmp != null && tmp2 != null; tmp = tmp.next, tmp2 = tmp2.next) {
+    for (
+      let tmp = this.first, tmp2 = another.first;
+      tmp != null && tmp2 != null;
+      tmp = tmp.next, tmp2 = tmp2.next
+    ) {
       if (!eqlFunc(tmp.value, tmp2.value)) {
         return false;
       }

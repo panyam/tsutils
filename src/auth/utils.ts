@@ -28,7 +28,8 @@ const request = require("request");
  *     other requests going forward.
  */
 
-const wrapAsync = (fn: any) => (...args: any[]) => Promise.resolve(fn(...args)).catch(args[2]);
+const wrapAsync = (fn: any) => (...args: any[]) =>
+  Promise.resolve(fn(...args)).catch(args[2]);
 
 /**
  * Redirects users to login screen of they are not logged in
@@ -40,7 +41,9 @@ export function ensureLogin() {
   return wrapAsync(async (req: any, res: any, next: any) => {
     if (!req.session.loggedInUser) {
       // Redirect to a login if user not logged in
-      const redirUrl = `/auth/login?callbackURL=${encodeURIComponent(req.originalUrl)}`;
+      const redirUrl = `/auth/login?callbackURL=${encodeURIComponent(
+        req.originalUrl
+      )}`;
       res.redirect(redirUrl);
     } else {
       next();
@@ -56,7 +59,14 @@ export function defaultVerifyCallback(params?: any): any {
   const profileToId: Nullable<ProfileToIdFunc> = params.profileToId || null;
   // const profileToUser: Nullable<ProfileToUserFunc> = params.profileToUser || null;
   const datastore = Datastore.getInstance();
-  return async function (req: any, accessToken: string, refreshToken: string, params: any, profile: any, done: any) {
+  return async function (
+    req: any,
+    accessToken: string,
+    refreshToken: string,
+    params: any,
+    profile: any,
+    done: any
+  ) {
     try {
       console.log("Verify Callback, Profile: ", req, profile, params);
       // ensure channel is created
@@ -66,14 +76,18 @@ export function defaultVerifyCallback(params?: any): any {
       }
       // const authFlow = await datastore.getAuthFlowById(authFlowId);
       // TODO - Use the authFlow.purpose to ensure loginUser is not lost
-      const [channel, newCreated] = await datastore.ensureChannel(profile.provider, id, {
-        credentials: {
-          accessToken: accessToken,
-          refreshToken: refreshToken,
-        },
-        expiresIn: params["expires_in"] || 0,
-        profile: profile,
-      });
+      const [channel, newCreated] = await datastore.ensureChannel(
+        profile.provider,
+        id,
+        {
+          credentials: {
+            accessToken: accessToken,
+            refreshToken: refreshToken,
+          },
+          expiresIn: params["expires_in"] || 0,
+          profile: profile,
+        }
+      );
       return done(null, channel);
     } catch (err) {
       return done(err, null);
@@ -103,7 +117,7 @@ export function createProviderRouter(provider: string, params: any = {}): any {
             provider: provider,
             handlerName: "login",
             handlerParams: { callbackURL: callbackURL },
-          }),
+          })
         );
       } else {
         authFlow = await datastore.getAuthFlowById(authFlowId);
@@ -117,21 +131,26 @@ export function createProviderRouter(provider: string, params: any = {}): any {
         req.session.authFlowId = authFlow!.id;
 
         // Kick off an auth we can have different kinds of auth
-        passport.authenticate(provider, { scope: params.scope, state: `${authFlow.id}` })(req, res, next);
+        passport.authenticate(provider, {
+          scope: params.scope,
+          state: `${authFlow.id}`,
+        })(req, res, next);
       }
-    }),
+    })
   );
 
   router.get(
     "/callback",
-    passport.authenticate(provider, { failureRedirect: `/auth/${provider}/fail` }),
+    passport.authenticate(provider, {
+      failureRedirect: `/auth/${provider}/fail`,
+    }),
     /*
     (...args: any[]) => {
       const x = passport.authenticate(provider, { failureRedirect: `/auth/${provider}/fail` });
       return x(...args)
     },
     */
-    wrapAsync(continueAuthFlow),
+    wrapAsync(continueAuthFlow)
   );
 
   router.get("/fail", (req: any, res: any) => {
@@ -150,7 +169,9 @@ export async function continueAuthFlow(req: any, res: any, next: any) {
   req.session.authFlowId = null;
 
   if (authFlow != null) {
-    const handler = req.app.get("authFlows")[authFlow.handlerName] as AuthFlowCallback;
+    const handler = req.app.get("authFlows")[
+      authFlow.handlerName
+    ] as AuthFlowCallback;
     if (handler != null) {
       handler(authFlow, req, res, next);
       return;

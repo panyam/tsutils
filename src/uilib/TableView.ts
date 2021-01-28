@@ -3,7 +3,10 @@ import { View } from "./Views";
 import { createNode } from "../utils/dom";
 import { Nullable } from "../types";
 
-export abstract class TableView<EntityType, EntityViewType extends View<EntityType>> extends View<EntityType[]> {
+export abstract class TableView<
+  EntityType,
+  EntityViewType extends View<EntityType>
+> extends View<EntityType[]> {
   listViewBodyDiv: HTMLDivElement;
   listViewHeaderDiv: HTMLDivElement;
   listViewFooterDiv: HTMLDivElement;

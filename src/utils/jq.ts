@@ -18,12 +18,17 @@ export function ensureElement(elemOrId: ElemType | string, root: any = null) {
   }
 }
 
-export function ensureCreated(elemOrId: ElemType | string, root: any = null, elemType = "div") {
+export function ensureCreated(
+  elemOrId: ElemType | string,
+  root: any = null,
+  elemType = "div"
+) {
   let out = ensureElement(elemOrId, root);
   if (out == null || out.length == 0) {
     // creat it then
     out = $("<" + elemType + "></" + elemType + ">");
-    if (elemOrId != null && typeof elemOrId === "string") out.attr("id", elemOrId);
+    if (elemOrId != null && typeof elemOrId === "string")
+      out.attr("id", elemOrId);
     if (root == null) root = $("body");
     root.append(out);
   }
