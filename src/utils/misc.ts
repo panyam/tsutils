@@ -15,10 +15,7 @@ export function stripQuotes(str: string): string {
   return str;
 }
 
-export function trimmedSplit(
-  value: string | null,
-  delimiter: string
-): string[] {
+export function trimmedSplit(value: string | null, delimiter: string): string[] {
   if (value == null) return [];
   return (value || "")
     .split(delimiter)
@@ -38,7 +35,7 @@ export function firstIndexOf<T>(
   items: ReadonlyArray<T>,
   cmpFunc: (t: T) => boolean,
   startIndex = 0,
-  ensure = false
+  ensure = false,
 ): number {
   for (let i = startIndex; i < items.length; i++) {
     if (cmpFunc(items[i])) return i;

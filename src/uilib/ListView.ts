@@ -1,10 +1,7 @@
 import { View } from "./Views";
 import { StringMap, Nullable } from "../types";
 
-export abstract class ListView<
-  ListEntityType,
-  EntityType = ListEntityType[]
-> extends View<EntityType> {
+export abstract class ListView<ListEntityType, EntityType = ListEntityType[]> extends View<EntityType> {
   containerView: Element;
 
   get entities(): ListEntityType[] {
@@ -50,9 +47,5 @@ export abstract class ListView<
    * is missing but to be safe this method also must check if a child
    * view already existed even though deleted from the index.
    */
-  protected abstract ensureChildView(
-    index: number,
-    child: ListEntityType,
-    container: Element
-  ): View;
+  protected abstract ensureChildView(index: number, child: ListEntityType, container: Element): View;
 }

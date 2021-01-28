@@ -189,8 +189,7 @@ export class BinHeapStorage<T> extends Storage<T> {
       const parentHandle = this.handles[parent];
       parentIsEmpty = parentHandle == null;
       if (parentHandle != null) {
-        if (this.comparator(parentHandle.value, this.handles[curr]!.value) <= 0)
-          break;
+        if (this.comparator(parentHandle.value, this.handles[curr]!.value) <= 0) break;
         parentHandle.index = curr;
       }
 
@@ -214,9 +213,7 @@ export class BinHeapStorage<T> extends Storage<T> {
     while (lo <= hi) {
       const mid = (lo + hi) >> 1;
       if (A[mid] == index) {
-        throw new Error(
-          `A[${mid}] (${A[mid]}) should not be equal to index (${index})`
-        );
+        throw new Error(`A[${mid}] (${A[mid]}) should not be equal to index (${index})`);
       }
       if (index < A[mid]) {
         // go to right half

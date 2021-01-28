@@ -11,8 +11,8 @@ export function facebookAuthRouter(config: any, vbParams: any): any {
         callbackURL: config.FACEBOOK.CALLBACK_URL,
         profileFields: ["email", "name"],
       },
-      defaultVerifyCallback(vbParams)
-    )
+      defaultVerifyCallback(vbParams),
+    ),
   );
 
   return createProviderRouter("facebook");
