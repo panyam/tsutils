@@ -59,25 +59,20 @@
   "pre-commit": [
     "precommit-msg",
     "clean",
-    "build",
     "lintfix",
     "test"
   ],
   "scripts": {
     "clean": "rm -Rf dist && jest --clearCache && rm -rf static/dist",
     "test": "jest --coverage --runInBand",
-    "start": "node ./bin/www",
+    "start": "webpack-dev-server --mode=development",
     "build": "webpack --mode=production",
     "devbuild": "webpack --mode=development",
-    "start": "webpack-dev-server --mode=development",
     "dev": "webpack-dev-server --mode=development",
     "debug": "webpack-dev-server --config ./webpack.config.js --mode=development --debug=true",
     "lint": "eslint . --quiet --ext .ts",
     "lintfix": "eslint '*/**/*.ts' --quiet --fix",
     "precommit-msg": "echo 'Pre-commit checks...' && exit 0",
-    "deploy": "npm run bebuild && gcloud app deploy",
-    "copy-config": "cp src/config/config.yml dist/src/config",
-    "copy-static": "cp -r backend/static dist/backend",
     "tsc": "./node_modules/typescript/bin/tsc; npm run copy-config && npm run copy-static"
   },
   "devDependencies": {

@@ -1,0 +1,41 @@
+
+.listViewHeader {
+  position: absolute;
+  top: 0px;
+  left: 0px;
+  right: 0px;
+  text-align: center;
+  font-weight: bold;
+  padding-top: 5px;
+}
+
+.listViewBody {
+  position: absolute;
+  top: 0px;
+  bottom: 0px;
+  left: 0px;
+  right: 0px;
+  border: solid 0px blue;
+  overflow: scroll;
+  z-index: 10;
+}
+
+.listViewFooter {
+  padding-top: 5px;
+  text-align: center;
+  position: absolute;
+  bottom: 0px;
+  left: 0px;
+  right: 0px;
+}
+
+.listViewTable {
+  display: table;
+  width: 100%;
+}
+
+.listViewRow {
+  position: relative;
+  border: solid 1px red;
+  height: 150px;
+}

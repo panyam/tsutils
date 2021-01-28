@@ -23,7 +23,6 @@
     "removeComments": true
   },
   "include": [
-    "./src/lib/**/*.ts",
-    "./src/clients/**/*.ts"
+    "./src/**/*.ts"
   ]
 }
