@@ -1,5 +1,5 @@
 import express = require("express");
-import { StringMap } from "../../lib/types";
+import { StringMap } from "../types";
 import { Datastore } from "./datastore";
 import { AuthFlowCallback, AuthFlow, User, Channel } from "./models";
 
