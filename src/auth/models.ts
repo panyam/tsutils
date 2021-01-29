@@ -1,5 +1,5 @@
-import { Timestamp, Nullable } from "../../lib/types";
-import { BaseEntity } from "../core/models";
+import { Timestamp, Nullable } from "../types";
+import { BaseEntity } from "../base/models";
 
 export class CallbackRequest {
   hostname: string;

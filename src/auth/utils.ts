@@ -1,4 +1,4 @@
-import { Nullable } from "../../lib/types";
+import { Nullable } from "../types";
 import { Datastore } from "./datastore";
 import { AuthFlowCallback, AuthFlow, User } from "./models";
 const express = require("express");

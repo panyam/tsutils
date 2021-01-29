@@ -1,5 +1,5 @@
 import { Datastore as GCDatastore } from "@google-cloud/datastore";
-import { Nullable } from "../../lib/types";
+import { Nullable } from "../types";
 import { User, Channel, AuthFlow } from "./models";
 
 const USER_KIND = "user";
