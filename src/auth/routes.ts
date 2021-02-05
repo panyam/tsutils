@@ -36,10 +36,8 @@ export function loginRouter(config: any): any {
   /* GET home page. */
   router.get("/", function (req: any, res: any, next: any) {
     const callbackURL = req.query["callbackURL"] || "/";
-    res.render("main", {
-      layout: "login",
-      title: "Notations",
-      h1: "Welcome",
+    res.render("login", {
+      h1: "Login",
       callbackURL: encodeURIComponent(callbackURL),
     });
   });

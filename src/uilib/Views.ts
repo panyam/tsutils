@@ -2,6 +2,9 @@ import { getAttr, setAttr, createNode } from "../utils/dom";
 import { MAX_INT, Nullable } from "../types";
 import { LayoutManager } from "./Layouts";
 
+declare const ResizeObserver: any;
+
+// export type ViewParams = any;
 export interface ViewParams {
   parent?: Nullable<Element>;
   rootElement?: Nullable<Element>;
@@ -105,6 +108,11 @@ export class View<EntityType = any> {
     this.setupChildViews();
     this.updateViewsFromEntity(null);
     this.layoutChildViews();
+
+    const resizeObserver = new ResizeObserver(() => {
+      this.layoutChildViews();
+    });
+    resizeObserver.observe(this.rootElement);
   }
 
   get layoutManager(): Nullable<LayoutManager> {
