@@ -9,11 +9,17 @@ export function facebookAuthRouter(config: any, vbParams: any): any {
         clientID: config.FACEBOOK.APP_ID,
         clientSecret: config.FACEBOOK.APP_SECRET,
         callbackURL: config.FACEBOOK.CALLBACK_URL,
+        passReqToCallback: true,
         profileFields: ["email", "name"],
       },
-      defaultVerifyCallback(vbParams)
+      defaultVerifyCallback({
+        profileToId: (profile: any) =>
+          (profile.emails || []).length > 0
+            ? profile.emails[0].value
+            : profile.id,
+      })
     )
   );
 
-  return createProviderRouter("facebook");
+  return createProviderRouter("facebook", { scope: ["profile", "email"] });
 }

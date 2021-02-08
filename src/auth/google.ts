@@ -10,6 +10,7 @@ export function googleAuthRouter(config: any, vbParams: any): any {
         clientSecret: config.GOOGLE.CLIENT_SECRET,
         callbackURL: config.GOOGLE.CALLBACK_URL,
         passReqToCallback: true,
+        profileFields: ["email", "name"],
       },
       defaultVerifyCallback({
         profileToId: (profile: any) =>
@@ -17,7 +18,6 @@ export function googleAuthRouter(config: any, vbParams: any): any {
             ? profile.emails[0].value
             : profile.id,
       })
-      // defaultVerifyCallback(vbParams)
     )
   );
 
