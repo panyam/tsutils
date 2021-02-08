@@ -23,7 +23,7 @@ export class Datastore extends BaseDatastore {
 
   async deleteBlobById(blobId: string): Promise<boolean> {
     const key = this.gcds.key([BLOB_KIND, blobId]);
-    await this.gcds.delete({ key: key });
+    await this.gcds.delete(key);
     return true;
   }
 
