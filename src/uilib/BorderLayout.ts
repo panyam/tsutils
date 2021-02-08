@@ -148,7 +148,10 @@ export class BorderLayout extends DefaultLayoutManager {
     return 0.5;
   }
 
-  addView(view: View, name: BorderLayoutConstraint = BorderLayoutConstraint.CENTER): void {
+  addView(
+    view: View,
+    name: BorderLayoutConstraint = BorderLayoutConstraint.CENTER
+  ): void {
     if (BorderLayoutConstraint.CENTER == name) {
       this.centerView = view;
     } else if (BorderLayoutConstraint.NORTH == name) {

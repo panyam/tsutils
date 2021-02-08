@@ -97,10 +97,16 @@ export class View<EntityType = any> {
       config.parent.appendChild(this.rootElement);
       // Also give it an auto generated ID if an id was not provided
       if (!getAttr(this.rootElement, "id")) {
-        setAttr(this.rootElement, "id", `${this.rootElement.tagName}${View.idCounter++}`);
+        setAttr(
+          this.rootElement,
+          "id",
+          `${this.rootElement.tagName}${View.idCounter++}`
+        );
       }
     } else {
-      throw new Error("Either 'rootElement' or a 'parent' param must be provided.");
+      throw new Error(
+        "Either 'rootElement' or a 'parent' param must be provided."
+      );
     }
     this.isSVG = this.rootElement.namespaceURI == "http://www.w3.org/2000/svg";
     this.processConfigs(config);
@@ -327,7 +333,8 @@ export class View<EntityType = any> {
     if (another == this) return true;
     let parent: Nullable<View> = this.parentView;
     while (parent != null) {
-      if (parent == another || parent.rootElement == another.rootElement) return true;
+      if (parent == another || parent.rootElement == another.rootElement)
+        return true;
       parent = parent.parentView;
     }
     return false;
@@ -478,7 +485,9 @@ export class View<EntityType = any> {
   get width(): number {
     const insWidth = this.insets.left + this.insets.right;
     if (this.isSVG) {
-      return (this.rootElement as SVGGraphicsElement).getBBox().width + insWidth;
+      return (
+        (this.rootElement as SVGGraphicsElement).getBBox().width + insWidth
+      );
     } else {
       return (this.rootElement as HTMLElement).offsetWidth + insWidth;
     }
@@ -487,7 +496,9 @@ export class View<EntityType = any> {
   get height(): number {
     const insHeight = this.insets.top + this.insets.bottom;
     if (this.isSVG) {
-      return (this.rootElement as SVGGraphicsElement).getBBox().height + insHeight;
+      return (
+        (this.rootElement as SVGGraphicsElement).getBBox().height + insHeight
+      );
     } else {
       return (this.rootElement as HTMLElement).offsetHeight + insHeight;
     }
@@ -521,7 +532,12 @@ export class View<EntityType = any> {
     return this;
   }
 
-  protected setBoundsImpl(x: number, y: number, width: number, height: number): void {
+  protected setBoundsImpl(
+    x: number,
+    y: number,
+    width: number,
+    height: number
+  ): void {
     // if (this.rootElement.tagName == "svg") {
     if (this.isSVG) {
       this.rootElement.setAttribute("x", "" + x);

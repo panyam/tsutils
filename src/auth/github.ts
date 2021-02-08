@@ -10,8 +10,8 @@ export function githubAuthRouter(config: any, vbParams: any): any {
         clientSecret: config.GITHUB.CLIENT_SECRET,
         callbackURL: config.GITHUB.CALLBACK_URL,
       },
-      defaultVerifyCallback(vbParams),
-    ),
+      defaultVerifyCallback(vbParams)
+    )
   );
 
   return createProviderRouter("github");

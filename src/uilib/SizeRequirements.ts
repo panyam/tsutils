@@ -62,7 +62,9 @@ export default class SizeRequirements {
    *   default SizeRequirements object instance being passed back.
    * @return  the total space requirements.
    */
-  static getTiledSizeRequirements(children: SizeRequirements[]): SizeRequirements {
+  static getTiledSizeRequirements(
+    children: SizeRequirements[]
+  ): SizeRequirements {
     const total = new SizeRequirements();
     for (let i = 0; i < children.length; i++) {
       const req = children[i];
@@ -84,7 +86,9 @@ export default class SizeRequirements {
    *  the returns result will be a default instance of SizeRequirements.
    * @return  the total space requirements.
    */
-  static getAlignedSizeRequirements(children: SizeRequirements[]): SizeRequirements {
+  static getAlignedSizeRequirements(
+    children: SizeRequirements[]
+  ): SizeRequirements {
     const totalAscent = new SizeRequirements();
     const totalDescent = new SizeRequirements();
     for (let i = 0; i < children.length; i++) {
@@ -106,7 +110,10 @@ export default class SizeRequirements {
       totalDescent.maximum = Math.max(descent, totalDescent.maximum);
     }
     const min = Math.min(totalAscent.minimum + totalDescent.minimum, MAX_INT);
-    const pref = Math.min(totalAscent.preferred + totalDescent.preferred, MAX_INT);
+    const pref = Math.min(
+      totalAscent.preferred + totalDescent.preferred,
+      MAX_INT
+    );
     const max = Math.min(totalAscent.maximum + totalDescent.maximum, MAX_INT);
     let alignment = 0.0;
     if (min > 0) {
@@ -154,7 +161,7 @@ export default class SizeRequirements {
     children: SizeRequirements[],
     offsets: number[],
     spans: number[],
-    forward = true,
+    forward = true
   ): void {
     // The total argument turns out to be a bad idea since the
     // total of all the children can overflow the integer used to
@@ -169,9 +176,27 @@ export default class SizeRequirements {
       max += children[i].maximum;
     }
     if (allocated >= pref) {
-      SizeRequirements.expandedTile(allocated, min, pref, max, children, offsets, spans, forward);
+      SizeRequirements.expandedTile(
+        allocated,
+        min,
+        pref,
+        max,
+        children,
+        offsets,
+        spans,
+        forward
+      );
     } else {
-      SizeRequirements.compressedTile(allocated, min, pref, max, children, offsets, spans, forward);
+      SizeRequirements.compressedTile(
+        allocated,
+        min,
+        pref,
+        max,
+        children,
+        offsets,
+        spans,
+        forward
+      );
     }
   }
 
@@ -183,7 +208,7 @@ export default class SizeRequirements {
     request: SizeRequirements[],
     offsets: number[],
     spans: number[],
-    forward = true,
+    forward = true
   ): void {
     // ---- determine what we have to work with ----
     const totalPlay = Math.min(pref - allocated, pref - min);
@@ -222,7 +247,7 @@ export default class SizeRequirements {
     request: SizeRequirements[],
     offsets: number[],
     spans: number[],
-    forward = true,
+    forward = true
   ): void {
     // ---- determine what we have to work with ----
     const totalPlay = Math.min(allocated - pref, max - pref);
@@ -290,7 +315,7 @@ export default class SizeRequirements {
     children: SizeRequirements[],
     offsets: number[],
     spans: number[],
-    normal = true,
+    normal = true
   ): void {
     const totalAlignment = normal ? total.alignment : 1.0 - total.alignment;
     const totalAscent = allocated * totalAlignment;
