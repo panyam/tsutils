@@ -1,5 +1,4 @@
-import { Timestamp, Nullable } from "../../tsutils/types";
-import { BaseEntity } from "../../tsutils/base/models";
+import { BaseEntity } from "../base/models";
 
 export class Blob extends BaseEntity {
   // A unique ID for this blob.  This
