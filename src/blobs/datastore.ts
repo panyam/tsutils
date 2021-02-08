@@ -43,7 +43,7 @@ export class Datastore extends BaseDatastore {
     if (blob.userId.trim().length == 0) {
       throw new Error("Blobs must have a valid userId");
     }
-    const newKey = this.gcds.key(BLOB_KIND);
+    let newKey = this.gcds.key(BLOB_KIND);
     if (!blob.hasKey) {
       await this.gcds.save({
         key: newKey,
@@ -56,7 +56,7 @@ export class Datastore extends BaseDatastore {
       blob.id = newKey.id;
       dbBlob = this.toDBBlob(blob);
     } else {
-      newKey.id = blob.id;
+      newKey = this.gcds.key([BLOB_KIND, blob.id]);
     }
 
     // Now update with the
