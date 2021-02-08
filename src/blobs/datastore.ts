@@ -1,5 +1,5 @@
-import { Datastore as BaseDatastore } from "../../tsutils/base/datastore";
-import { Nullable } from "../../tsutils/types";
+import { Datastore as BaseDatastore } from "../base/datastore";
+import { Nullable } from "../types";
 import { Blob } from "./models";
 
 const BLOB_KIND = "blobs";

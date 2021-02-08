@@ -2,7 +2,10 @@ import { Timestamp, Nullable } from "../../tsutils/types";
 import { BaseEntity } from "../../tsutils/base/models";
 
 export class Blob extends BaseEntity {
-  // A unique ID for this blob
+  // A unique ID for this blob.  This
+  // MUST be provided by the USER so that
+  // the user can lookup this resource again
+  // if needed.
   id: string;
 
   // Type and ID of the parent resource of the type
