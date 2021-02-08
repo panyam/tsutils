@@ -17,8 +17,14 @@ export class Datastore extends BaseDatastore {
     return this.getChannel(provider, loginId);
   }
 
-  async getChannel(provider: string, loginId: string): Promise<Nullable<Channel>> {
-    const query = this.gcds.createQuery(CHANNEL_KIND).filter("provider", provider).filter("loginId", loginId);
+  async getChannel(
+    provider: string,
+    loginId: string
+  ): Promise<Nullable<Channel>> {
+    const query = this.gcds
+      .createQuery(CHANNEL_KIND)
+      .filter("provider", provider)
+      .filter("loginId", loginId);
     const results = await this.gcds.runQuery(query);
     if (results && results.length > 0 && results[0].length > 0) {
       const channel = results[0][0];
@@ -28,7 +34,9 @@ export class Datastore extends BaseDatastore {
   }
 
   async getUserByChannel(channelKey: string): Promise<Nullable<User>> {
-    const query = this.gcds.createQuery(USER_KIND).filter("channelKey", channelKey);
+    const query = this.gcds
+      .createQuery(USER_KIND)
+      .filter("channelKey", channelKey);
     const results = await this.gcds.runQuery(query);
     if (results && results.length > 0 && results[0].length > 0) {
       const user = results[0][0];
@@ -48,7 +56,9 @@ export class Datastore extends BaseDatastore {
   }
 
   async getAuthFlowById(authFlowId: string): Promise<Nullable<AuthFlow>> {
-    const query = this.gcds.createQuery(AUTH_FLOW_KIND).filter("id", authFlowId);
+    const query = this.gcds
+      .createQuery(AUTH_FLOW_KIND)
+      .filter("id", authFlowId);
     const results = await this.gcds.runQuery(query);
     if (results && results.length > 0 && results[0].length > 0) {
       const authFlow = results[0][0];
@@ -209,7 +219,11 @@ export class Datastore extends BaseDatastore {
   }
 
   // Helper methods
-  async ensureChannel(provider: string, loginId: string, params?: any): Promise<[Channel, boolean]> {
+  async ensureChannel(
+    provider: string,
+    loginId: string,
+    params?: any
+  ): Promise<[Channel, boolean]> {
     // get channel if exists
     // See if a channel exist - create if it does not
     let channel: Nullable<Channel> = await this.getChannel(provider, loginId);
@@ -226,7 +240,10 @@ export class Datastore extends BaseDatastore {
     return [channel, newCreated];
   }
 
-  async ensureUser(channel: Channel, userParams?: any): Promise<[User, boolean]> {
+  async ensureUser(
+    channel: Channel,
+    userParams?: any
+  ): Promise<[User, boolean]> {
     userParams = userParams || {};
     let user = await this.getUserByChannel(channel.key);
     const newCreated = user == null;
