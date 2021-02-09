@@ -81,9 +81,9 @@ class Scrollable {
 
 export class ScrollGroup {
   private scrollables: Scrollable[] = [];
-  private onScrollEventListener = this.onScrollEvent.bind(this);
-  private onMouseEventListener = this.onMouseEvent.bind(this);
-  private onTouchEventListener = this.onTouchEvent.bind(this);
+  private onScrollEventListener = this.onScrollEvent.bind(this) as EventListener;
+  private onMouseEventListener = this.onMouseEvent.bind(this) as EventListener;
+  private onTouchEventListener = this.onTouchEvent.bind(this) as EventListener;
   private focussedElement: HTMLElement | null = null;
   private leadScrollable: Scrollable | null = null;
   private lastScrolledAt = -1;

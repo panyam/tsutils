@@ -1,4 +1,4 @@
-import { Timestamp, Nullable } from "../../tsutils/types";
+import { Timestamp } from "../types";
 
 export class BaseEntity {
   isActive: boolean;

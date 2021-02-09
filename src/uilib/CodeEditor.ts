@@ -67,12 +67,12 @@ export class CodeEditor extends View<string> {
 
     const toProp = (key: string, value: unknown): string => key + ": " + value + ";";
     const lineNumStylesStr = collectStream(
-      mapStream(streamDict(lineNumberStyles), (x: [string, string]) => toProp(x[0], x[1])),
+      mapStream(streamDict<string, string>(lineNumberStyles), (x: [string, string]) => toProp(x[0], x[1])),
       (prop, out) => prop + out,
       "",
     );
     const textAreaStylesStr = collectStream(
-      mapStream(streamDict(textAreaStyles), (x: [string, string]) => toProp(x[0], x[1])),
+      mapStream(streamDict<string, string>(textAreaStyles), (x: [string, string]) => toProp(x[0], x[1])),
       (prop, out) => prop + out,
       "",
     );

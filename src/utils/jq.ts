@@ -1,3 +1,4 @@
+/*
 type ElemType = any;
 
 export function setCSS(elem: ElemType, attr: string, value: any): void {
@@ -43,3 +44,4 @@ export function setVisible(elem: ElemType, show = true) {
   }
   return elem;
 }
+*/

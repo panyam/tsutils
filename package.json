@@ -5,7 +5,9 @@
   "homepage": "https://github.com/panyam/tsutils#readme",
   "license": "ISC",
   "description": "coding no more",
-  "main": "./dist/index.js",
+  "type": "commonjs",
+  "main": "./dist/src/index.js",
+  "types": "./dist/src/index.d.ts",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/panyam/tsutils.git"
@@ -66,14 +68,10 @@
     "clean": "rm -Rf dist && jest --clearCache && rm -rf static/dist",
     "test": "jest --coverage --runInBand",
     "start": "webpack-dev-server --mode=development",
-    "build": "webpack --mode=production",
-    "devbuild": "webpack --mode=development",
-    "dev": "webpack-dev-server --mode=development",
-    "debug": "webpack-dev-server --config ./webpack.config.js --mode=development --debug=true",
+    "build": "tsc",
     "lint": "eslint . --quiet --ext .ts",
     "lintfix": "eslint '*/**/*.ts' --quiet --fix",
-    "precommit-msg": "echo 'Pre-commit checks...' && exit 0",
-    "tsc": "./node_modules/typescript/bin/tsc; npm run copy-config && npm run copy-static"
+    "precommit-msg": "echo 'Pre-commit checks...' && exit 0"
   },
   "devDependencies": {
     "@babel/core": "^7.9.6",
