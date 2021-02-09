@@ -1,5 +1,6 @@
 import { Int, Undefined } from "../types";
 
+declare const $: any;
 const fontMetrics: { [key: string]: any } = {};
 
 export function getcssint(elem: JQuery<HTMLElement>, attrib: string): Int {
@@ -75,7 +76,10 @@ export function fillChildComponent(elem: JQuery<HTMLElement>) {
   elem.width(finalWidth);
 }
 
-export function forEachChild(elem: Element, visitor: (child: Element, index: Int) => Undefined<boolean>) {
+export function forEachChild(
+  elem: Element,
+  visitor: (child: Element, index: Int) => Undefined<boolean>
+) {
   const children = elem.children;
   const L = children.length;
   for (let i = 0; i < L; i++) {
@@ -84,7 +88,10 @@ export function forEachChild(elem: Element, visitor: (child: Element, index: Int
   }
 }
 
-export function forEachNode(elem: Element, visitor: (child: ChildNode, index: Int) => Undefined<boolean>) {
+export function forEachNode(
+  elem: Element,
+  visitor: (child: ChildNode, index: Int) => Undefined<boolean>
+) {
   const children = elem.childNodes;
   const L = children.length;
   for (let i = 0; i < L; i++) {
@@ -93,7 +100,10 @@ export function forEachNode(elem: Element, visitor: (child: ChildNode, index: In
   }
 }
 
-export function forEachAttribute(elem: Element, visitor: (name: string, value: any) => Undefined<boolean>) {
+export function forEachAttribute(
+  elem: Element,
+  visitor: (name: string, value: any) => Undefined<boolean>
+) {
   const nodeNameMap = elem.attributes;
   for (let i = 0; i < nodeNameMap.length; i++) {
     const attrib = nodeNameMap[i];
@@ -144,11 +154,19 @@ export function setAttr(elem: Element, name: string, value: any) {
   return elem.setAttribute(name, value);
 }
 
-export function getAttrOrStyle(elem: Element, attribName: string, cssStyles: any, styleName: string) {
+export function getAttrOrStyle(
+  elem: Element,
+  attribName: string,
+  cssStyles: any,
+  styleName: string
+) {
   return elem.getAttribute(attribName) || cssStyles[styleName];
 }
 
-export function createSVGNode<T extends SVGGraphicsElement>(nodename: string, config: any): any {
+export function createSVGNode<T extends SVGGraphicsElement>(
+  nodename: string,
+  config: any
+): any {
   config = config || {};
   config.ns = "http://www.w3.org/2000/svg";
   return createNode(nodename, config) as T;
@@ -208,7 +226,10 @@ export function setCSS(elem: Element, attr: string, value: any): void {
   (elem as any).style[attr] = value;
 }
 
-export function ensureElement(elemOrId: Element | string, root: any = null): Element {
+export function ensureElement(
+  elemOrId: Element | string,
+  root: any = null
+): Element {
   if (typeof elemOrId === "string") {
     if (root == null) root = document;
     return root.querySelector(elemOrId);
