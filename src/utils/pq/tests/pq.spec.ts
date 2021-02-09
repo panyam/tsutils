@@ -30,24 +30,19 @@ function isSorted<T>(values: T[], cmp: Comparator<T>): boolean {
 }
 
 describe("PQ Tests", () => {
-  StorageCreators(numCmp).it(
-    "Test Basic Values",
-    (storage: Storage<number>) => {
-      const sortedValues = [...TEST_NUMS];
-      sortedValues.sort(numCmp);
-      const pq = new PQ(storage);
-      pq.heapify(TEST_NUMS.values());
+  StorageCreators(numCmp).it("Test Basic Values", (storage: Storage<number>) => {
+    const sortedValues = [...TEST_NUMS];
+    sortedValues.sort(numCmp);
+    const pq = new PQ(storage);
+    pq.heapify(TEST_NUMS.values());
 
-      const pqvalues = Array.from(pq.storage.sortedHandles).map(
-        (handle) => handle.value
-      ) as number[];
-      expect(isSorted(pqvalues, numCmp)).toBe(true);
-      for (let i = 0; i < sortedValues.length; i++) {
-        const popped = pq.pop();
-        expect(sortedValues[i]).toBe(popped);
-      }
+    const pqvalues = Array.from(pq.storage.sortedHandles).map((handle) => handle.value) as number[];
+    expect(isSorted(pqvalues, numCmp)).toBe(true);
+    for (let i = 0; i < sortedValues.length; i++) {
+      const popped = pq.pop();
+      expect(sortedValues[i]).toBe(popped);
     }
-  );
+  });
 
   StorageCreators(revNumCmp).it("Test Reverse", (storage: Storage<number>) => {
     const sortedValues = [...TEST_NUMS];
@@ -56,9 +51,7 @@ describe("PQ Tests", () => {
     const pq = new PQ(storage);
     pq.heapify(TEST_NUMS.values());
 
-    const pqvalues = Array.from(pq.storage.sortedHandles).map(
-      (handle) => handle.value
-    ) as number[];
+    const pqvalues = Array.from(pq.storage.sortedHandles).map((handle) => handle.value) as number[];
     expect(isSorted(pqvalues, revNumCmp)).toBe(true);
     for (let i = 0; i < reversed.length; i++) {
       const popped = pq.pop();
@@ -73,53 +66,56 @@ describe("PQ Tests", () => {
     expect(pq.find(5)).toBe(handle);
   });
 
-  StorageCreators(
-    (v1: Value<number>, v2: Value<number>) => v1.value - v2.value
-  ).it("Test Remove", (storage: Storage<Value<number>>) => {
-    const pq = new PQ(storage, (v) => v.value);
-    const values = TEST_NUMS.map((x) => new Value(x));
-    pq.heapify(values.values());
-    expect(pq.top!.value.value).toBe(1);
-    // Pop and see the min change
-    pq.pop();
-    expect(pq.find(values[1])).toBe(null);
-    expect(pq.top.value.value).toBe(2);
+  StorageCreators((v1: Value<number>, v2: Value<number>) => v1.value - v2.value).it(
+    "Test Remove",
+    (storage: Storage<Value<number>>) => {
+      const pq = new PQ(storage, (v) => v.value);
+      const values = TEST_NUMS.map((x) => new Value(x));
+      pq.heapify(values.values());
+      expect(pq.top!.value.value).toBe(1);
+      // Pop and see the min change
+      pq.pop();
+      expect(pq.find(values[1])).toBe(null);
+      expect(pq.top.value.value).toBe(2);
 
-    // Remove and test
-    pq.removeValue(values[0]);
-    expect(pq.top.value.value).toBe(2);
-    expect(pq.find(5 as any)).toBe(null);
-    expect(pq.size).toBe(5);
-  });
+      // Remove and test
+      pq.removeValue(values[0]);
+      expect(pq.top.value.value).toBe(2);
+      expect(pq.find(5 as any)).toBe(null);
+      expect(pq.size).toBe(5);
+    },
+  );
 
-  StorageCreators(
-    (v1: Value<number>, v2: Value<number>) => v1.value - v2.value
-  ).it("Test Find", (storage: Storage<Value<number>>) => {
-    const pq = new PQ(storage, (v) => v.value);
-    // Add a bunch of values, and find the entries
-    const values = TEST_NUMS.map((x) => new Value(x));
-    pq.heapify(values.values());
+  StorageCreators((v1: Value<number>, v2: Value<number>) => v1.value - v2.value).it(
+    "Test Find",
+    (storage: Storage<Value<number>>) => {
+      const pq = new PQ(storage, (v) => v.value);
+      // Add a bunch of values, and find the entries
+      const values = TEST_NUMS.map((x) => new Value(x));
+      pq.heapify(values.values());
 
-    expect(pq.top.value).toBe(values[1]);
-    const ptr = pq.find(values[0]);
-    expect(ptr!.value).toBe(values[0]);
-  });
+      expect(pq.top.value).toBe(values[1]);
+      const ptr = pq.find(values[0]);
+      expect(ptr!.value).toBe(values[0]);
+    },
+  );
 
-  StorageCreators(
-    (v1: Value<number>, v2: Value<number>) => v1.value - v2.value
-  ).it("Test Adjust", (storage: Storage<Value<number>>) => {
-    const pq = new PQ(storage, (v) => v.value);
+  StorageCreators((v1: Value<number>, v2: Value<number>) => v1.value - v2.value).it(
+    "Test Adjust",
+    (storage: Storage<Value<number>>) => {
+      const pq = new PQ(storage, (v) => v.value);
 
-    // Add a bunch of values, and find the entries
-    const values = [5, 2, 10].map((x) => new Value(x));
-    pq.heapify(values.values());
+      // Add a bunch of values, and find the entries
+      const values = [5, 2, 10].map((x) => new Value(x));
+      pq.heapify(values.values());
 
-    expect(pq.top.value).toBe(values[1]);
-    const ptr = pq.find(values[0])!;
-    ptr.value.value = 1;
-    pq.adjust(ptr);
-    expect(pq.top.value).toBe(values[0]);
-  });
+      expect(pq.top.value).toBe(values[1]);
+      const ptr = pq.find(values[0])!;
+      ptr.value.value = 1;
+      pq.adjust(ptr);
+      expect(pq.top.value).toBe(values[0]);
+    },
+  );
   /*
    */
 });

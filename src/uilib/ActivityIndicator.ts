@@ -33,13 +33,7 @@ export class ActivityIndicator extends View {
     setCSS(
       this.rootElement,
       "background",
-      this.bgColor +
-        "\n" +
-        "url('" +
-        this.imageUrl +
-        "')\n" +
-        "50% 50%\n" +
-        "no-repeat"
+      this.bgColor + "\n" + "url('" + this.imageUrl + "')\n" + "50% 50%\n" + "no-repeat",
     );
     this.isVisible = false;
   }

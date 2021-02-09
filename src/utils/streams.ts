@@ -4,18 +4,13 @@ export function* streamArray<V>(arr: ReadonlyArray<V>): Generator<[number, V]> {
   }
 }
 
-export function* streamDict<K extends string | number, V>(
-  dict: any
-): Generator<[K, V]> {
+export function* streamDict<K extends string | number, V>(dict: any): Generator<[K, V]> {
   for (const key in dict) {
     yield [key as K, dict[key] as V];
   }
 }
 
-export function* mapStream<X, Y>(
-  stream: Generator<X>,
-  mapper: (x: X, index?: number) => Y
-): Generator<Y> {
+export function* mapStream<X, Y>(stream: Generator<X>, mapper: (x: X, index?: number) => Y): Generator<Y> {
   let i = 0;
   for (let next = stream.next(); !next.done; next = stream.next()) {
     yield mapper(next.value, i);
@@ -23,10 +18,7 @@ export function* mapStream<X, Y>(
   }
 }
 
-export function* filterStream<X>(
-  stream: Generator<X>,
-  filterFunc?: (x: X, index?: number) => boolean
-): Generator<X> {
+export function* filterStream<X>(stream: Generator<X>, filterFunc?: (x: X, index?: number) => boolean): Generator<X> {
   let i = 0;
   for (let next = stream.next(); !next.done; next = stream.next()) {
     if (filterFunc) {
@@ -43,7 +35,7 @@ export function* filterStream<X>(
 export function collectStream<X, Y>(
   stream: Generator<X>,
   collector: (x: X, y: Y, index?: number) => Y,
-  collection: Y
+  collection: Y,
 ): Y {
   let i = 0;
   for (let next = stream.next(); !next.done; next = stream.next()) {

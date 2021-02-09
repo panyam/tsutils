@@ -13,12 +13,9 @@ export function googleAuthRouter(config: any, vbParams: any): any {
         profileFields: ["email", "name"],
       },
       defaultVerifyCallback({
-        profileToId: (profile: any) =>
-          (profile.emails || []).length > 0
-            ? profile.emails[0].value
-            : profile.id,
-      })
-    )
+        profileToId: (profile: any) => ((profile.emails || []).length > 0 ? profile.emails[0].value : profile.id),
+      }),
+    ),
   );
 
   return createProviderRouter("google", { scope: ["profile", "email"] });
