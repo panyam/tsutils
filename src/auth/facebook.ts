@@ -21,5 +21,5 @@ export function facebookAuthRouter(config: any, vbParams: any): any {
     )
   );
 
-  return createProviderRouter("facebook", { scope: ["profile", "email"] });
+  return createProviderRouter("facebook", { scope: ["email"] });
 }

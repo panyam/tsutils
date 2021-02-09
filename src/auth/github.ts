@@ -9,10 +9,23 @@ export function githubAuthRouter(config: any, vbParams: any): any {
         clientID: config.GITHUB.CLIENT_ID,
         clientSecret: config.GITHUB.CLIENT_SECRET,
         callbackURL: config.GITHUB.CALLBACK_URL,
+        passReqToCallback: true,
+        profileFields: ["email", "name"],
       },
-      defaultVerifyCallback(vbParams)
+      defaultVerifyCallback({
+        profileToId: (profile: any) => {
+          if (profile.username && profile.username.trim().length > 0) {
+            return profile.username.trim();
+          }
+          else if ((profile.emails || []).length > 0) {
+            return profile.emails[0].value;
+          } else {
+            return profile.id;
+          }
+        }
+      })
     )
   );
 
-  return createProviderRouter("github");
+  return createProviderRouter("github", { scope: ["email"] });
 }
