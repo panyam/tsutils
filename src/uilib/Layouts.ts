@@ -1,4 +1,5 @@
-import { Size, View } from "./Views";
+import { View as View } from "./View";
+import { Size } from "./core";
 import { MAX_INT, Nullable } from "../types";
 
 /**

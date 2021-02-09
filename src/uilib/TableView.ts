@@ -1,9 +1,11 @@
 import "./styles/TableView";
-import { View } from "./Views";
+import { EntityView } from "./EntityView";
 import { createNode } from "../utils/dom";
 import { Nullable } from "../types";
 
-export abstract class TableView<EntityType, EntityViewType extends View<EntityType>> extends View<EntityType[]> {
+export abstract class TableView<EntityType, EntityViewType extends EntityView<EntityType>> extends EntityView<
+  EntityType[]
+> {
   listViewBodyDiv: HTMLDivElement;
   listViewHeaderDiv: HTMLDivElement;
   listViewFooterDiv: HTMLDivElement;

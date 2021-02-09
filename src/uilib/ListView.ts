@@ -1,7 +1,7 @@
-import { View } from "./Views";
+import { EntityView } from "./EntityView";
 import { StringMap, Nullable } from "../types";
 
-export abstract class ListView<ListEntityType, EntityType = ListEntityType[]> extends View<EntityType> {
+export abstract class ListView<ListEntityType, EntityType = ListEntityType[]> extends EntityView<EntityType> {
   containerView: Element;
 
   get entities(): ListEntityType[] {
@@ -28,9 +28,9 @@ export abstract class ListView<ListEntityType, EntityType = ListEntityType[]> ex
     const entities = this.entities;
     for (let i = 0; i < entities.length; i++) {
       const child = entities[i];
-      let childView: View;
+      let childView: EntityView<ListEntityType>;
       if (i < this.childViewCount) {
-        childView = this.childViews[i];
+        childView = this.childViews[i] as EntityView<ListEntityType>;
       } else {
         childView = this.ensureChildView(i, child, this.containerView);
         this.addView(childView);
@@ -47,5 +47,9 @@ export abstract class ListView<ListEntityType, EntityType = ListEntityType[]> ex
    * is missing but to be safe this method also must check if a child
    * view already existed even though deleted from the index.
    */
-  protected abstract ensureChildView(index: number, child: ListEntityType, container: Element): View;
+  protected abstract ensureChildView(
+    index: number,
+    child: ListEntityType,
+    container: Element,
+  ): EntityView<ListEntityType>;
 }

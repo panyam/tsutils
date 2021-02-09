@@ -1,5 +1,5 @@
 import { setCSS } from "../utils/dom";
-import { View, ViewParams } from "./Views";
+import { EntityView, ViewParams } from "./EntityView";
 
 interface AIViewParams extends ViewParams {
   zIndex?: number;
@@ -8,7 +8,7 @@ interface AIViewParams extends ViewParams {
   modalId?: string;
 }
 
-export class ActivityIndicator extends View {
+export class ActivityIndicator extends EntityView {
   bgColor: any;
   imageUrl: string;
   zIndex: number;

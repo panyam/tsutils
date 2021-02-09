@@ -1,4 +1,4 @@
-import { Size, Rect, Insets } from "../Views";
+import { Size, Rect, Insets } from "../core";
 
 describe("Basic Tests", () => {
   test("Size Creation", () => {

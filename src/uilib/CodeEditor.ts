@@ -1,9 +1,9 @@
-import { View, ViewParams } from "./Views";
+import { View } from "./View";
 import { ScrollGroup } from "./Scrolling";
 import { StringMap } from "../types";
 import { collectStream, streamDict, mapStream } from "../utils/streams";
 
-export class CodeEditor extends View<string> {
+export class CodeEditor extends View {
   private _scrollGroup: ScrollGroup;
   textarea: HTMLTextAreaElement;
   lineNumbersDiv: HTMLDivElement;

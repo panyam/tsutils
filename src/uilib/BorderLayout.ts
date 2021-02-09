@@ -1,5 +1,6 @@
 import { Nullable } from "../types";
-import { Size, View } from "./Views";
+import { Size } from "./core";
+import { View } from "./View";
 import { DefaultLayoutManager } from "./Layouts";
 
 export enum BorderLayoutConstraint {

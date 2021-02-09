@@ -1,6 +1,7 @@
 import { getAttr, setAttr, createNode } from "../utils/dom";
 import { MAX_INT, Nullable } from "../types";
 import { LayoutManager } from "./Layouts";
+import { Rect, Size, Insets } from "./core";
 
 declare const ResizeObserver: any;
 
@@ -11,57 +12,12 @@ export interface ViewParams {
   document?: Document;
 }
 
-export class Point {
-  x = 0;
-  y = 0;
-  constructor(x = 0, y = 0) {
-    this.x = x;
-    this.y = y;
-  }
-}
-
-export class Size {
-  width = 0;
-  height = 0;
-  constructor(w = 0, h = 0) {
-    this.width = w;
-    this.height = h;
-  }
-}
-
-export class Insets {
-  left: number;
-  top: number;
-  right: number;
-  bottom: number;
-  constructor(left = 0, top = 0, right = 0, bottom = 0) {
-    this.left = left;
-    this.top = top;
-    this.right = right;
-    this.bottom = bottom;
-  }
-}
-
-export class Rect {
-  x = 0;
-  y = 0;
-  width = 0;
-  height = 0;
-  constructor(x = 0, y = 0, w = 0, h = 0) {
-    this.x = x;
-    this.y = y;
-    this.width = w;
-    this.height = h;
-  }
-}
-
-export class View<EntityType = any> {
+export class View {
   private static idCounter = 0;
   private static counter = 0;
   readonly uuid: string = "" + View.counter++;
   readonly rootElement: Element;
   readonly config: ViewParams;
-  protected _entity: Nullable<EntityType>;
 
   // View in which this view can be found.
   parentView: Nullable<View>;
@@ -84,8 +40,7 @@ export class View<EntityType = any> {
    */
   protected _layoutManager: Nullable<LayoutManager> = null;
 
-  constructor(entity: Nullable<EntityType> = null, config?: ViewParams) {
-    this._entity = entity;
+  constructor(config?: ViewParams) {
     this.config = config = config || {};
     this.originalRootHTML = "";
     if (this.config.rootElement) {
@@ -106,9 +61,10 @@ export class View<EntityType = any> {
     this.processConfigs(config);
     this.createChildElements();
     this.setupChildViews();
-    this.updateViewsFromEntity(null);
+    // this.updateViewsFromEntity(null);
     this.layoutChildViews();
 
+    // TODO - should this be here or toggled from else where?
     const resizeObserver = new ResizeObserver(() => {
       this.layoutChildViews();
     });
@@ -180,7 +136,7 @@ export class View<EntityType = any> {
   }
 
   refreshViews(): void {
-    this.updateViewsFromEntity(null);
+    // TODO
   }
 
   /**
@@ -188,40 +144,6 @@ export class View<EntityType = any> {
    */
   childHtml(): string {
     return "";
-  }
-
-  get entity(): Nullable<EntityType> {
-    return this._entity;
-  }
-
-  set entity(entity: Nullable<EntityType>) {
-    if (entity != this._entity && this.isEntityValid(entity)) {
-      this._entity = entity;
-      this.refreshViews();
-    }
-  }
-
-  /**
-   * This method is called to update the entity based on what has
-   * been input/entered into the views.  By default it does nothing.
-   */
-  protected updateEntityFromViews(): Nullable<EntityType> {
-    return this._entity;
-  }
-
-  /**
-   * Called when the entity has been updated in order to update the views
-   * and/or their contents.
-   * This method is called with the "previous" entity as the latest
-   * entity is already set in this View.  This will help the View
-   * reconcile any diffs.
-   */
-  protected updateViewsFromEntity(_previous: Nullable<EntityType>): void {
-    // Do nothing - implement this to update view state from entity
-  }
-
-  protected isEntityValid(_entity: Nullable<EntityType>): boolean {
-    return true;
   }
 
   get doc(): Document {

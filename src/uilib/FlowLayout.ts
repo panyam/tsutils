@@ -1,4 +1,5 @@
-import { Size, View } from "./Views";
+import { View } from "./View";
+import { Size } from "./core";
 import { DefaultLayoutManager } from "./Layouts";
 
 export enum FlowAlignType {

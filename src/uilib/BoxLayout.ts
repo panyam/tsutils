@@ -1,6 +1,7 @@
 import { MAX_INT } from "../types";
 import { ArrayTimesN } from "../utils/misc";
-import { Size, View } from "./Views";
+import { Size } from "./core";
+import { View } from "./View";
 import { DefaultLayoutManager } from "./Layouts";
 import SizeRequirements from "./SizeRequirements";
 
