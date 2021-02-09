@@ -3,10 +3,6 @@ import { Int, Undefined } from "../types";
 declare const $: any;
 const fontMetrics: { [key: string]: any } = {};
 
-export function getcssint(elem: JQuery<HTMLElement>, attrib: string): Int {
-  return parseInt(elem.css(attrib).replace(/px/, ""));
-}
-
 export function getFontMetrics(fontFamily: string, fontSize: Int): any {
   if (!(fontFamily in fontMetrics)) {
     fontMetrics[fontFamily] = {};
@@ -26,60 +22,7 @@ export function getFontMetrics(fontFamily: string, fontSize: Int): any {
   return familyMetrics[fontSize];
 }
 
-export function centerElem(elem: JQuery<HTMLElement>, axis: string) {
-  const parent = elem.parent();
-  const horizPadding =
-    getcssint(elem, "padding-left") +
-    getcssint(elem, "padding-right") +
-    getcssint(elem, "margin-left") +
-    getcssint(elem, "margin-right") +
-    getcssint(parent, "border-left") +
-    getcssint(parent, "border-right");
-  const vertPadding =
-    getcssint(elem, "padding-top") +
-    getcssint(elem, "padding-bottom") +
-    getcssint(elem, "margin-top") +
-    getcssint(elem, "margin-bottom") +
-    getcssint(parent, "border-top") +
-    getcssint(parent, "border-bottom");
-  const finalHeight: number = (parent.height() as number) - vertPadding;
-  const finalWidth: number = (parent.width() as number) - horizPadding;
-  if (axis == "x") {
-    elem.css("left", (finalWidth - (elem.width() as number)) / 2);
-  } else if (axis == "y") {
-    elem.css("top", (finalHeight - (elem.height() as number)) / 2);
-  } else {
-    elem.css("left", (finalWidth - (elem.width() as number)) / 2);
-    elem.css("top", (finalHeight - (elem.height() as number)) / 2);
-  }
-}
-
-export function fillChildComponent(elem: JQuery<HTMLElement>) {
-  const parent = elem.parent();
-  const horizPadding =
-    getcssint(elem, "padding-left") +
-    getcssint(elem, "padding-right") +
-    getcssint(elem, "margin-left") +
-    getcssint(elem, "margin-right") +
-    getcssint(parent, "border-left") +
-    getcssint(parent, "border-right");
-  const vertPadding =
-    getcssint(elem, "padding-top") +
-    getcssint(elem, "padding-bottom") +
-    getcssint(elem, "margin-top") +
-    getcssint(elem, "margin-bottom") +
-    getcssint(parent, "border-top") +
-    getcssint(parent, "border-bottom");
-  const finalHeight = (parent.height() as number) - vertPadding;
-  const finalWidth = (parent.width() as number) - horizPadding;
-  elem.height(finalHeight);
-  elem.width(finalWidth);
-}
-
-export function forEachChild(
-  elem: Element,
-  visitor: (child: Element, index: Int) => Undefined<boolean>
-) {
+export function forEachChild(elem: Element, visitor: (child: Element, index: Int) => Undefined<boolean>) {
   const children = elem.children;
   const L = children.length;
   for (let i = 0; i < L; i++) {
@@ -88,10 +31,7 @@ export function forEachChild(
   }
 }
 
-export function forEachNode(
-  elem: Element,
-  visitor: (child: ChildNode, index: Int) => Undefined<boolean>
-) {
+export function forEachNode(elem: Element, visitor: (child: ChildNode, index: Int) => Undefined<boolean>) {
   const children = elem.childNodes;
   const L = children.length;
   for (let i = 0; i < L; i++) {
@@ -100,10 +40,7 @@ export function forEachNode(
   }
 }
 
-export function forEachAttribute(
-  elem: Element,
-  visitor: (name: string, value: any) => Undefined<boolean>
-) {
+export function forEachAttribute(elem: Element, visitor: (name: string, value: any) => Undefined<boolean>) {
   const nodeNameMap = elem.attributes;
   for (let i = 0; i < nodeNameMap.length; i++) {
     const attrib = nodeNameMap[i];
@@ -154,19 +91,11 @@ export function setAttr(elem: Element, name: string, value: any) {
   return elem.setAttribute(name, value);
 }
 
-export function getAttrOrStyle(
-  elem: Element,
-  attribName: string,
-  cssStyles: any,
-  styleName: string
-) {
+export function getAttrOrStyle(elem: Element, attribName: string, cssStyles: any, styleName: string) {
   return elem.getAttribute(attribName) || cssStyles[styleName];
 }
 
-export function createSVGNode<T extends SVGGraphicsElement>(
-  nodename: string,
-  config: any
-): any {
+export function createSVGNode<T extends SVGGraphicsElement>(nodename: string, config: any): any {
   config = config || {};
   config.ns = "http://www.w3.org/2000/svg";
   return createNode(nodename, config) as T;
@@ -226,10 +155,7 @@ export function setCSS(elem: Element, attr: string, value: any): void {
   (elem as any).style[attr] = value;
 }
 
-export function ensureElement(
-  elemOrId: Element | string,
-  root: any = null
-): Element {
+export function ensureElement(elemOrId: Element | string, root: any = null): Element {
   if (typeof elemOrId === "string") {
     if (root == null) root = document;
     return root.querySelector(elemOrId);
@@ -251,5 +177,59 @@ export function setVisible(elem: Element, show = true): Element {
     elem.hide();
   }
   return elem;
+}
+
+export function getcssint(elem: JQuery<HTMLElement>, attrib: string): Int {
+  return parseInt(elem.css(attrib).replace(/px/, ""));
+}
+
+export function centerElem(elem: JQuery<HTMLElement>, axis: string) {
+  const parent = elem.parent();
+  const horizPadding =
+    getcssint(elem, "padding-left") +
+    getcssint(elem, "padding-right") +
+    getcssint(elem, "margin-left") +
+    getcssint(elem, "margin-right") +
+    getcssint(parent, "border-left") +
+    getcssint(parent, "border-right");
+  const vertPadding =
+    getcssint(elem, "padding-top") +
+    getcssint(elem, "padding-bottom") +
+    getcssint(elem, "margin-top") +
+    getcssint(elem, "margin-bottom") +
+    getcssint(parent, "border-top") +
+    getcssint(parent, "border-bottom");
+  const finalHeight: number = (parent.height() as number) - vertPadding;
+  const finalWidth: number = (parent.width() as number) - horizPadding;
+  if (axis == "x") {
+    elem.css("left", (finalWidth - (elem.width() as number)) / 2);
+  } else if (axis == "y") {
+    elem.css("top", (finalHeight - (elem.height() as number)) / 2);
+  } else {
+    elem.css("left", (finalWidth - (elem.width() as number)) / 2);
+    elem.css("top", (finalHeight - (elem.height() as number)) / 2);
+  }
+}
+
+export function fillChildComponent(elem: JQuery<HTMLElement>) {
+  const parent = elem.parent();
+  const horizPadding =
+    getcssint(elem, "padding-left") +
+    getcssint(elem, "padding-right") +
+    getcssint(elem, "margin-left") +
+    getcssint(elem, "margin-right") +
+    getcssint(parent, "border-left") +
+    getcssint(parent, "border-right");
+  const vertPadding =
+    getcssint(elem, "padding-top") +
+    getcssint(elem, "padding-bottom") +
+    getcssint(elem, "margin-top") +
+    getcssint(elem, "margin-bottom") +
+    getcssint(parent, "border-top") +
+    getcssint(parent, "border-bottom");
+  const finalHeight = (parent.height() as number) - vertPadding;
+  const finalWidth = (parent.width() as number) - horizPadding;
+  elem.height(finalHeight);
+  elem.width(finalWidth);
 }
 */
