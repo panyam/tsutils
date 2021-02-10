@@ -1,4 +1,4 @@
-import { Datastore as BaseDatastore } from "../base/datastore";
+import { Datastore as BaseDatastore } from "../dal/datastore";
 import { Nullable } from "../types";
 import { User, Channel, AuthFlow } from "./models";
 

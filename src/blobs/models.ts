@@ -1,4 +1,4 @@
-import { BaseEntity } from "../base/models";
+import { BaseEntity } from "../dal/models";
 
 export class Blob extends BaseEntity {
   // A unique ID for this blob.  This

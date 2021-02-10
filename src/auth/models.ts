@@ -1,5 +1,5 @@
 import { Timestamp, Nullable } from "../types";
-import { BaseEntity } from "../base/models";
+import { BaseEntity } from "../dal/models";
 
 export class CallbackRequest {
   hostname: string;
