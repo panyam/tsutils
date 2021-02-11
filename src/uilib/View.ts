@@ -12,12 +12,11 @@ export interface ViewParams {
   childViewLoader?: ChildViewLoader;
 }
 
-export class View {
+export class View extends EventHub {
   private static idCounter = 0;
   readonly viewId: string;
   readonly rootElement: Element;
   readonly config: ViewParams;
-  readonly eventHub: EventHub;
 
   // View in which this view can be found.
   parentView: Nullable<View>;
@@ -54,11 +53,11 @@ export class View {
   private resizeObserver: any;
 
   constructor(rootElement: Element, config?: ViewParams) {
+    super();
     // Save and Validate rootElement before doing anything else
     this.rootElement = rootElement;
     this.isSVG = this.rootElement.namespaceURI == "http://www.w3.org/2000/svg";
     this.originalRootHTML = this.rootElement.innerHTML;
-    this.eventHub = new EventHub();
     if (getAttr(this.rootElement, "viewId")) {
       throw new Error("Root element already assigned to a view");
     }
