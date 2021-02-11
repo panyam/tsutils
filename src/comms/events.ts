@@ -1,19 +1,87 @@
-import { Nullable, Timestamp, Undefined } from "./types";
+import { Nullable, Timestamp, Undefined } from "../types";
 
 /**
  * Super class of all Events.
  */
 export class TEvent {
-  readonly name: string;
-  readonly source: any;
-  readonly timeStamp: Timestamp = performance.now();
-  data?: any;
-  suppressed = false;
+  // Globally unique ID for all events.
+  private static counter = 0;
+  readonly uuid = TEvent.counter++;
 
-  constructor(name: string, source: any, data?: any) {
+  /**
+   * The event this event was spawned from (if any).
+   */
+  private _spawnedFrom: Nullable<this> = null;
+
+  /**
+   * Name of the event.
+   */
+  readonly name: string;
+
+  /**
+   * Source from which this event is originating.
+   */
+  readonly source: any;
+
+  /**
+   * Source state that is set by the source of the event only
+   * *it* can use.
+   */
+  sourceState: any = null;
+
+  /**
+   * Event specific payload.
+   */
+  payload: any;
+
+  /**
+   * Whether the event was cancelled.
+   */
+  cancelled = false;
+
+  /**
+   * Timestamp of the event - optional.
+   */
+  timeStamp: Timestamp = -1;
+
+  /**
+   * All child events that were spawned from this Event.
+   * The parent/spawnedFrom and child event references help us
+   * form a call tree/trace of a events as it traverses
+   * the system.
+   */
+  children: TEvent[] = [];
+
+  constructor(name: string, source: any, payload?: any) {
     this.name = name;
     this.source = source;
-    this.data = data;
+    this.payload = payload;
+  }
+
+  get spawnedFrom(): Nullable<this> {
+    return this._spawnedFrom;
+  }
+
+  protected setSpawnedFrom(msg: Nullable<this>): void {
+    this._spawnedFrom = msg;
+    if (msg == null) this._rootEvent = this;
+    else this._rootEvent = msg.rootEvent;
+  }
+
+  spawn(name: string, source: any, payload?: any): TEvent {
+    const child = new TEvent(name, source, payload);
+    child.setSpawnedFrom(this);
+    this.children.push(child);
+    return child;
+  }
+
+  /**
+   * The first/root message in the forward chain.
+   */
+  private _rootEvent: this;
+
+  get rootEvent(): this {
+    return this._rootEvent as this;
   }
 }
 

@@ -2,7 +2,7 @@ import { getAttr, setAttr, createNode } from "../utils/dom";
 import { MAX_INT, Nullable, StringMap } from "../types";
 import { LayoutManager } from "./Layouts";
 import { Rect, Size, Insets } from "./core";
-import { EventHub } from "../events";
+import { EventHub } from "../comms/events";
 
 declare const ResizeObserver: any;
 
