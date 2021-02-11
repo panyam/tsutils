@@ -1,6 +1,9 @@
-import { View as View } from "./View";
 import { Size } from "./core";
 import { MAX_INT, Nullable } from "../types";
+
+interface View {
+  parentView: Nullable<View>;
+}
 
 /**
  * An implementation of the java style Layout managers

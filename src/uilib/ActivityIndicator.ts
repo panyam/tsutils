@@ -1,5 +1,5 @@
 import { setCSS } from "../utils/dom";
-import { EntityView, ViewParams } from "./EntityView";
+import { View, ViewParams } from "./View";
 
 interface AIViewParams extends ViewParams {
   zIndex?: number;
@@ -8,22 +8,23 @@ interface AIViewParams extends ViewParams {
   modalId?: string;
 }
 
-export class ActivityIndicator extends EntityView {
+export class ActivityIndicator extends View {
   bgColor: any;
   imageUrl: string;
   zIndex: number;
   modalId: string;
 
-  constructor(config?: AIViewParams) {
-    super(null, (config = config || {}));
+  processConfigs(config?: any): any {
+    config = super.processConfigs(config);
     this.zIndex = config.zIndex || 500;
     this.bgColor = config.bgColor || "rgba(10, 10, 10, .6)";
     this.imageUrl = config.imageUrl || "http://i.stack.imgur.com/FhHRx.gif";
     this.modalId = config.modalId || "modal";
+    return config;
   }
 
-  setupChildViews(): void {
-    super.setupChildViews();
+  loadChildViews(): void {
+    super.loadChildViews();
     setCSS(this.rootElement, "position", "absolute");
     setCSS(this.rootElement, "z-index", this.zIndex);
     setCSS(this.rootElement, "left", "0px");

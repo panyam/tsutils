@@ -7,7 +7,6 @@
     "allowJs": false,
     "declaration": true,
     "downlevelIteration": true,
-    "downlevelIteration": true,
     "emitDecoratorMetadata": true,
     "esModuleInterop": true,
     "experimentalDecorators": true,

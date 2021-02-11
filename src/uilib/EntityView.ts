@@ -57,4 +57,8 @@ export class EntityView<EntityType = any> extends View {
   protected isEntityValid(_entity: Nullable<EntityType>): boolean {
     return true;
   }
+
+  refreshViews(): void {
+    // TODO
+  }
 }

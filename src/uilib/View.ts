@@ -2,7 +2,7 @@ import { getAttr, setAttr, createNode } from "../utils/dom";
 import { MAX_INT, Nullable, StringMap } from "../types";
 import { LayoutManager } from "./Layouts";
 import { Rect, Size, Insets } from "./core";
-import { Event, EventHub } from "../events";
+import { EventHub } from "../events";
 
 declare const ResizeObserver: any;
 
@@ -120,10 +120,6 @@ export class View {
 
   findAll(target: string): NodeList {
     return this.rootElement.querySelectorAll(target);
-  }
-
-  refreshViews(): void {
-    // TODO
   }
 
   /**

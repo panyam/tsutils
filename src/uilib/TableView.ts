@@ -29,8 +29,8 @@ export abstract class TableView<EntityType, EntityViewType extends EntityView<En
     `;
   }
 
-  createChildElements(): void {
-    super.createChildElements();
+  loadChildViews(): void {
+    super.loadChildViews();
     this.listViewHeaderDiv = this.find(".listViewHeader") as HTMLDivElement;
     this.listViewBodyDiv = this.find(".listViewBody") as HTMLDivElement;
     this.listViewTableDiv = this.find(".listViewTable") as HTMLDivElement;
@@ -43,7 +43,7 @@ export abstract class TableView<EntityType, EntityViewType extends EntityView<En
     entity = entity || [];
     this.entityViews = [];
     entity.forEach((entity) => {
-      const newRow = createNode("div", { doc: this.doc });
+      const newRow = createNode("div", { doc: this.rootElement.ownerDocument });
       newRow.classList.add("listViewRow");
       this.listViewBodyDiv.append(newRow);
       const entityView = this.addViewForEntity(newRow);
