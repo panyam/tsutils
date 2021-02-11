@@ -1,38 +1,24 @@
-import { Int, Nullable, Timestamp, Undefined } from "./types";
-
-export type EventName = string;
-export type EventCallback = (event: Event) => Undefined<boolean>;
+import { Nullable, Timestamp, Undefined } from "./types";
 
 /**
  * Super class of all Events.
  */
-export class Event<T = any> {
-  readonly name: EventName;
+export class TEvent<T = any> {
+  readonly name: string;
   readonly source: any;
   readonly timeStamp: Timestamp = performance.now();
   data?: T;
-  private _suppressed = false;
+  suppressed = false;
 
-  constructor(name: EventName, source: any, data?: T) {
+  constructor(name: string, source: any, data?: T) {
     this.name = name;
     this.source = source;
     this.data = data;
   }
+}
 
-  /**
-   * Suppresses this event.
-   */
-  suppress(): void {
-    this._suppressed = true;
-  }
-
-  /**
-   * Returns if the event was suppressed or not.
-   * @returns {Bool}
-   */
-  get wasSuppressed(): boolean {
-    return this._suppressed;
-  }
+export function newEvent<T = any>(name: string, source: any, data?: T): TEvent<T> {
+  return new TEvent(name, source, data);
 }
 
 export class State {
@@ -48,13 +34,15 @@ export class State {
     this.stateData = data;
   }
 
-  handle(event: Event): void {
+  handle(event: TEvent): void {
     // todo
   }
 }
 
+export type EventCallback = (event: TEvent) => Undefined<boolean>;
+
 export class EventHub {
-  private _onCallbacks: { [key: string]: Array<EventCallback> } = {};
+  private _handlers: { [key: string]: Array<EventCallback> } = {};
   private _muted = false;
 
   get isMuted(): boolean {
@@ -69,15 +57,15 @@ export class EventHub {
     this._muted = false;
   }
 
-  on(names: Array<EventName> | string, callback: EventCallback): this {
-    return this._addHandler(names, this._onCallbacks, callback);
+  on(names: Array<string> | string, callback: EventCallback): this {
+    return this._addHandler(names, this._handlers, callback);
   }
 
-  removeOn(names: Array<EventName> | string, callback: EventCallback): this {
-    return this._removeHandler(names, this._onCallbacks, callback);
+  removeOn(names: Array<string> | string, callback: EventCallback): this {
+    return this._removeHandler(names, this._handlers, callback);
   }
 
-  _ensureEventNames(names: Array<EventName> | string): string[] {
+  _ensurestrings(names: Array<string> | string): string[] {
     if (typeof names === "string") {
       names = (names as string).split(",");
     }
@@ -86,16 +74,16 @@ export class EventHub {
     });
   }
 
-  _addHandler<T>(names: Array<EventName> | string, handlerlist: { [key: string]: Array<T> }, handler: T): this {
-    this._ensureEventNames(names).forEach(function (name) {
+  _addHandler<T>(names: Array<string> | string, handlerlist: { [key: string]: Array<T> }, handler: T): this {
+    this._ensurestrings(names).forEach(function (name) {
       handlerlist[name] = handlerlist[name] || [];
       handlerlist[name].push(handler);
     });
     return this;
   }
 
-  _removeHandler<T>(names: Array<EventName> | string, handlerlist: { [key: string]: Array<T> }, handler: T): this {
-    this._ensureEventNames(names).forEach(function (name) {
+  _removeHandler<T>(names: Array<string> | string, handlerlist: { [key: string]: Array<T> }, handler: T): this {
+    this._ensurestrings(names).forEach(function (name) {
       const evHandlers = handlerlist[name] || [];
       for (let i = 0; i < evHandlers.length; i++) {
         if (evHandlers[i] == handler) {
@@ -107,14 +95,14 @@ export class EventHub {
     return this;
   }
 
-  dispatch(event: Event): boolean {
-    if (this._dispatch(event, this._onCallbacks) == false) {
+  dispatch(event: TEvent): boolean {
+    if (this._dispatch(event, this._handlers) == false) {
       return false;
     }
     return true;
   }
 
-  _dispatch(event: Event, callbacks: { [key: string]: Array<EventCallback> }): boolean {
+  _dispatch(event: TEvent, callbacks: { [key: string]: Array<EventCallback> }): boolean {
     const evtCallbacks = callbacks[event.name] || [];
     for (const callback of evtCallbacks) {
       if (callback(event) == false) {
@@ -204,7 +192,7 @@ export class StateMachine {
    * @param {EventSource} source  The source generating the event.
    * @param {Object} data    The event specific data.
    */
-  handle(event: Event): void {
+  handle(event: TEvent): void {
     if (this._currentState == null) return;
 
     const nextState: any = this._currentState.handle(event);
