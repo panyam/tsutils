@@ -3,22 +3,18 @@ import { Nullable, Timestamp, Undefined } from "./types";
 /**
  * Super class of all Events.
  */
-export class TEvent<T = any> {
+export class TEvent {
   readonly name: string;
   readonly source: any;
   readonly timeStamp: Timestamp = performance.now();
-  data?: T;
+  data?: any;
   suppressed = false;
 
-  constructor(name: string, source: any, data?: T) {
+  constructor(name: string, source: any, data?: any) {
     this.name = name;
     this.source = source;
     this.data = data;
   }
-}
-
-export function newEvent<T = any>(name: string, source: any, data?: T): TEvent<T> {
-  return new TEvent(name, source, data);
 }
 
 export class State {
