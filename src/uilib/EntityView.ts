@@ -2,22 +2,15 @@ import { getAttr, setAttr, createNode } from "../utils/dom";
 import { MAX_INT, Nullable } from "../types";
 import { LayoutManager } from "./Layouts";
 import { Rect, Size, Insets } from "./core";
-import { View } from "./View";
+import { View, ViewParams } from "./View";
 
 declare const ResizeObserver: any;
-
-// export type ViewParams = any;
-export interface ViewParams {
-  parent?: Nullable<Element>;
-  rootElement?: Nullable<Element>;
-  document?: Document;
-}
 
 export class EntityView<EntityType = any> extends View {
   protected _entity: Nullable<EntityType>;
 
-  constructor(entity: Nullable<EntityType> = null, config?: ViewParams) {
-    super((config = config || {}));
+  constructor(rootElement: Element, entity: Nullable<EntityType> = null, config?: ViewParams) {
+    super(rootElement, config);
     this._entity = entity;
   }
 
@@ -25,8 +18,8 @@ export class EntityView<EntityType = any> extends View {
    * After child elements are created this is an opportunity to
    * add additional bindings for them.
    */
-  protected setupChildViews(): void {
-    super.setupChildViews();
+  protected loadChildViews(): void {
+    super.loadChildViews();
     this.updateViewsFromEntity();
   }
 

@@ -19,7 +19,7 @@ export abstract class TableView<EntityType, EntityViewType extends EntityView<En
     return "0px";
   }
 
-  childHtml(): string {
+  childHtml(): Nullable<string> {
     return `
       <div class = "listViewHeader" style = "height: ${this.headerHeight}"> </div>
       <div class = "listViewBody" style = "top: ${this.headerHeight}; bottom: ${this.footerHeight}">

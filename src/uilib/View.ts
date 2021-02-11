@@ -1,30 +1,34 @@
 import { getAttr, setAttr, createNode } from "../utils/dom";
-import { MAX_INT, Nullable } from "../types";
+import { MAX_INT, Nullable, StringMap } from "../types";
 import { LayoutManager } from "./Layouts";
 import { Rect, Size, Insets } from "./core";
+import { Event, EventHub } from "../events";
 
 declare const ResizeObserver: any;
 
-// export type ViewParams = any;
+export type ChildViewLoader = (view: View) => void;
+
 export interface ViewParams {
-  parent?: Nullable<Element>;
-  rootElement?: Nullable<Element>;
-  document?: Document;
+  childViewLoader?: ChildViewLoader;
 }
 
 export class View {
   private static idCounter = 0;
-  private static counter = 0;
-  readonly uuid: string = "" + View.counter++;
+  readonly viewId: string;
   readonly rootElement: Element;
   readonly config: ViewParams;
+  readonly eventHub: EventHub;
 
   // View in which this view can be found.
   parentView: Nullable<View>;
 
   // Child views of this View
-  protected childViews: View[] = [];
+  protected childViews: View[];
 
+  // Bindings of views by key to a child (or descendant view)
+  protected viewBindings: StringMap<View>;
+
+  // Denotes if our root element is an svg element or not
   readonly isSVG: boolean;
 
   /**
@@ -40,35 +44,42 @@ export class View {
    */
   protected _layoutManager: Nullable<LayoutManager> = null;
 
-  constructor(config?: ViewParams) {
-    this.config = config = config || {};
-    this.originalRootHTML = "";
-    if (this.config.rootElement) {
-      this.rootElement = this.config.rootElement;
-      this.originalRootHTML = this.rootElement.innerHTML;
-    } else if (config.parent) {
-      const doc = config.document || document;
-      this.rootElement = this.createRootElement(doc);
-      config.parent.appendChild(this.rootElement);
-      // Also give it an auto generated ID if an id was not provided
-      if (!getAttr(this.rootElement, "id")) {
-        setAttr(this.rootElement, "id", `${this.rootElement.tagName}${View.idCounter++}`);
-      }
-    } else {
-      throw new Error("Either 'rootElement' or a 'parent' param must be provided.");
-    }
+  /**
+   * Will be true once position = absolute has been set for our styles.
+   */
+  protected isPositionAbsolute = false;
+
+  protected childViewLoader: ChildViewLoader;
+
+  private resizeObserver: any;
+
+  constructor(rootElement: Element, config?: ViewParams) {
+    // Save and Validate rootElement before doing anything else
+    this.rootElement = rootElement;
     this.isSVG = this.rootElement.namespaceURI == "http://www.w3.org/2000/svg";
-    this.processConfigs(config);
-    this.createChildElements();
-    this.setupChildViews();
+    this.originalRootHTML = this.rootElement.innerHTML;
+    this.eventHub = new EventHub();
+    if (getAttr(this.rootElement, "viewId")) {
+      throw new Error("Root element already assigned to a view");
+    }
+    this.viewId = "" + View.idCounter++;
+    setAttr(this.rootElement, "viewId", `${this.rootElement.tagName}${this.viewId}`);
+    this.childViews = [];
+    this.config = this.processConfigs((config = config || {}));
+    this.childViewLoader = config.childViewLoader || View.defaultChildViewLoader;
+
+    // This will ensure children are loaded correctly and we can even intercept them as necessary
+    // via config hooks - childViewLoader
+    this.loadChildViews();
+
     // this.updateViewsFromEntity(null);
-    this.layoutChildViews();
+    // this.layoutChildViews();
 
     // TODO - should this be here or toggled from else where?
-    const resizeObserver = new ResizeObserver(() => {
+    this.resizeObserver = new ResizeObserver(() => {
       this.layoutChildViews();
     });
-    resizeObserver.observe(this.rootElement);
+    this.resizeObserver.observe(this.rootElement);
   }
 
   get layoutManager(): Nullable<LayoutManager> {
@@ -79,26 +90,11 @@ export class View {
     this._layoutManager = layoutMgr;
   }
 
-  /**
-   * Tag name of the root node element for default Element creations.
-   */
-  get rootNodeName(): string {
-    return "div";
-  }
-
   // An option for child classes to extract any other info
   // from the configs while within the constructor before
   // any layouts are created etc.
-  protected processConfigs(config: any): void {
-    //
-  }
-
-  /**
-   * Instantiates the root node for this view without attaching to
-   * a parent.
-   */
-  protected createRootElement(doc: Document): Element {
-    return createNode(this.rootNodeName, { doc: doc });
+  protected processConfigs(config: any): any {
+    return config;
   }
 
   /**
@@ -107,17 +103,8 @@ export class View {
    * while also performing any necessary bindings with the provided
    * entity.  This method is only called once during construction.
    */
-  protected createChildElements(): void {
-    const html = this.childHtml();
-    this.rootElement.innerHTML = html;
-  }
-
-  /**
-   * After child elements are created this is an opportunity to
-   * add additional bindings for them.
-   */
-  protected setupChildViews(): void {
-    // implement this
+  protected loadChildViews(): void {
+    this.childViewLoader(this);
   }
 
   /**
@@ -141,13 +128,11 @@ export class View {
 
   /**
    * A short hand way of returning the html of the child views
+   * Returning null ensures that children are *not* replaced.
+   * Useful for wrapping a html view as is.
    */
-  childHtml(): string {
-    return "";
-  }
-
-  get doc(): Document {
-    return this.rootElement.ownerDocument;
+  childHtml(): Nullable<string> {
+    return null;
   }
 
   get childViewCount(): number {
@@ -444,18 +429,28 @@ export class View {
   }
 
   protected setBoundsImpl(x: number, y: number, width: number, height: number): void {
-    // if (this.rootElement.tagName == "svg") {
     if (this.isSVG) {
       this.rootElement.setAttribute("x", "" + x);
       this.rootElement.setAttribute("y", "" + y);
       this.rootElement.setAttribute("width", "" + width);
       this.rootElement.setAttribute("height", "" + height);
     } else {
-      this.rootElement.setAttribute("left", x + "px");
-      this.rootElement.setAttribute("top", y + "px");
-      this.rootElement.setAttribute("width", width + "px");
-      this.rootElement.setAttribute("height", height + "px");
-      // throw new Error("Not Implemented");
+      if (!this.isPositionAbsolute) {
+        (this.rootElement as HTMLElement).style.position = "absolute";
+        this.isPositionAbsolute = true;
+      }
+      const elem = this.rootElement as HTMLElement;
+      elem.style.left = x + "px";
+      elem.style.top = y + "px";
+      elem.style.width = width + "px";
+      elem.style.height = height + "px";
     }
   }
+
+  protected static defaultChildViewLoader: ChildViewLoader = (view: View) => {
+    const html = view.childHtml();
+    if (html != null) {
+      view.rootElement.innerHTML = html;
+    }
+  };
 }

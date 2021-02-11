@@ -3,6 +3,7 @@ import { ScrollGroup } from "./Scrolling";
 import { StringMap } from "../types";
 import { collectStream, streamDict, mapStream } from "../utils/streams";
 
+// Here most of it is styling.
 export class CodeEditor extends View {
   private _scrollGroup: ScrollGroup;
   textarea: HTMLTextAreaElement;
@@ -10,6 +11,9 @@ export class CodeEditor extends View {
   lineCount = 0;
 
   get scrollGroup(): ScrollGroup {
+    if (!this._scrollGroup) {
+      this._scrollGroup = new ScrollGroup();
+    }
     return this._scrollGroup;
   }
 
@@ -91,14 +95,11 @@ export class CodeEditor extends View {
     `;
   }
 
-  setupChildViews(): void {
-    super.setupChildViews();
-    if (!this._scrollGroup) {
-      this._scrollGroup = new ScrollGroup();
-    }
-    this._scrollGroup.clear();
-    this.textarea = this.find(".codeEditor") as HTMLTextAreaElement;
+  loadChildViews(): void {
+    super.loadChildViews();
+    this.scrollGroup.clear();
     this.lineNumbersDiv = this.find(".lineNumbers") as HTMLDivElement;
+    this.textarea = this.find(".codeEditor") as HTMLTextAreaElement;
     this.textarea.addEventListener("keydown", (e) => this.onKeyEvent(e));
     this.textarea.addEventListener("cut", (e) => this.onClipboardEvent(e));
     this.textarea.addEventListener("paste", (e) => this.onClipboardEvent(e));

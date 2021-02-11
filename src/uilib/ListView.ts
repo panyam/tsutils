@@ -2,28 +2,13 @@ import { EntityView } from "./EntityView";
 import { StringMap, Nullable } from "../types";
 
 export abstract class ListView<ListEntityType, EntityType = ListEntityType[]> extends EntityView<EntityType> {
-  containerView: Element;
-
   get entities(): ListEntityType[] {
     return (this.entity || []) as ListEntityType[];
   }
 
-  protected createChildElements(): void {
-    super.createChildElements();
-    this.containerView = this.ensureContainerView();
-  }
-
-  /**
-   * Ensures we have a container element to add all our list elements.
-   * After this method is called containerView property MUST be non null;
-   */
-  ensureContainerView(): Element {
-    return this.rootElement;
-  }
-
   updateViewsFromEntity(previous: Nullable<EntityType>): void {
     super.updateViewsFromEntity(previous);
-    this.containerView.innerHTML = "";
+    this.rootElement.innerHTML = "";
     this.childViews = [];
     const entities = this.entities;
     for (let i = 0; i < entities.length; i++) {
@@ -32,7 +17,7 @@ export abstract class ListView<ListEntityType, EntityType = ListEntityType[]> ex
       if (i < this.childViewCount) {
         childView = this.childViews[i] as EntityView<ListEntityType>;
       } else {
-        childView = this.ensureChildView(i, child, this.containerView);
+        childView = this.ensureChildView(i, child, this.rootElement);
         this.addView(childView);
       }
       // set the entity here to refresh
