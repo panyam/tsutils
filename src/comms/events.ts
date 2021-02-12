@@ -159,7 +159,7 @@ export class EventHub {
     return this;
   }
 
-  dispatch(event: TEvent): boolean {
+  dispatchEvent(event: TEvent): boolean {
     if (this._dispatch(event, this._handlers) == false) {
       return false;
     }
