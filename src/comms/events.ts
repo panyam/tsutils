@@ -103,7 +103,7 @@ export class State {
   }
 }
 
-export type EventCallback = (event: TEvent) => Undefined<boolean>;
+export type EventCallback = (event: TEvent) => void;
 
 export class EventHub {
   private _handlers: { [key: string]: Array<EventCallback> } = {};
@@ -160,18 +160,10 @@ export class EventHub {
   }
 
   dispatchEvent(event: TEvent): boolean {
-    if (this._dispatch(event, this._handlers) == false) {
-      return false;
-    }
-    return true;
-  }
-
-  _dispatch(event: TEvent, callbacks: { [key: string]: Array<EventCallback> }): boolean {
-    const evtCallbacks = callbacks[event.name] || [];
+    const evtCallbacks = this._handlers[event.name] || [];
     for (const callback of evtCallbacks) {
-      if (callback(event) == false) {
-        return false;
-      }
+      callback(event);
+      if (event.cancelled) return false;
     }
     return true;
   }
@@ -235,7 +227,8 @@ export class StateMachine {
   /**
    * Register a new state in the state machine.
    *
-   * @param {State} state  State being registered.  If another State with the same name exists, then a {DuplicateError} is thrown.
+   * @param {State} state  State being registered.  If another State with
+   * the same name exists, then a {DuplicateError} is thrown.
    * @param {Bool} isRoot  Whether the new state is a root state.
    */
   registerState(state: State, isRoot = false): void {

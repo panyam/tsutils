@@ -6,15 +6,6 @@ import { assert } from "../utils/misc";
  * belong in a system.
  */
 export abstract class Actor {
-  // Globally unique ID for all entities.
-  private static counter: Int = 0;
-  readonly uuid: number = Actor.counter++;
-  readonly name: string;
-
-  constructor(name: string) {
-    this.name = name;
-  }
-
   processMessage(msg: Message): void {
     assert(msg.target == this, "Cannot handle messages whose target is not this.");
     if (msg.isReply) {
@@ -32,12 +23,16 @@ export abstract class Actor {
   /**
    * Called to handle a Send message to this actor.
    */
-  abstract processSend(send: Send): void;
+  processSend(send: Send): void {
+    // Drop it
+  }
 
   /**
    * Called to handle a Reply message to this actor.
    */
-  abstract processReply(_reply: Reply): void;
+  processReply(_reply: Reply): void {
+    // Drop it
+  }
 
   /*
   replyToSend(send: Send, error?: any): Reply {
