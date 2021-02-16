@@ -28,8 +28,8 @@ export class Resource extends BaseEntity {
 
   constructor(config?: any) {
     super((config = config || {}));
-    this.id = config.id || "";
-    this.userId = config.userId || "";
+    this.id = "" + (config.id || "");
+    this.userId = "" + (config.userId || "");
     this.visibleTo = config.visibleTo || [];
     this.visibility = config.visibility || "private";
   }
