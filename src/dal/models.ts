@@ -34,6 +34,11 @@ export class Resource extends BaseEntity {
     this.visibility = config.visibility || "private";
   }
 
+  // TODO - move this to schema and/or decorators
+  get version(): number {
+    return 0;
+  }
+
   // And others things here
   get hasKey(): boolean {
     return this.id.trim().length > 0;
