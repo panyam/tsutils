@@ -82,6 +82,66 @@ export enum BorderLayoutConstraint {
   LINE_END = AFTER_LINE_ENDS,
 }
 
+export class BorderLayoutParams {
+  /**
+   * The layout manager allows a seperation of
+   * components with gaps.  The horizontal gap will
+   * specify the space between components and between
+   * the components and the borders of the
+   * <code>Container</code>.
+   */
+  readonly hgap: number;
+
+  /**
+   * The layout manager allows a seperation of
+   * components with gaps.  The vertical gap will
+   * specify the space between rows and between the
+   * the rows and the borders of the <code>Container</code>.
+   */
+  readonly vgap: number;
+
+  /**
+   * Whether to layout left to right or right to left.
+   */
+  readonly leftToRight: boolean;
+
+  /**
+   * Returns the alignment along the x axis.  This specifies how
+   * the component would like to be aligned relative to other
+   * components.  The value should be a number between 0 and 1
+   * where 0 represents alignment along the origin, 1 is aligned
+   * the furthest away from the origin, 0.5 is centered, etc.
+   */
+  layoutAlignmentX = 0.5;
+
+  /**
+   * Returns the alignment along the y axis.  This specifies how
+   * the component would like to be aligned relative to other
+   * components.  The value should be a number between 0 and 1
+   * where 0 represents alignment along the origin, 1 is aligned
+   * the furthest away from the origin, 0.5 is centered, etc.
+   */
+  layoutAlignmentY = 0.5;
+}
+
+/**
+ * Applies border layout on a div where children are marked with borderlayout constraints.
+ * It is expected that a child's preferred layout is known before this method is called.
+ */
+export function applyBorderLayout(parent: HTMLDivElement, params: BorderLayoutParams): void {
+  const children = parent.querySelectorAll("[borderLayoutConstraint]");
+  const northHTMLElement: Nullable<HTMLElement> = null;
+  const eastHTMLElement: Nullable<HTMLElement> = null;
+  const westHTMLElement: Nullable<HTMLElement> = null;
+  const southHTMLElement: Nullable<HTMLElement> = null;
+  const centerHTMLElement: Nullable<HTMLElement> = null;
+
+  const firstLine: Nullable<HTMLElement> = null;
+  const lastLine: Nullable<HTMLElement> = null;
+  const firstItem: Nullable<HTMLElement> = null;
+  const lastItem: Nullable<HTMLElement> = null;
+}
+
 export class BorderLayout extends DefaultLayoutManager {
   protected northView: Nullable<View> = null;
   protected eastView: Nullable<View> = null;
@@ -231,10 +291,6 @@ export class BorderLayout extends DefaultLayoutManager {
       dim.height += d.height + this.vgap;
     }
 
-    const insets = parentView.insets;
-    dim.width += insets.left + insets.right;
-    dim.height += insets.top + insets.bottom;
-
     return dim;
   }
 
@@ -273,10 +329,6 @@ export class BorderLayout extends DefaultLayoutManager {
       dim.height += d.height + this.vgap;
     }
 
-    const insets = parentView.insets;
-    dim.width += insets.left + insets.right;
-    dim.height += insets.top + insets.bottom;
-
     return dim;
   }
 
@@ -284,11 +336,10 @@ export class BorderLayout extends DefaultLayoutManager {
    * Lays out the view and all its children.
    */
   layoutChildViews(parentView: View): void {
-    const insets = parentView.insets;
-    let top = insets.top;
-    let bottom = parentView.height - insets.bottom;
-    let left = insets.left;
-    let right = parentView.width - insets.right;
+    let top = 0;
+    let bottom = parentView.height;
+    let left = 0;
+    let right = parentView.width;
 
     const ltr = this.leftToRight;
     let c: Nullable<View> = null;

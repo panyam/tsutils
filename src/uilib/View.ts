@@ -341,16 +341,6 @@ export class View extends EventHub {
     return -1;
   }
 
-  private _insets = new Insets();
-  get insets(): Insets {
-    return this._insets;
-  }
-
-  set insets(insets: Insets) {
-    this._insets = insets;
-    this.invalidateLayout();
-  }
-
   /**
    * Horizontal layout alignment used by layout managers.
    */
@@ -378,19 +368,21 @@ export class View extends EventHub {
   }
 
   get width(): number {
-    const insWidth = this.insets.left + this.insets.right;
     if (this.isSVG) {
-      return (this.rootElement as SVGGraphicsElement).getBBox().width + insWidth;
+      return (this.rootElement as SVGGraphicsElement).getBBox().width;
     } else {
+      const stylemap = window.getComputedStyle(this.rootElement);
+      const insWidth = parseInt(stylemap.marginLeft) | parseInt(stylemap.marginRight);
       return (this.rootElement as HTMLElement).offsetWidth + insWidth;
     }
   }
 
   get height(): number {
-    const insHeight = this.insets.top + this.insets.bottom;
     if (this.isSVG) {
-      return (this.rootElement as SVGGraphicsElement).getBBox().height + insHeight;
+      return (this.rootElement as SVGGraphicsElement).getBBox().height;
     } else {
+      const stylemap = window.getComputedStyle(this.rootElement);
+      const insHeight = parseInt(stylemap.marginTop) | parseInt(stylemap.marginBottom);
       return (this.rootElement as HTMLElement).offsetHeight + insHeight;
     }
   }
