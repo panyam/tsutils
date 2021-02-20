@@ -2,14 +2,26 @@ import { Datastore as BaseDatastore } from "../dal/datastore";
 import { Nullable } from "../types";
 import { User, Channel, AuthFlow } from "./models";
 
-const USER_KIND = "user";
-const CHANNEL_KIND = "channel";
-const AUTH_FLOW_KIND = "authflow";
+const USER_KIND = "User";
+const CHANNEL_KIND = "Channel";
+const AUTH_FLOW_KIND = "AuthFlow";
 
 export class Datastore extends BaseDatastore {
   private static instance: Datastore = new Datastore();
   static getInstance(): Datastore {
     return Datastore.instance;
+  }
+
+  async getUsers(offset = 0, count = 100): Promise<User[]> {
+    let query = this.gcds.createQuery(USER_KIND);
+    query = query.offset(offset);
+    query = query.limit(count);
+    const results = await this.gcds.runQuery(query);
+    if (results && results.length > 0 && results[0].length > 0) {
+      const users = results[0].map(this.toUser);
+      return users;
+    }
+    return [];
   }
 
   async getChannelByKey(key: string): Promise<Nullable<Channel>> {

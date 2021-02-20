@@ -2,7 +2,7 @@ import { Datastore as BaseDatastore } from "../dal/datastore";
 import { Nullable } from "../types";
 import { Blob } from "./models";
 
-const BLOB_KIND = "blobs";
+const BLOB_KIND = "Blobs";
 
 export class Datastore extends BaseDatastore {
   private static instance: Datastore = new Datastore();
