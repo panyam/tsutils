@@ -44,7 +44,7 @@ export abstract class ResourceApi<ResType> {
 
   async update(resId: string, params: any): Promise<ResType> {
     const url = this.urlForUpdate(resId, params);
-    const response = axios.post(url, this.processUpdateParams(params));
+    const response = await axios.put(url, this.processUpdateParams(params));
     return this.processUpdateResponse(response);
   }
 

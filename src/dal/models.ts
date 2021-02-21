@@ -31,7 +31,7 @@ export class Resource extends BaseEntity {
     this.id = "" + (config.id || "");
     this.userId = "" + (config.userId || "");
     this.visibleTo = config.visibleTo || [];
-    this.visibility = config.visibility || "private";
+    this.visibility = (config.visibility || "private").toLowerCase();
   }
 
   // TODO - move this to schema and/or decorators
