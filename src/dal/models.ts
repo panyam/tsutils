@@ -34,6 +34,10 @@ export class Resource extends BaseEntity {
     this.visibility = (config.visibility || "private").toLowerCase();
   }
 
+  isVisibleTo(userId: string): boolean {
+    return this.userId == userId || this.visibility == "public";
+  }
+
   // TODO - move this to schema and/or decorators
   get version(): number {
     return 0;

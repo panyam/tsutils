@@ -19,7 +19,7 @@ export function authRouter(config: any): any {
   });
 
   const router = express.Router();
-  router.use("/login", loginRouter(config));
+  router.use("/login(/)?", loginRouter(config));
 
   // Setup different Auths
   router.use("/github", githubAuthRouter(config, {}));
