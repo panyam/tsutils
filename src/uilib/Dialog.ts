@@ -64,6 +64,9 @@ export class Dialog extends View {
     for (const title of (this.config as any).buttons || []) {
       this.addButton(title);
     }
+    this.closeButton.addEventListener("click", (evt) => {
+      this.close(-1, "Close");
+    });
   }
 
   async open(): Promise<any> {
@@ -87,7 +90,7 @@ export class Dialog extends View {
   close(index = -1, title = ""): boolean {
     if (this.shouldClose != null && !this.shouldClose(index, title)) return false;
     if (this.resolveFunc != null) {
-      this.resolveFunc(index, title);
+      this.resolveFunc([index, title]);
     }
     this.setVisible(false);
     return true;
