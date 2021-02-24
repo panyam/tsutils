@@ -35,6 +35,8 @@ export class Timer {
             this.stepFunc(timestamp);
           } catch (err) {
             console.log("Error from Timer Handler: ", err);
+            alert("Error from Timer Handler: " + err.message);
+            return;
           }
           this.lastRefreshAt = timestamp;
         }
