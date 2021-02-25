@@ -1,11 +1,13 @@
-export class Token {
+import { Nullable } from "../types";
+
+export class Token<TokenType> {
   pos: number;
   line: number;
   col: number;
-  type: any;
+  type: TokenType;
   value?: any;
 
-  constructor(pos: number, line: number, col: number, type: any, value: any = null) {
+  constructor(pos: number, line: number, col: number, type: TokenType, value: any = null) {
     this.pos = pos;
     this.line = line;
     this.col = col;
@@ -35,12 +37,12 @@ export class ParseError extends Error {
   }
 }
 
-export class UnexpectedTokenError extends ParseError {
-  foundToken: Token;
-  expectedTokens: Token[];
+export class UnexpectedTokenError<TokenType> extends ParseError {
+  foundToken: Token<TokenType>;
+  expectedTokens: Token<TokenType>[];
   readonly name: string = "UnexpectedTokenError";
 
-  constructor(foundToken: Token, ...expectedTokens: Token[]) {
+  constructor(foundToken: Token<TokenType>, ...expectedTokens: Token<TokenType>[]) {
     super(
       foundToken.line,
       foundToken.col,
@@ -66,6 +68,10 @@ export class CharTape {
 
   constructor(input: string) {
     this.input = input;
+  }
+
+  push(content: string): void {
+    this.input += content;
   }
 
   /**
@@ -122,5 +128,87 @@ export class CharTape {
       this.currCol = this.lineLengths[this.currLine] - 1;
     }
     return true;
+  }
+}
+
+/**
+ * Tokenize our string into multiple Tokens.
+ */
+export abstract class Tokenizer<TokenType> {
+  tape: CharTape;
+  private peekedToken: Nullable<Token<TokenType>> = null;
+
+  constructor(tape: string | CharTape) {
+    if (typeof tape === "string") {
+      tape = new CharTape(tape);
+    }
+    this.tape = tape;
+  }
+
+  peek(): Nullable<Token<TokenType>> {
+    return this.next(false);
+  }
+
+  /**
+   * Performs the real work of extracting the next token from
+   * the tape based on the current state of the tokenizer.
+   */
+  protected abstract extractNext(): Nullable<Token<TokenType>>;
+
+  next(extract = true): Nullable<Token<TokenType>> {
+    if (this.peekedToken == null) {
+      const next = this.extractNext();
+      if (next != null) {
+        this.peekedToken = next;
+      }
+    }
+    const out = this.peekedToken;
+    // consume it
+    if (extract) this.peekedToken = null;
+    return out;
+  }
+
+  match(
+    matchFunc: (token: Token<TokenType>) => boolean,
+    ensure = false,
+    consume = true,
+    nextAction?: (token: Token<TokenType>) => boolean | undefined,
+  ): Nullable<Token<TokenType>> {
+    const token = this.peek();
+    if (token != null) {
+      if (matchFunc(token)) {
+        if (nextAction && nextAction != null) {
+          nextAction(token);
+        }
+        if (consume) {
+          this.next();
+        }
+      } else if (ensure) {
+        // Should we throw an error?
+        throw new UnexpectedTokenError(token);
+      } else {
+        return null;
+      }
+    } else if (ensure) {
+      throw new ParseError(-1, -1, "Unexpected end of tape");
+    }
+    return token;
+  }
+
+  consumeIf(...expected: TokenType[]): Nullable<Token<TokenType>> {
+    return this.match((t) => t.isOneOf(...expected));
+  }
+
+  expectToken(...expected: TokenType[]): Token<TokenType> {
+    return this.match((t) => t.isOneOf(...expected), true, true) as Token<TokenType>;
+  }
+
+  nextMatches(...expected: TokenType[]): Nullable<Token<TokenType>> {
+    const token = this.peek();
+    if (token == null) return null;
+    for (const tok of expected) {
+      if (token.type == tok) return token;
+    }
+    return null;
   }
 }
