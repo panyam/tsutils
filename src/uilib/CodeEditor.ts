@@ -103,8 +103,9 @@ export class CodeEditor extends View {
     this.textarea.addEventListener("keydown", (e) => this.onKeyEvent(e));
     this.textarea.addEventListener("cut", (e) => this.onClipboardEvent(e));
     this.textarea.addEventListener("paste", (e) => this.onClipboardEvent(e));
-    this._scrollGroup.add(this.textarea);
-    this._scrollGroup.add(this.lineNumbersDiv);
+    // TODO - wrap with HTMLElementScrollable
+    // this._scrollGroup.add(this.textarea);
+    // this._scrollGroup.add(this.lineNumbersDiv);
   }
 
   ensureNumLines(nLines: number): void {

@@ -14,24 +14,50 @@ import { Timer } from "./Timer";
  * a scroll group is synchronized
  */
 
+type EventHandler = (evt: any) => void;
+export interface Scrollable {
+  // Set or get the current scroll offset
+  scrollOffset: number;
+
+  // Get total scroll size
+  readonly scrollSize: number;
+
+  // Size of the current "page".
+  // Our scrollOffset + pageSize is always < scrollSize
+  readonly pageSize: number;
+
+  // Detaches a scrollable from further use
+  detach(): void;
+}
+
 /**
  * A wrapper for html elements that can be scrolled.
  */
-class Scrollable {
-  private static counter = 0;
-  readonly scrollableId: string = "Scrollable_" + Scrollable.counter++;
+export class HTMLElementScrollable implements Scrollable {
+  private _scrollGroup: ScrollGroup | null = null;
   readonly element: HTMLElement;
   private vertical = true;
-  parentGroup: ScrollGroup | null = null;
+  private onScrollEventListener = this.onScrollEvent.bind(this) as EventListener;
+  private onMouseEventListener = this.onMouseEvent.bind(this) as EventListener;
+  private onTouchEventListener = this.onTouchEvent.bind(this) as EventListener;
 
-  constructor(element: HTMLElement, vertical = true) {
+  constructor(element: HTMLElement, scrollGroup: ScrollGroup, vertical = true) {
+    if ((element as any).scrollGroup && (element as any).scrollGroup != scrollGroup) {
+      throw new Error("Detach element from ScrollGroup first.");
+    }
+    (element as any).scrollGroup = scrollGroup;
+    this._scrollGroup = scrollGroup;
     this.element = element;
     this.vertical = vertical;
-    const currId = this.element.getAttribute("scrollableId") || null;
-    if (currId != null && currId.trim() != "") {
-      throw new Error("Element already attached to a Scrollable.  Detach first");
-    }
-    this.element.setAttribute("scrollableId", this.scrollableId);
+    this.element.addEventListener("scroll", this.onScrollEventListener);
+    this.element.addEventListener("mousedown", this.onMouseEventListener);
+    this.element.addEventListener("mouseenter", this.onMouseEventListener);
+    this.element.addEventListener("mouseleave", this.onMouseEventListener);
+    this.element.addEventListener("touchstart", this.onTouchEventListener);
+  }
+
+  get scrollGroup(): ScrollGroup | null {
+    return this._scrollGroup;
   }
 
   // Set or get the current scroll offset
@@ -70,21 +96,61 @@ class Scrollable {
     }
   }
 
-  addEventListener(type: string, listener: EventListener): void {
-    this.element.addEventListener(type, listener);
+  detach(): void {
+    (this.element as any).scrollGroup = null;
+    this.element.removeEventListener("scroll", this.onScrollEventListener);
+    this.element.removeEventListener("mousedown", this.onMouseEventListener);
+    this.element.removeEventListener("mouseenter", this.onMouseEventListener);
+    this.element.removeEventListener("mouseleave", this.onMouseEventListener);
+    this.element.removeEventListener("touchstart", this.onTouchEventListener);
   }
 
-  removeEventListener(type: string, listener: EventListener): void {
-    this.element.removeEventListener(type, listener);
+  onScrollEvent(event: Event): void {
+    /**
+     * Scroll events will be sent for all elements that are scrolling
+     * either programatically or invoked via gestures.
+     * It is not possible to know which of these it is and the problem
+     * with this is that by handling all events it could result in an
+     * infinite loop kicking each other off.
+     *
+     * So we need a way to be able differentiate scroll events between
+     * those that were the "source" and those that are "followers".
+     * We can try a few strategies here:
+     *
+     * 1. Take the first scroll event's target as the source
+     * and kick off a timer to check when scroll events stop.  As long
+     * as scroll events come from this source we update followers.
+     */
+    this.scrollGroup?.onScroll(this, event.timeStamp);
+  }
+
+  onTouchEvent(event: TouchEvent): void {
+    // console.log(`Touched Eeent(${event.type}): `, event);
+    if (event.type == "touchstart" && this.scrollGroup) {
+      this.scrollGroup.focussedScrollable = this;
+      // this.setLeadScrollable(this.focussedElement);
+    }
+  }
+
+  onMouseEvent(event: MouseEvent): void {
+    // console.log(`Mouse Event(${event.type}): `, event);
+    const element = event.target;
+    if (this.scrollGroup) {
+      if (event.type == "mouseenter") {
+        this.scrollGroup.focussedScrollable = this;
+      } else if (event.type == "mouseleave") {
+        this.scrollGroup.focussedScrollable = null;
+      } else if (event.type == "mousedown") {
+        this.scrollGroup.focussedScrollable = this;
+        // this.setLeadScrollable(this.focussedElement);
+      }
+    }
   }
 }
 
 export class ScrollGroup {
   private scrollables: Scrollable[] = [];
-  private onScrollEventListener = this.onScrollEvent.bind(this) as EventListener;
-  private onMouseEventListener = this.onMouseEvent.bind(this) as EventListener;
-  private onTouchEventListener = this.onTouchEvent.bind(this) as EventListener;
-  private focussedElement: HTMLElement | null = null;
+  private _focussedScrollable: Scrollable | null = null;
   private leadScrollable: Scrollable | null = null;
   private lastScrolledAt = -1;
   private lastScrollOffset = 0;
@@ -105,25 +171,15 @@ export class ScrollGroup {
     this.scrollTimer = new Timer(500, this.onTimer.bind(this));
   }
 
-  add(element: HTMLElement, vertical = true): void {
+  add(scrollable: Scrollable): void {
     // skip if already exists
-    if ((element as any).scrollGroup == this) {
-      throw new Error("Detach element from ScrollGroup first.");
-    }
-    const index = this.scrollables.findIndex((s) => s.element == element);
+    const index = this.scrollables.indexOf(scrollable);
     if (index >= 0) return;
-    const scrollable = new Scrollable(element, vertical);
-    (element as any).scrollGroup = this;
-    scrollable.addEventListener("scroll", this.onScrollEventListener);
-    scrollable.addEventListener("mousedown", this.onMouseEventListener);
-    scrollable.addEventListener("mouseenter", this.onMouseEventListener);
-    scrollable.addEventListener("mouseleave", this.onMouseEventListener);
-    scrollable.addEventListener("touchstart", this.onTouchEventListener);
     this.scrollables.push(scrollable);
   }
 
-  remove(element: Scrollable): void {
-    const index = this.scrollables.findIndex((s) => s == element);
+  remove(scrollable: Scrollable): void {
+    const index = this.scrollables.indexOf(scrollable);
     if (index < 0) return;
     this.detachAtIndex(index);
   }
@@ -136,47 +192,9 @@ export class ScrollGroup {
 
   detachAtIndex(index: number): Scrollable {
     const scrollable = this.scrollables[index];
-    (scrollable.element as any).scrollGroup = this;
-    scrollable.element.removeAttribute("scrollableId");
-    scrollable.removeEventListener("scroll", this.onScrollEventListener);
-    scrollable.removeEventListener("mousedown", this.onMouseEventListener);
-    scrollable.removeEventListener("mouseenter", this.onMouseEventListener);
-    scrollable.removeEventListener("mouseleave", this.onMouseEventListener);
-    scrollable.removeEventListener("touchstart", this.onTouchEventListener);
+    scrollable.detach();
     this.scrollables.splice(index, 1);
     return scrollable;
-  }
-
-  onScrollEvent(event: Event): void {
-    /**
-     * Scroll events will be sent for all elements that are scrolling
-     * either programatically or invoked via gestures.
-     * It is not possible to know which of these it is and the problem
-     * with this is that by handling all events it could result in an
-     * infinite loop kicking each other off.
-     *
-     * So we need a way to be able differentiate scroll events between
-     * those that were the "source" and those that are "followers".
-     * We can try a few strategies here:
-     *
-     * 1. Take the first scroll event's target as the source
-     * and kick off a timer to check when scroll events stop.  As long
-     * as scroll events come from this source we update followers.
-     */
-    const target = event.target as HTMLElement;
-    if (this.leadScrollable == null) {
-      this.setLeadScrollable(target);
-    }
-    const scrollable = this.leadScrollable;
-    if (scrollable != null) {
-      // update followers
-      const offsetDelta = Math.abs(scrollable.scrollOffset - this.lastScrollOffset);
-      const timeDelta = Math.abs(event.timeStamp - this.lastScrolledAt);
-      if (offsetDelta > this.offsetDeltaThreshold || timeDelta > this.eventDeltaThreshold) {
-        this.lastScrolledAt = event.timeStamp;
-        this.syncFollowersToLeader();
-      }
-    }
   }
 
   syncFollowersToLeader(): void {
@@ -208,39 +226,35 @@ export class ScrollGroup {
     }
   }
 
-  onTouchEvent(event: TouchEvent): void {
-    // console.log(`Touched Eeent(${event.type}): `, event);
-    if (event.type == "touchstart") {
-      this.focussedElement = event.target as HTMLElement;
-      // this.setLeadScrollable(this.focussedElement);
-    }
+  set focussedScrollable(scrollable: Scrollable | null) {
+    this._focussedScrollable = scrollable;
   }
 
-  onMouseEvent(event: MouseEvent): void {
-    // console.log(`Mouse Event(${event.type}): `, event);
-    const element = event.target;
-    if (event.type == "mouseenter") {
-      this.focussedElement = element as HTMLElement;
-    } else if (event.type == "mouseleave") {
-      this.focussedElement = null;
-    } else if (event.type == "mousedown") {
-      this.focussedElement = event.target as HTMLElement;
-      // this.setLeadScrollable(this.focussedElement);
+  onScroll(scrollable: Scrollable, timestamp: number): void {
+    if (this.leadScrollable == null) {
+      this.setLeadScrollable(scrollable);
+    }
+    const leader = this.leadScrollable;
+    if (leader != null) {
+      // update followers
+      const offsetDelta = Math.abs(leader.scrollOffset - this.lastScrollOffset);
+      const timeDelta = Math.abs(timestamp - this.lastScrolledAt);
+      if (offsetDelta > this.offsetDeltaThreshold || timeDelta > this.eventDeltaThreshold) {
+        this.lastScrolledAt = timestamp;
+        this.syncFollowersToLeader();
+      }
     }
   }
 
   /**
    * Sets the active scrollable to the focussed element.
    */
-  protected setLeadScrollable(element: HTMLElement): Scrollable | null {
+  public setLeadScrollable(scrollable: Scrollable): Scrollable | null {
     if (this.leadScrollable == null) {
       // scrolling has not begun yet so set it as the "root" scroller
-      const scrollable = this.scrollables.find((s) => s.element == element);
-      if (scrollable != null) {
-        this.leadScrollable = scrollable;
-        console.log("Scrolling started with: ", scrollable);
-        this.scrollTimer.start();
-      }
+      this.leadScrollable = scrollable;
+      console.log("Scrolling started with: ", scrollable);
+      this.scrollTimer.start();
     } else {
       // What if there was an already active scrollable?
       // This can happen if:
