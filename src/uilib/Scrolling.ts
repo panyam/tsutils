@@ -27,6 +27,7 @@ export interface Scrollable {
   readonly pageSize: number;
 
   // Detaches a scrollable from further use
+  attach(scrollGroup: ScrollGroup): void;
   detach(): void;
 }
 
@@ -41,19 +42,33 @@ export class HTMLElementScrollable implements Scrollable {
   private onMouseEventListener = this.onMouseEvent.bind(this) as EventListener;
   private onTouchEventListener = this.onTouchEvent.bind(this) as EventListener;
 
-  constructor(element: HTMLElement, scrollGroup: ScrollGroup, vertical = true) {
-    if ((element as any).scrollGroup && (element as any).scrollGroup != scrollGroup) {
-      throw new Error("Detach element from ScrollGroup first.");
-    }
-    (element as any).scrollGroup = scrollGroup;
-    this._scrollGroup = scrollGroup;
+  constructor(element: HTMLElement, vertical = true) {
     this.element = element;
     this.vertical = vertical;
+  }
+
+  attach(scrollGroup: ScrollGroup): void {
+    if ((this.element as any).scrollGroup == scrollGroup) {
+      return;
+    } else if ((this.element as any).scrollGroup) {
+      throw new Error("Detach element from ScrollGroup first.");
+    }
+    (this.element as any).scrollGroup = scrollGroup;
+    this._scrollGroup = scrollGroup;
     this.element.addEventListener("scroll", this.onScrollEventListener);
     this.element.addEventListener("mousedown", this.onMouseEventListener);
     this.element.addEventListener("mouseenter", this.onMouseEventListener);
     this.element.addEventListener("mouseleave", this.onMouseEventListener);
     this.element.addEventListener("touchstart", this.onTouchEventListener);
+  }
+
+  detach(): void {
+    (this.element as any).scrollGroup = null;
+    this.element.removeEventListener("scroll", this.onScrollEventListener);
+    this.element.removeEventListener("mousedown", this.onMouseEventListener);
+    this.element.removeEventListener("mouseenter", this.onMouseEventListener);
+    this.element.removeEventListener("mouseleave", this.onMouseEventListener);
+    this.element.removeEventListener("touchstart", this.onTouchEventListener);
   }
 
   get scrollGroup(): ScrollGroup | null {
@@ -94,15 +109,6 @@ export class HTMLElementScrollable implements Scrollable {
     } else {
       return this.element.clientWidth;
     }
-  }
-
-  detach(): void {
-    (this.element as any).scrollGroup = null;
-    this.element.removeEventListener("scroll", this.onScrollEventListener);
-    this.element.removeEventListener("mousedown", this.onMouseEventListener);
-    this.element.removeEventListener("mouseenter", this.onMouseEventListener);
-    this.element.removeEventListener("mouseleave", this.onMouseEventListener);
-    this.element.removeEventListener("touchstart", this.onTouchEventListener);
   }
 
   onScrollEvent(event: Event): void {
@@ -175,6 +181,7 @@ export class ScrollGroup {
     // skip if already exists
     const index = this.scrollables.indexOf(scrollable);
     if (index >= 0) return;
+    scrollable.attach(this);
     this.scrollables.push(scrollable);
   }
 

@@ -16,7 +16,7 @@ export class View extends EventHub {
   private static idCounter = 0;
   readonly viewId: string;
   readonly rootElement: Element;
-  readonly config: ViewParams;
+  readonly config: any;
 
   // View in which this view can be found.
   parentView: Nullable<View>;
@@ -52,7 +52,7 @@ export class View extends EventHub {
 
   private resizeObserver: any;
 
-  constructor(rootElement: Element, config?: ViewParams) {
+  constructor(rootElement: Element, config?: any) {
     super();
     // Save and Validate rootElement before doing anything else
     this.rootElement = rootElement;
