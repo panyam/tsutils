@@ -23,6 +23,10 @@ export class Token<TokenType> {
     }
     return false;
   }
+
+  immediatelyFollows(another: Token<TokenType>): boolean {
+    return this.line == another.line && this.col == another.col + another.value.length;
+  }
 }
 
 export class ParseError extends Error {
