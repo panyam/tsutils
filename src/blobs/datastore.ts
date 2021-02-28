@@ -63,7 +63,7 @@ export class Datastore extends BaseDatastore {
     await this.gcds.upsert({
       key: newKey,
       data: dbBlob,
-      excludeFromIndexes: ["contents"],
+      excludeFromIndexes: ["contents", "contents/main"],
     });
     return blob;
   }
@@ -74,7 +74,7 @@ export class Datastore extends BaseDatastore {
       parentType: dbBlob.parentType,
       parentId: dbBlob.parentId,
       userId: dbBlob.userId,
-      contents: dbBlob.contents,
+      contents: JSON.parse(dbBlob.contents),
     });
   }
 
@@ -84,7 +84,7 @@ export class Datastore extends BaseDatastore {
       parentId: blob.parentId,
       parentType: blob.parentType,
       userId: blob.userId,
-      contents: blob.contents,
+      contents: JSON.stringify(blob.contents),
     };
   }
 }
