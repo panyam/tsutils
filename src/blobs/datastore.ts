@@ -74,7 +74,7 @@ export class Datastore extends BaseDatastore {
       parentType: dbBlob.parentType,
       parentId: dbBlob.parentId,
       userId: dbBlob.userId,
-      contents: decodeURIComponent(dbBlob.contents),
+      contents: dbBlob.contents,
     });
   }
 
@@ -84,7 +84,7 @@ export class Datastore extends BaseDatastore {
       parentId: blob.parentId,
       parentType: blob.parentType,
       userId: blob.userId,
-      contents: encodeURIComponent(blob.contents),
+      contents: blob.contents,
     };
   }
 }
