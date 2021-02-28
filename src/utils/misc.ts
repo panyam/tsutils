@@ -4,6 +4,17 @@ export function assert(condition: boolean, msg?: string): asserts condition {
   }
 }
 
+export function encodeAs(value: number, alphabet: string): string {
+  let out = "";
+  const nDig = alphabet.length;
+  while (value > 0) {
+    const digit = value % nDig;
+    out = alphabet[digit] + out;
+    value = Math.floor(value / nDig);
+  }
+  return out;
+}
+
 export function ifDefined(value: any, elseVal = null): any {
   return typeof value === "undefined" ? elseVal : value;
 }

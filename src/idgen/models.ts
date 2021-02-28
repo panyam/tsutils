@@ -18,7 +18,7 @@ export class ID extends BaseEntity {
   constructor(config?: any) {
     super((config = config || {}));
     this.id = config.id || "";
-    this.ownerId = config.userId || "";
+    this.ownerId = config.ownerId || "";
     this.expiresAt = config.expiresAt || -1;
   }
 

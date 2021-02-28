@@ -85,6 +85,7 @@ export class Datastore extends BaseDatastore {
     await this.gcds.save({
       key: newKey,
       data: dbChannel,
+      excludeFromIndexes: ["profile"],
     });
     // try getting it to verify
     return channel;
@@ -244,6 +245,8 @@ export class Datastore extends BaseDatastore {
     const newCreated = user == null;
     if (user == null) {
       user = new User(userParams);
+      user.name = channel.profile.displayName || "";
+      user.email = channel.profile?.emails[0]?.value || "";
       user.channelKey = channel.key;
       user = await this.saveUser(user);
     }

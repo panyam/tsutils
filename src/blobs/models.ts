@@ -15,7 +15,11 @@ export class Blob extends BaseEntity {
   userId: string;
 
   // Contents of this blob where data is stored
-  contents: string;
+  // Stored as raw object - could be strings or json
+  contents: any;
+
+  // Version of the blob
+  version = "v1";
 
   constructor(config?: any) {
     super((config = config || {}));
@@ -23,6 +27,7 @@ export class Blob extends BaseEntity {
     this.parentType = config.parentType || "";
     this.parentId = config.parentId || "";
     this.userId = config.userId || "";
+    this.version = config.version || "v1";
     this.contents = config.contents || "Hello World";
   }
 

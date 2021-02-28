@@ -2,26 +2,27 @@ import { Datastore as BaseDatastore } from "../dal/datastore";
 import { Nullable } from "../types";
 import { ID } from "./models";
 
-export abstract class Datastore extends BaseDatastore {
+export class Datastore extends BaseDatastore {
   readonly namespace: string;
+  readonly generator: () => string;
 
-  constructor(namespace: string, apiEndpoint = "") {
-    super(apiEndpoint);
+  constructor(namespace: string, generator: () => string) {
+    super();
     this.namespace = namespace;
+    this.generator = generator;
   }
 
   get tableName(): string {
     return "IDGen_" + this.namespace;
   }
 
-  abstract generateID(): string;
-
   async nextID(ownerId: string, expiresAt = -1): Promise<ID> {
-    const id = this.generateID();
-    const query = this.gcds.createQuery(this.tableName).filter("id", id);
-    let results = await this.gcds.runQuery(query);
-    while (results && results.length > 0 && results[0].length > 0) {
-      results = await this.gcds.runQuery(query);
+    let id = "";
+    while (true) {
+      id = this.generator();
+      const query = this.gcds.createQuery(this.tableName).filter("id", id);
+      const results = await this.gcds.runQuery(query);
+      if (!results || (results.length > 0 && results[0].length == 0)) break;
     }
     // Found one
     const res = new ID({
@@ -57,7 +58,7 @@ export abstract class Datastore extends BaseDatastore {
       throw new Error("ID objects must have a valid id");
     }
     if (id.ownerId.trim().length == 0) {
-      throw new Error("Blobs must have a valid ownerId");
+      throw new Error("IDs must have a valid ownerId");
     }
     const newKey = this.gcds.key([this.tableName, id.id]);
 
