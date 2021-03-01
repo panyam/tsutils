@@ -1,0 +1,59 @@
+.menuparent {
+  float: left;
+}
+
+.menuSeparator {
+  display: inline-block;
+  position: relative;
+  width: 100%;
+  float: left;
+  margin: 5px;
+}
+
+.menuRootItemLabel {
+  display: inline-block;
+  position: relative;
+  margin: 5px;
+  padding: 5px;
+  float: left;
+}
+
+.menuItemLabel {
+  display: inline-block;
+  position: relative;
+  margin: 5px;
+  padding: 5px;
+  width: 90%;
+}
+
+.menuItemContainer {
+  visibility: hidden;
+  display: inline-block;
+  background-color: white;
+  width: 150px;
+  color: black;
+  position: absolute;
+  margin: 5px;
+  padding: 5px;
+  z-index: 10;
+  top: 110%;
+  left: 0px;
+}
+
+.menuRootItemLabel:hover,
+.highlighted {
+  background-color: red;
+  color: white;
+  cursor: pointer;
+}
+
+.menuItemLabel:hover,
+.highlighted {
+  background-color: red;
+  color: white;
+  cursor: pointer;
+}
+
+.menuitem {
+  visibility: hidden;
+}
