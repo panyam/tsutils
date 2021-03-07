@@ -19,19 +19,43 @@ interface MenuItemsView {
 }
 
 class MenuItem {
-  id: string;
-  itemType: MenuItemType;
-  label = "";
+  readonly menubar: Menubar;
+  readonly id: string;
+  readonly type: MenuItemType;
+  readonly elem: HTMLElement;
+  parent: Nullable<MenuItem>;
   key: string;
-  elem: HTMLElement;
-  parent: Nullable<MenuItem> = null;
-  children: MenuItem[] = [];
 
   // Element to hold the label
+  label = "";
   labelElem: HTMLElement;
 
   // Element to hold children (for menuparents only)
+  children: MenuItem[] = [];
   childrenElem: Nullable<HTMLElement> = null;
+
+  constructor(type: MenuItemType, id: string, elem: HTMLElement, menubar: Menubar, parent: Nullable<MenuItem> = null) {
+    this.id = id;
+    this.type = type;
+    this.elem = elem;
+    this.menubar = menubar;
+    this.parent = parent;
+  }
+
+  /**
+   * Tells whether this is a root item.
+   */
+  get isRoot(): boolean {
+    return this.parent == null;
+  }
+
+  /**
+   * Gets the root menu item of this item.
+   */
+  get root(): MenuItem {
+    if (this.parent == null) return this;
+    return this.parent.root;
+  }
 }
 
 export class Menubar {
@@ -53,6 +77,9 @@ export class Menubar {
     });
     // now time to lay this all out
     this.rootMenus.forEach((mi) => this.ensureMenuItemView(mi, this.rootElement));
+    document.addEventListener("click", (evt) => {
+      this.onDocumentClicked(evt);
+    });
   }
 
   protected assignMenuId(elem: HTMLElement): string {
@@ -76,21 +103,21 @@ export class Menubar {
     const id = elem.getAttribute("menuId");
     assert(id != null, "Menu item must have a menuId");
     if (!(id in this.menuItems)) {
-      const out = new MenuItem();
-      out.id = id;
-      out.elem = elem;
+      let out: MenuItem;
       const tag = elem.tagName.toLowerCase();
       if (tag == "hr") {
-        out.itemType = MenuItemType.SEPERATOR;
+        out = new MenuItem(MenuItemType.SEPERATOR, id, elem, this);
         out.key = elem.getAttribute("menuKey") || "";
       } else if (tag == "span") {
-        out.itemType = MenuItemType.ITEM;
+        out = new MenuItem(MenuItemType.ITEM, id, elem, this);
         out.label = elem.innerText || "Item";
         out.key = elem.getAttribute("menuKey") || elem.innerText;
       } else if (tag == "div") {
-        out.itemType = MenuItemType.PARENT;
+        out = new MenuItem(MenuItemType.PARENT, id, elem, this);
         out.label = elem.getAttribute("title") || "Menu";
         out.key = elem.getAttribute("menuKey") || elem.innerText;
+      } else {
+        throw new Error("Unsupported menu item type");
       }
       const parentElem = elem.parentElement;
       if (parentElem) {
@@ -110,14 +137,16 @@ export class Menubar {
 
   protected ensureMenuItemView(menuItem: MenuItem, parent: HTMLElement): void {
     // todo
-    if (menuItem.itemType == MenuItemType.SEPERATOR) {
+    if (menuItem.type == MenuItemType.SEPERATOR) {
       menuItem.labelElem = createNode("hr", {
         attrs: {
           class: "menuSeparator",
           menuId: menuItem.id,
         },
       }) as HTMLElement;
-      menuItem.labelElem.addEventListener("click", (evt) => this.onMenuItem(evt));
+      menuItem.labelElem.addEventListener("click", (evt) => this.onMenuItemClicked(evt));
+      menuItem.labelElem.addEventListener("mouseenter", (evt) => this.onMenuItemEntered(evt));
+      menuItem.labelElem.addEventListener("mouseleave", (evt) => this.onMenuItemExited(evt));
       parent.appendChild(menuItem.labelElem);
     } else {
       const miClass = menuItem.parent == null ? "menuRootItemLabel" : "menuItemLabel";
@@ -128,7 +157,9 @@ export class Menubar {
         },
         text: menuItem.label,
       }) as HTMLSpanElement;
-      menuItem.labelElem.addEventListener("click", (evt) => this.onMenuItem(evt));
+      menuItem.labelElem.addEventListener("click", (evt) => this.onMenuItemClicked(evt));
+      menuItem.labelElem.addEventListener("mouseenter", (evt) => this.onMenuItemEntered(evt));
+      menuItem.labelElem.addEventListener("mouseleave", (evt) => this.onMenuItemExited(evt));
       parent.appendChild(menuItem.labelElem);
 
       if (menuItem.children.length > 0) {
@@ -146,16 +177,43 @@ export class Menubar {
     }
   }
 
-  protected onMenuItem(evt: Event): void {
+  protected eventToMenuItem(evt: Event): Nullable<MenuItem> {
     const target = evt.target as HTMLElement;
     const id = target.getAttribute("menuId");
     if (id) {
-      const mi = this.menuItems[id];
-      if (mi.itemType == MenuItemType.PARENT) {
-        // toggle child
-        const visible = this.isMenuItemShowing(mi);
-        this.showMenuItem(mi, !visible);
+      return this.menuItems[id] || null;
+    }
+    return null;
+  }
+
+  protected onMenuItemEntered(evt: Event): void {
+    const mi = this.eventToMenuItem(evt);
+    if (!mi) return;
+    console.log("Menu Item Entered: ", mi);
+  }
+
+  protected onMenuItemExited(evt: Event): void {
+    const mi = this.eventToMenuItem(evt);
+    if (!mi) return;
+    console.log("Menu Item Exited: ", mi);
+  }
+
+  private currentShowingMenuParent: Nullable<MenuItem> = null;
+  protected onMenuItemClicked(evt: Event): void {
+    const mi = this.eventToMenuItem(evt);
+    if (!mi) return;
+    if (mi.type == MenuItemType.PARENT && mi.childrenElem) {
+      // toggle child
+      const show = !this.isMenuItemShowing(mi);
+      if (show) {
+        // hide all other menu items upto the common ancestor.
+        // const curr = this.currentMenujj
+        this.hideMenus();
+        this.currentShowingMenuParent = mi;
+      } else if (this.currentShowingMenuParent != null) {
+        this.currentShowingMenuParent = this.currentShowingMenuParent.parent;
       }
+      this.showMenuItem(mi, show);
     }
   }
 
@@ -174,6 +232,26 @@ export class Menubar {
       } else {
         container.style.visibility = "hidden";
       }
+    }
+  }
+
+  onDocumentClicked(evt: Event) {
+    // see if clicked on a menu element
+    let target = evt.target as Nullable<HTMLElement>;
+    while (target) {
+      if (target.getAttribute("menuId")) {
+        return;
+      }
+      target = target.parentElement;
+    }
+    console.log("Clicked on Document:", evt);
+    this.hideMenus();
+  }
+
+  hideMenus(all = false): void {
+    while (this.currentShowingMenuParent != null) {
+      this.showMenuItem(this.currentShowingMenuParent, false);
+      this.currentShowingMenuParent = this.currentShowingMenuParent.parent;
     }
   }
 }
