@@ -234,6 +234,7 @@ export class Menubar extends EventHub {
       this.dispatchEvent(miEvt);
       if (!miEvt.cancelled) {
         // hide it
+        this.hideMenus();
       }
     }
   }
