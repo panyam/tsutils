@@ -24,6 +24,7 @@ export class MenuItem {
   readonly elem: HTMLElement;
   parent: Nullable<MenuItem>;
   key: string;
+  hidden = false;
 
   // Element to hold the label
   label = "";
@@ -108,14 +109,17 @@ export class Menubar extends EventHub {
       if (tag == "hr") {
         out = new MenuItem(MenuItemType.SEPARATOR, id, elem, this);
         out.key = elem.getAttribute("menuKey") || "";
+        out.hidden = elem.style.display == "none";
       } else if (tag == "span") {
         out = new MenuItem(MenuItemType.ITEM, id, elem, this);
         out.label = elem.innerText || "Item";
         out.key = elem.getAttribute("menuKey") || elem.innerText;
+        out.hidden = elem.style.display == "none";
       } else if (tag == "div") {
         out = new MenuItem(MenuItemType.PARENT, id, elem, this);
         out.label = elem.getAttribute("title") || "Menu";
-        out.key = elem.getAttribute("menuKey") || elem.innerText;
+        out.key = elem.getAttribute("menuKey") || elem.getAttribute("title") || id;
+        out.hidden = elem.style.display == "none";
       } else {
         throw new Error("Unsupported menu item type");
       }
@@ -147,6 +151,7 @@ export class Menubar extends EventHub {
       menuItem.labelElem.addEventListener("click", (evt) => this.onMenuItemClicked(evt));
       menuItem.labelElem.addEventListener("mouseenter", (evt) => this.onMenuItemEntered(evt));
       menuItem.labelElem.addEventListener("mouseleave", (evt) => this.onMenuItemExited(evt));
+      if (menuItem.hidden) menuItem.labelElem.style.display = "none";
       parent.appendChild(menuItem.labelElem);
     } else {
       const miClass = menuItem.parent == null ? "menuRootItemLabel" : "menuItemLabel";
@@ -160,6 +165,7 @@ export class Menubar extends EventHub {
       menuItem.labelElem.addEventListener("click", (evt) => this.onMenuItemClicked(evt));
       menuItem.labelElem.addEventListener("mouseenter", (evt) => this.onMenuItemEntered(evt));
       menuItem.labelElem.addEventListener("mouseleave", (evt) => this.onMenuItemExited(evt));
+      if (menuItem.hidden) menuItem.labelElem.style.display = "none";
       parent.appendChild(menuItem.labelElem);
 
       if (menuItem.children.length > 0) {
