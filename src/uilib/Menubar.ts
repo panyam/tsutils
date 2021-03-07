@@ -1,24 +1,23 @@
 import { Nullable, StringMap } from "../types";
 import { assert } from "../utils/misc";
 import { createNode } from "../utils/dom";
+import { EventHub, TEvent } from "../comms/events";
+
+export enum EventTypes {
+  MENU_WILL_CLOSE = "MENU_WILL_CLOSE",
+  MENU_WILL_OPEN = "MENU_WILL_OPEN",
+  MENU_CLOSED = "MENU_CLOSED",
+  MENU_OPENED = "MENU_OPENED",
+  MENU_ITEM_CLICKED = "MENU_ITEM_CLICKED",
+}
 
 enum MenuItemType {
   PARENT,
   ITEM,
-  SEPERATOR,
+  SEPARATOR,
 }
 
-/**
- * The list of menu items shown in a row.
- */
-interface MenuItemsView {
-  /**
-   * Show or hide the item view.
-   */
-  show(visible: boolean): void;
-}
-
-class MenuItem {
+export class MenuItem {
   readonly menubar: Menubar;
   readonly id: string;
   readonly type: MenuItemType;
@@ -58,18 +57,19 @@ class MenuItem {
   }
 }
 
-export class Menubar {
+export class Menubar extends EventHub {
   private idCounter: number;
   rootElement: HTMLDivElement;
   menuItems: StringMap<MenuItem>;
   rootMenus: MenuItem[];
 
   constructor(rootDiv: HTMLDivElement) {
+    super();
     this.rootElement = rootDiv;
     this.idCounter = 0;
     this.rootMenus = [];
     this.menuItems = {};
-    const nodes = rootDiv.querySelectorAll("div.menuparent, hr.seperator, span.menuitem");
+    const nodes = rootDiv.querySelectorAll("div.menuparent, hr.separator, span.menuitem");
     nodes.forEach((node) => {
       const elem = node as HTMLElement;
       this.assignMenuId(elem);
@@ -95,7 +95,7 @@ export class Menubar {
     if (
       !elem.classList.contains("menuparent") &&
       !elem.classList.contains("menuitem") &&
-      !elem.classList.contains("seperator")
+      !elem.classList.contains("separator")
     ) {
       return null;
     }
@@ -106,7 +106,7 @@ export class Menubar {
       let out: MenuItem;
       const tag = elem.tagName.toLowerCase();
       if (tag == "hr") {
-        out = new MenuItem(MenuItemType.SEPERATOR, id, elem, this);
+        out = new MenuItem(MenuItemType.SEPARATOR, id, elem, this);
         out.key = elem.getAttribute("menuKey") || "";
       } else if (tag == "span") {
         out = new MenuItem(MenuItemType.ITEM, id, elem, this);
@@ -137,7 +137,7 @@ export class Menubar {
 
   protected ensureMenuItemView(menuItem: MenuItem, parent: HTMLElement): void {
     // todo
-    if (menuItem.type == MenuItemType.SEPERATOR) {
+    if (menuItem.type == MenuItemType.SEPARATOR) {
       menuItem.labelElem = createNode("hr", {
         attrs: {
           class: "menuSeparator",
@@ -202,9 +202,15 @@ export class Menubar {
   protected onMenuItemClicked(evt: Event): void {
     const mi = this.eventToMenuItem(evt);
     if (!mi) return;
+    evt.stopPropagation();
     if (mi.type == MenuItemType.PARENT && mi.childrenElem) {
       // toggle child
       const show = !this.isMenuItemShowing(mi);
+      const evt = new TEvent(show ? EventTypes.MENU_WILL_OPEN : EventTypes.MENU_WILL_CLOSE, this, mi);
+      this.dispatchEvent(evt);
+      if (evt.cancelled) {
+        return;
+      }
       if (show) {
         // hide all other menu items upto the common ancestor.
         // const curr = this.currentMenujj
@@ -214,6 +220,15 @@ export class Menubar {
         this.currentShowingMenuParent = this.currentShowingMenuParent.parent;
       }
       this.showMenuItem(mi, show);
+      this.dispatchEvent(new TEvent(show ? EventTypes.MENU_OPENED : EventTypes.MENU_CLOSED, this, mi));
+    } else if (mi.type == MenuItemType.SEPARATOR) {
+      // Do nothing - for now
+    } else {
+      const miEvt = new TEvent(EventTypes.MENU_ITEM_CLICKED, this, mi);
+      this.dispatchEvent(miEvt);
+      if (!miEvt.cancelled) {
+        // hide it
+      }
     }
   }
 
