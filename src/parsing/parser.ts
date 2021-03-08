@@ -7,7 +7,7 @@ class PTNodeBase<TokenType> {
   parent: Nullable<PTNode<TokenType>> = null;
   isError = false;
   label: string;
-  constructor(label: string, parent: Nullable<PTNode<TokenType>>) {
+  constructor(label: string, parent: Nullable<PTNode<TokenType>> = null) {
     this.label = label;
     this.parent = parent;
   }

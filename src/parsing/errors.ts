@@ -1,4 +1,3 @@
-
 import { Token } from "./tokenizer";
 
 export class ParseError extends Error {

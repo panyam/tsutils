@@ -1,4 +1,5 @@
 import { Nullable } from "../types";
+import { ParseError, UnexpectedTokenError } from "./errors";
 
 export class Token<TokenType> {
   pos: number;
