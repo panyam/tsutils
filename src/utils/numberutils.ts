@@ -60,6 +60,9 @@ export class Fraction {
   static readonly INFINITY = new Fraction(1, 0);
 
   constructor(num = 0, den = 1) {
+    if (isNaN(num) || isNaN(den)) {
+      throw new Error("Invalid numerator or denminator");
+    }
     this.num = num;
     this.den = den;
   }
