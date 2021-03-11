@@ -11,13 +11,12 @@ export class TermSet {
     this.grammar = grammar;
   }
 
-  addTo(another: TermSet) {
-    const before = another.size;
+  addTo(another: TermSet): number {
+    const before = another.entries.size;
     for (const termid of this.entries) {
       another.entries.add(termid);
     }
-    const after = another.size;
-    return after - before;
+    return another.entries.size - before;
   }
 
   has(term: Term): boolean {
@@ -216,31 +215,25 @@ export class FirstSets {
     switch (exp.type) {
       case ExpType.TERM:
         this.add(parent, exp as Term);
-        this.addTo(parent, exp);
         break;
       case ExpType.NON_TERM:
         this.visit(exp as NonTerm, populated);
-        this.addTo(parent, exp);
         break;
       case ExpType.OPTIONAL:
         this.add(parent, this.grammar.Null);
         this.processRule(exp, (exp as Opt).exp, populated);
-        this.addTo(parent, exp);
         break;
       case ExpType.ATLEAST_0:
         this.add(parent, this.grammar.Null);
         this.processRule(exp, (exp as Atleast0).exp, populated);
-        this.addTo(parent, exp);
         break;
       case ExpType.ATLEAST_1:
         this.processRule(exp, (exp as Atleast1).exp, populated);
-        this.addTo(parent, exp);
         break;
       case ExpType.ANY_OF:
         for (const e of (exp as ExpList).exps) {
           this.processRule(exp, e, populated);
         }
-        this.addTo(parent, exp);
         break;
       case ExpType.SEQ:
         const exps = (exp as ExpList).exps;
@@ -254,11 +247,11 @@ export class FirstSets {
             break;
           }
         }
-        this.addTo(parent, exp);
         break;
       default:
         assert(false, "Unhandled expression type");
     }
+    this.addTo(parent, exp);
   }
 }
 
