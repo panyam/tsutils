@@ -1,5 +1,6 @@
-import { Grammar } from "../grammar";
+import { ExpType, Exp, Grammar } from "../grammar";
 import { FirstSets, NullableSet, FollowSets } from "../sets";
+import { streamDict, mapStream, filterStream, collectStream } from "../../utils/streams";
 
 describe("Grammar Tests", () => {
   test("Constructor", () => {
@@ -29,7 +30,7 @@ describe("Grammar Tests", () => {
     expect(ns).toEqual(["A", "C", "S"]);
   });
 
-  test("Nullables Tests 1", () => {
+  test("Nullables Tests 2", () => {
     const g = new Grammar();
     g.addTerminals("a", "b", "c");
     g.addS("S", "A", "C", "A")
@@ -55,7 +56,7 @@ describe("Grammar Tests", () => {
     expect(ns).toEqual(["S"]);
   });
 
-  test("Nullables Tests 1", () => {
+  test("Nullables Tests 3", () => {
     const g = new Grammar();
     g.addTerminals("a", "b", "c");
     g.addS("S", "A", "B", "C");
@@ -72,7 +73,7 @@ describe("Grammar Tests", () => {
     expect(ns).toEqual(["A", "B", "C", "S"]);
   });
 
-  test("Nullables Tests 1", () => {
+  test("Nullables Tests 4", () => {
     const g = new Grammar();
     g.addTerminals("a", "b", "c");
     g.addS("S", "A", "C", "A")
@@ -99,13 +100,22 @@ describe("Grammar Tests", () => {
   test("First Tests 1", () => {
     const g = new Grammar();
     g.addTerminals("a", "b", "c");
-    g.add("S", g.seq("A", "C", "A"));
-    g.add("A", g.seq("a", "A", "a"), "B", "C");
-    g.add("B", g.seq("b", "B"), "b");
-    g.add("C", g.seq("c", "C"), g.Null);
+    g.withNT("S").addR("A", "C", "A");
+    g.withNT("A").addR("a", "A", "a").addR("B").addR("C");
+    g.withNT("B").addR("a", "B").addR("b");
+    g.withNT("C").addR("c", "C").addR();
 
     const ns = new NullableSet(g);
     const fs = new FirstSets(g, ns);
+    const nts = fs.nonterms;
+    /*
+    streamDict(fs.entries)
+                .filter((k: number, v: TermSet) => {
+                  const e = g.expById(k);
+                  return e != null && e.type == ExpType.NON_TERM;
+                })
+                .collect(((k: number, v: TermSet), out => out[k] = v), {});
+               */
     console.log(fs.entries);
   });
 });

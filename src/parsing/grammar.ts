@@ -25,9 +25,11 @@ export abstract class Exp {
   grammar: Grammar;
   abstract readonly type: ExpType;
 
+  private static idCounter = -1;
+
   constructor() {
-    this.id = -MAX_INT;
-    this.index = -MAX_INT;
+    this.id = Exp.idCounter--;
+    this.index = Exp.idCounter--;
   }
   equals(another: Exp): boolean {
     return this.type == another.type;
@@ -199,6 +201,11 @@ export class Grammar {
   readonly Eof = new Term("<EOF>");
   readonly Null = new Term("");
 
+  withNT(nt: string): this {
+    this.nonterm(nt);
+    return this;
+  }
+
   /**
    * Adds a new rule to a particular non terminal of the grammar
    * Each rule represents a production of the form:
@@ -230,7 +237,12 @@ export class Grammar {
    * name -> exp1 exp2 exp3 ... expn
    */
   addS(nt: string, ...exps: (Exp | string)[]): this {
-    const nonterm = this.nonterm(nt);
+    this.nonterm(nt);
+    return this.addR(...exps);
+  }
+
+  addR(...exps: (Exp | string)[]): this {
+    assert(this.currentNonTerm != null);
     let newExp: Exp;
     if (exps.length == 0) {
       newExp = this.Null;
@@ -239,7 +251,7 @@ export class Grammar {
     } else {
       newExp = this.seq(...exps);
     }
-    nonterm.add(newExp);
+    this.currentNonTerm.add(newExp);
     return this;
   }
 
@@ -369,8 +381,8 @@ export class Grammar {
   }
 
   protected wrapExp<T extends Exp>(exp: T): T {
-    assert(exp.id == -MAX_INT, "Expression already wrapped");
-    assert(exp.index == -MAX_INT, "Expression already wrapped");
+    assert(exp.id < 0, "Expression already wrapped: " + exp.id);
+    assert(exp.index < 0, "Expression already wrapped: " + exp.index);
     exp.grammar = this;
     exp.id = this.expsById.length;
     this.expsById.push(exp);

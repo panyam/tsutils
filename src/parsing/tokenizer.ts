@@ -1,31 +1,33 @@
 import { Nullable } from "../types";
 import { ParseError, UnexpectedTokenError } from "./errors";
 
-export class Token<TokenType> {
+type TokenType = number | string;
+
+export class Token {
+  tag: TokenType;
   pos: number;
   line: number;
   col: number;
-  type: TokenType;
   value?: any;
 
   constructor(pos: number, line: number, col: number, type: TokenType, value: any = null) {
     this.pos = pos;
     this.line = line;
     this.col = col;
-    this.type = type;
+    this.tag = type;
     this.value = value;
   }
 
   isOneOf(...expected: any[]): boolean {
     for (const tok of expected) {
-      if (this.type == tok) {
+      if (this.tag == tok) {
         return true;
       }
     }
     return false;
   }
 
-  immediatelyFollows(another: Token<TokenType>): boolean {
+  immediatelyFollows(another: Token): boolean {
     return this.line == another.line && this.col == another.col + another.value.length;
   }
 }
@@ -110,9 +112,9 @@ export class CharTape {
 /**
  * Tokenize our string into multiple Tokens.
  */
-export abstract class Tokenizer<TokenType> {
+export abstract class Tokenizer {
   tape: CharTape;
-  private peekedToken: Nullable<Token<TokenType>> = null;
+  private peekedToken: Nullable<Token> = null;
 
   constructor(tape: string | CharTape) {
     if (typeof tape === "string") {
@@ -121,7 +123,7 @@ export abstract class Tokenizer<TokenType> {
     this.tape = tape;
   }
 
-  peek(): Nullable<Token<TokenType>> {
+  peek(): Nullable<Token> {
     return this.next(false);
   }
 
@@ -129,9 +131,9 @@ export abstract class Tokenizer<TokenType> {
    * Performs the real work of extracting the next token from
    * the tape based on the current state of the tokenizer.
    */
-  protected abstract extractNext(): Nullable<Token<TokenType>>;
+  protected abstract extractNext(): Nullable<Token>;
 
-  next(extract = true): Nullable<Token<TokenType>> {
+  next(extract = true): Nullable<Token> {
     if (this.peekedToken == null) {
       const next = this.extractNext();
       if (next != null) {
@@ -145,11 +147,11 @@ export abstract class Tokenizer<TokenType> {
   }
 
   match(
-    matchFunc: (token: Token<TokenType>) => boolean,
+    matchFunc: (token: Token) => boolean,
     ensure = false,
     consume = true,
-    nextAction?: (token: Token<TokenType>) => boolean | undefined,
-  ): Nullable<Token<TokenType>> {
+    nextAction?: (token: Token) => boolean | undefined,
+  ): Nullable<Token> {
     const token = this.peek();
     if (token != null) {
       if (matchFunc(token)) {
@@ -171,19 +173,19 @@ export abstract class Tokenizer<TokenType> {
     return token;
   }
 
-  consumeIf(...expected: TokenType[]): Nullable<Token<TokenType>> {
+  consumeIf(...expected: TokenType[]): Nullable<Token> {
     return this.match((t) => t.isOneOf(...expected));
   }
 
-  expectToken(...expected: TokenType[]): Token<TokenType> {
-    return this.match((t) => t.isOneOf(...expected), true, true) as Token<TokenType>;
+  expectToken(...expected: TokenType[]): Token {
+    return this.match((t) => t.isOneOf(...expected), true, true) as Token;
   }
 
-  nextMatches(...expected: TokenType[]): Nullable<Token<TokenType>> {
+  nextMatches(...expected: TokenType[]): Nullable<Token> {
     const token = this.peek();
     if (token == null) return null;
     for (const tok of expected) {
-      if (token.type == tok) return token;
+      if (token.tag == tok) return token;
     }
     return null;
   }

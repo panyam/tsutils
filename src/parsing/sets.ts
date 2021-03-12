@@ -149,12 +149,33 @@ export class FirstSets {
     this.refresh();
   }
 
+  get nonterms(): NumMap<NonTerm[]> {
+    const out: NumMap<NonTerm[]> = {};
+    for (const id in this.entries) {
+      const i = parseInt(id);
+      out[i] = [];
+      const e = this.grammar.expById(parseInt(id));
+      if (e != null && e.type == ExpType.NON_TERM) out[i].push(e as NonTerm);
+    }
+    return out;
+  }
+
   get count(): number {
-    return this._count;
+    let c = 0;
+    for (const x in this.entries) c += this.entries[x].size;
+    return c;
+    // assert(c == this._count, "Count mismatch")
+    // return this._count;
   }
 
   entriesFor(exp: Exp): TermSet {
-    return this.entries[exp.id];
+    if (exp.id in this.entries) {
+      return this.entries[exp.id];
+    } else {
+      const out = new TermSet(this.grammar);
+      this.entries[exp.id] = out;
+      return out;
+    }
   }
 
   add(exp: Exp, term: Term): boolean {
@@ -172,8 +193,8 @@ export class FirstSets {
    * Adds all entries in ntFrom's firstSet into the firstSet of ntTo.
    */
   addTo(ntTo: Exp, ntFrom: Exp): number {
-    const srcEntries = this.entries[ntFrom.id];
-    const destEntries = this.entries[ntTo.id];
+    const srcEntries = this.entriesFor(ntFrom);
+    const destEntries = this.entriesFor(ntTo);
     const count = srcEntries.addTo(destEntries);
     this._count += count;
     return count;
