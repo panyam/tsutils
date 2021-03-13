@@ -79,4 +79,38 @@ describe("First Sets tests", () => {
     expectFSEntries(g, fs, "B", ["b"]);
     expectFSEntries(g, fs, "C", ["c"]);
   });
+
+  test("First Tests 2", () => {
+    const g = new EBNFParser(`
+      E : T E1 ;
+      E1 : PLUS  T E1 | ;
+      T : F T1 ;
+      T1 : STAR F T1 | ;
+      F : OPEN E CLOSE | id ;
+    `).grammar;
+
+    const ns = new NullableSet(g);
+    const fs = new FirstSets(g, ns);
+    expectFSEntries(g, fs, "E", ["OPEN", "id"]);
+    expectFSEntries(g, fs, "T", ["OPEN", "id"]);
+    expectFSEntries(g, fs, "F", ["OPEN", "id"]);
+    expectFSEntries(g, fs, "E1", ["PLUS", ""]);
+    expectFSEntries(g, fs, "T1", ["STAR", ""]);
+  });
+
+  test("First Tests 3", () => {
+    const g = new EBNFParser(`
+      S : exp STOP ;
+      exp : term exptail ;
+      exptail : OPA term exptail | ;
+      term : sfactor termtail ;
+      termtail : OPM factor termtail | ;
+      sfactor : OPA factor | factor ;
+      factor : NUM | LP exp RP ;
+    `).grammar;
+
+    const ns = new NullableSet(g);
+    const fs = new FirstSets(g, ns);
+    expectFSEntries(g, fs, "S", ["OPA", "LP", "NUM"]);
+  });
 });

@@ -18,6 +18,7 @@ export class TermSet {
       assert(exp != null);
       out.push(exp.label);
     }
+    if (this.hasNull) out.push("");
     return out;
   }
 
@@ -26,6 +27,7 @@ export class TermSet {
     for (const termid of this.entries) {
       another.entries.add(termid);
     }
+    another.hasNull = this.hasNull || another.hasNull;
     return another.entries.size - before;
   }
 
@@ -247,6 +249,10 @@ export class FirstSets {
 
   processRule(parent: Exp, exp: Exp, populated: NumMap<NonTerm>): void {
     switch (exp.type) {
+      case ExpType.NULL:
+        // Nothing
+        this.addNull(parent);
+        break;
       case ExpType.TERM:
         this.add(parent, exp as Term);
         break;
@@ -283,7 +289,7 @@ export class FirstSets {
         }
         break;
       default:
-        assert(false, "Unhandled expression type");
+        assert(false, "Unhandled expression type: " + exp.type);
     }
     this.addTo(parent, exp);
   }
