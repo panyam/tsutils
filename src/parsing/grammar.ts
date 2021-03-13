@@ -10,6 +10,7 @@ export enum ExpType {
   ANY_OF = 5,
   SEQ = 6,
   MAX_TYPE = 7,
+  NULL = 8,
 }
 
 export abstract class Exp {
@@ -35,6 +36,12 @@ export abstract class Exp {
     return this.type == another.type;
   }
 }
+
+export class NullExp extends Exp {
+  readonly type: ExpType = ExpType.NULL;
+  static readonly INSTANCE = new NullExp();
+}
+export const Null = NullExp.INSTANCE;
 
 export abstract class Sym extends Exp {
   readonly type: ExpType;
@@ -199,7 +206,6 @@ export class Grammar {
   }
 
   readonly Eof = new Term("<EOF>");
-  readonly Null = new Term("");
 
   withNT(nt: string): this {
     this.nonterm(nt);
@@ -218,7 +224,7 @@ export class Grammar {
     const nonterm = this.nonterm(nt);
     let newExp: Exp;
     if (exps.length == 0) {
-      newExp = this.Null;
+      newExp = Null;
     } else if (exps.length == 1) {
       newExp = this.normalizeExp(exps[0]);
     } else {
@@ -245,7 +251,7 @@ export class Grammar {
     assert(this.currentNonTerm != null);
     let newExp: Exp;
     if (exps.length == 0) {
-      newExp = this.Null;
+      newExp = Null;
     } else if (exps.length == 1) {
       newExp = this.normalizeExp(exps[0]);
     } else {
@@ -373,11 +379,19 @@ export class Grammar {
   }
 
   seq(...exps: (Exp | string)[]): Exp {
-    return this.wrapExp(new Seq(...exps.map((e) => this.normalizeExp(e))));
+    if (exps.length == 1) {
+      return this.normalizeExp(exps[0]);
+    } else {
+      return this.wrapExp(new Seq(...exps.map((e) => this.normalizeExp(e))));
+    }
   }
 
   anyof(...exps: (Exp | string)[]): Exp {
-    return this.wrapExp(new AnyOf(...exps.map((e) => this.normalizeExp(e))));
+    if (exps.length == 1) {
+      return this.normalizeExp(exps[0]);
+    } else {
+      return this.wrapExp(new AnyOf(...exps.map((e) => this.normalizeExp(e))));
+    }
   }
 
   protected wrapExp<T extends Exp>(exp: T): T {

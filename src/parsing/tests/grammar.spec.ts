@@ -1,4 +1,4 @@
-import { ExpType, Exp, Grammar } from "../grammar";
+import { Null, ExpType, Exp, Grammar } from "../grammar";
 import { FirstSets, NullableSet, FollowSets } from "../sets";
 import { streamDict, mapStream, filterStream, collectStream } from "../../utils/streams";
 
@@ -18,13 +18,14 @@ describe("Grammar Tests", () => {
     expect(ns).toEqual([]);
   });
 
+  /*
   test("Nullables Tests 1", () => {
     const g = new Grammar();
     g.addTerminals("a", "b", "c");
     g.add("S", g.seq("A", "C", "A"));
     g.add("A", g.seq("a", "A", "a"), "B", "C");
     g.add("B", g.seq("b", "B"), "b");
-    g.add("C", g.seq("c", "C"), g.Null);
+    g.add("C", g.seq("c", "C"), Null);
 
     const ns = new NullableSet(g).nonterms.map((n) => n.label).sort();
     expect(ns).toEqual(["A", "C", "S"]);
@@ -108,14 +109,7 @@ describe("Grammar Tests", () => {
     const ns = new NullableSet(g);
     const fs = new FirstSets(g, ns);
     const nts = fs.nonterms;
-    /*
-    streamDict(fs.entries)
-                .filter((k: number, v: TermSet) => {
-                  const e = g.expById(k);
-                  return e != null && e.type == ExpType.NON_TERM;
-                })
-                .collect(((k: number, v: TermSet), out => out[k] = v), {});
-               */
     console.log(fs.entries);
   });
+  */
 });

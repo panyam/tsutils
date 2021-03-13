@@ -1,4 +1,5 @@
 import { Token } from "./tokenizer";
+import { Nullable } from "../types";
 
 export class ParseError extends Error {
   line: number;
@@ -12,17 +13,17 @@ export class ParseError extends Error {
   }
 }
 
-export class UnexpectedTokenError<TokenType> extends ParseError {
-  foundToken: Token<TokenType>;
-  expectedTokens: Token<TokenType>[];
+export class UnexpectedTokenError extends ParseError {
+  foundToken: Nullable<Token>;
+  expectedTokens: Token[];
   readonly name: string = "UnexpectedTokenError";
 
-  constructor(foundToken: Token<TokenType>, ...expectedTokens: Token<TokenType>[]) {
+  constructor(foundToken: Nullable<Token>, ...expectedTokens: Token[]) {
     super(
-      foundToken.line,
-      foundToken.col,
-      `Found Token: ${foundToken.type} (${foundToken.value || ""}), Expected: ${expectedTokens
-        .map((t) => t.type)
+      foundToken?.line || -1,
+      foundToken?.col || -1,
+      `Found Token: ${foundToken?.tag || "EOF"} (${foundToken?.value || ""}), Expected: ${expectedTokens
+        .map((t) => t.tag)
         .join(", ")}`,
     );
     this.foundToken = foundToken;

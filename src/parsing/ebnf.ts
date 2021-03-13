@@ -2,7 +2,7 @@ import { Nullable, StringMap } from "../types";
 import { Token, Tokenizer as TokenizerBase } from "./tokenizer";
 import { ParseError, UnexpectedTokenError } from "./errors";
 import { Grammar } from "./grammar";
-import { Exp, ExpType } from "./grammar"
+import { Exp, ExpType } from "./grammar";
 import { PTNode } from "./parser";
 import { assert } from "../utils/misc";
 
@@ -74,17 +74,15 @@ export enum NodeType {
   GRAMMAR = "GRAMMAR",
   DECL = "DECL",
   RULE = "RULE",
-  PROD = "PROD",
   PROD_SEQ = "PROD_SEQ",
   PROD_UNION = "PROD_UNION",
   PROD_NAME = "PROD_NAME",
   PROD_STRING = "PROD_STRING",
-  PROD_LIT = "PROD_LIT",
+  PROD_NUM = "PROD_NUM",
+  PROD_IDENT = "PROD_IDENT",
   PROD_STAR = "PROD_STAR",
   PROD_PLUS = "PROD_PLUS",
-  PROD_QMARK = "PROD_QMARK",
   PROD_OPTIONAL = "PROD_OPTIONAL",
-  PROD_GROUP = "PROD_GROUP",
   IDENT = "IDENT",
   ERROR = "ERROR",
   COMMENT = "COMMENT",
@@ -224,40 +222,6 @@ export class EBNFParser {
     return this.processParseTree(root);
   }
 
-  processParseTree(pt: PTNode): Grammar {
-    const grammar = new Grammar();
-    assert(pt.tag == NodeType.GRAMMAR);
-    // extract all non terminals
-    for (const child of pt.children) {
-      assert(child.tag == NodeType.RULE);
-      assert(child.children.length == 2);
-      assert(child.children[0].isToken);
-      assert(child.children[0].tag == NodeType.PROD_NAME);
-      assert(child.children[1].tag == NodeType.PROD_UNION);
-      grammar.nonterm(child.children[0].token!.value);
-    }
-
-    // now recurse down and get all terminals and create rules
-    for (const child of pt.children) {
-      const ntname = child.children[0].token!.value;
-      const prods = child.children[1];
-      const exp = this.processProds(prods);
-      if (exp != null) {
-        grammar.add(ntname, exp);
-      }
-    };
-    return grammar;
-  }
-
-  processProds(prods: PTNode): Nullable<Exp> {
-    assert(prods.tag == NodeType.PROD_UNION);
-    const children = prods.children;
-    for (const prod of children) {
-      assert(prod.tag == NodeType.PROD && prod.children.length == 1);
-    }
-    return null;
-  }
-
   /**
    * grammar := decl+;
    *
@@ -296,9 +260,17 @@ export class EBNFParser {
    *      ;
    */
   parseProductions(): PTNode {
-    const out = newNode(NodeType.PROD_UNION)
+    const out = newNode(NodeType.PROD_UNION);
     while (!this.tokenizer.nextMatches(TokenType.SEMI_COLON)) {
-      if (this.tokenizer.nextMatches(TokenType.STRING, TokenType.IDENT, TokenType.OPEN_PAREN, TokenType.OPEN_SQ)) {
+      if (
+        this.tokenizer.nextMatches(
+          TokenType.NUMBER,
+          TokenType.STRING,
+          TokenType.IDENT,
+          TokenType.OPEN_PAREN,
+          TokenType.OPEN_SQ,
+        )
+      ) {
         const prod = this.parseProd();
         out.add(prod);
         this.tokenizer.consumeIf(TokenType.PIPE);
@@ -310,31 +282,32 @@ export class EBNFParser {
   }
 
   parseProd(): PTNode {
-    const out = newNode(NodeType.PROD);
+    const out = newNode(NodeType.PROD_SEQ);
     while (true) {
-      let curr: PTNode;
-      if (this.tokenizer.nextMatches(TokenType.OPEN_PAREN)) {
-        curr = newNode(NodeType.PROD_GROUP);
+      let curr: Nullable<PTNode> = null;
+      if (this.tokenizer.consumeIf(TokenType.OPEN_PAREN)) {
         const child = this.parseProductions();
         if (child != null) {
-          curr.add(child);
+          curr = child;
         }
         this.tokenizer.expectToken(TokenType.CLOSE_PAREN);
-      } else if (this.tokenizer.nextMatches(TokenType.OPEN_SQ)) {
-        curr = newNode(NodeType.PROD_OPTIONAL);
+      } else if (this.tokenizer.consumeIf(TokenType.OPEN_SQ)) {
         const child = this.parseProductions();
         if (child != null) {
+          curr = newNode(NodeType.PROD_OPTIONAL);
           curr.add(child);
         }
         this.tokenizer.expectToken(TokenType.CLOSE_SQ);
       } else if (this.tokenizer.nextMatches(TokenType.IDENT)) {
-        curr = newNode(NodeType.PROD_LIT, this.tokenizer.next()!);
+        curr = newNode(NodeType.PROD_IDENT, this.tokenizer.next()!);
       } else if (this.tokenizer.nextMatches(TokenType.STRING)) {
         curr = newNode(NodeType.PROD_STRING, this.tokenizer.next()!);
-      } else if (this.tokenizer.nextMatches(TokenType.SEMI_COLON, TokenType.PIPE)) {
+      } else if (this.tokenizer.nextMatches(TokenType.NUMBER)) {
+        curr = newNode(NodeType.PROD_NUM, this.tokenizer.next()!);
+      } else if (
+        this.tokenizer.ensureToken(TokenType.CLOSE_PAREN, TokenType.CLOSE_SQ, TokenType.SEMI_COLON, TokenType.PIPE)
+      ) {
         return out;
-      } else {
-        throw new UnexpectedTokenError(this.tokenizer.peek());
       }
 
       let postNode: Nullable<PTNode> = null;
@@ -343,14 +316,118 @@ export class EBNFParser {
       } else if (this.tokenizer.consumeIf(TokenType.PLUS)) {
         postNode = newNode(NodeType.PROD_PLUS);
       } else if (this.tokenizer.consumeIf(TokenType.QMARK)) {
-        postNode = newNode(NodeType.PROD_QMARK);
+        postNode = newNode(NodeType.PROD_OPTIONAL);
       }
-      if (postNode != null) {
-        postNode.add(curr)
-        curr = postNode;
+      if (curr != null) {
+        if (postNode != null) {
+          postNode.add(curr);
+          curr = postNode;
+        }
+        out.add(curr);
       }
-      out.add(curr)
     }
     return out;
+  }
+
+  processParseTree(pt: PTNode): Grammar {
+    const grammar = new Grammar();
+    assert(pt.tag == NodeType.GRAMMAR);
+    // extract all non terminals
+    for (const child of pt.children) {
+      assert(child.tag == NodeType.RULE);
+      assert(child.children.length == 2);
+      assert(child.children[0].isToken);
+      assert(child.children[0].tag == NodeType.PROD_NAME);
+      assert(child.children[1].tag == NodeType.PROD_UNION);
+      grammar.nonterm(child.children[0].token!.value);
+    }
+
+    // now recurse down and get all terminals and create rules
+    for (const child of pt.children) {
+      const ntname = child.children[0].token!.value;
+      const prods = child.children[1];
+      const exp = this.processProdUnion(grammar, prods);
+      if (exp != null) {
+        grammar.add(ntname, exp);
+      }
+    }
+    return grammar;
+  }
+
+  processProdUnion(grammar: Grammar, prods: PTNode): Nullable<Exp> {
+    assert(prods.tag == NodeType.PROD_UNION);
+    const children = prods.children;
+    const exps: Exp[] = [];
+    for (const prod of children) {
+      assert(prod.tag == NodeType.PROD_SEQ);
+      const e = this.processProdSeq(grammar, prod);
+      if (e != null) {
+        exps.push(e);
+      }
+    }
+    if (exps.length == 0) return null;
+    else if (exps.length == 1) return exps[0];
+    else return grammar.anyof(...exps);
+  }
+
+  processProdSeq(grammar: Grammar, prods: PTNode): Nullable<Exp> {
+    assert(prods.tag == NodeType.PROD_SEQ);
+    const children = prods.children;
+    const exps: Exp[] = [];
+    for (const prod of children) {
+      const exp: Nullable<Exp> = this.processProd(grammar, prod);
+      if (exp != null) {
+        exps.push(exp);
+      }
+    }
+    if (exps.length == 0) return null;
+    else if (exps.length == 1) return exps[0];
+    else return grammar.seq(...exps);
+  }
+
+  processProd(grammar: Grammar, prod: PTNode): Nullable<Exp> {
+    if (prod.tag == NodeType.PROD_SEQ) {
+      return this.processProdSeq(grammar, prod);
+    } else if (prod.tag == NodeType.PROD_UNION) {
+      return this.processProdUnion(grammar, prod);
+    } else if (prod.tag == NodeType.PROD_OPTIONAL) {
+      assert(prod.children.length == 1);
+      const exp = this.processProd(grammar, prod.children[0]);
+      if (exp != null) {
+        return grammar.opt(exp);
+      }
+      return exp;
+    } else if (prod.tag == NodeType.PROD_PLUS) {
+      assert(prod.children.length == 1);
+      const exp = this.processProd(grammar, prod.children[0]);
+      if (exp != null) {
+        return grammar.atleast1(exp);
+      }
+      return exp;
+    } else if (prod.tag == NodeType.PROD_STAR) {
+      assert(prod.children.length == 1);
+      const exp = this.processProd(grammar, prod.children[0]);
+      if (exp != null) {
+        return grammar.atleast0(exp);
+      }
+      return exp;
+    } else if (prod.tag == NodeType.PROD_IDENT) {
+      const token = prod.token!;
+      if (grammar.isNonterm(token.value)) {
+        return grammar.nonterm(token.value);
+      } else {
+        // we have a terminal
+        return grammar.term(token.value);
+      }
+    } else if (prod.tag == NodeType.PROD_STRING) {
+      // TODO - ensure we can add literal into our
+      // Tokenizer so it will prioritize this over its rules
+      return grammar.term('"' + prod.token!.value + '"');
+    } else if (prod.tag == NodeType.PROD_NUM) {
+      // TODO - ensure we can add literal into our
+      // Tokenizer so it will prioritize this over its rules
+      return grammar.term(prod.token!.value + "");
+    }
+    return null;
   }
 }

@@ -1,5 +1,5 @@
 import { NumMap } from "../types";
-import { Grammar, Term, NonTerm, ExpType, Exp, ExpList, Opt, Atleast0, Atleast1 } from "./grammar";
+import { Null, Grammar, Term, NonTerm, ExpType, Exp, ExpList, Opt, Atleast0, Atleast1 } from "./grammar";
 import { assert } from "../utils/misc";
 
 export class TermSet {
@@ -24,22 +24,11 @@ export class TermSet {
   }
 
   add(term: Term): this {
-    if (term == this.grammar.Null) {
-      this.hasNull = true;
-    } else {
-      this.entries.add(term.id);
-    }
+    this.entries.add(term.id);
     return this;
   }
 
   delete(term: Term): boolean {
-    if (term == this.grammar.Null) {
-      if (this.hasNull) {
-        this.hasNull = false;
-        return true;
-      }
-      return false;
-    }
     return this.entries.delete(term.id);
   }
 
@@ -86,12 +75,13 @@ export class NullableSet {
   }
 
   isNullable(exp: Exp): boolean {
+    if (exp.type == ExpType.NULL) return true;
     if (!this.entries.has(exp.id) && !this.visited[exp.id]) {
       this.visited[exp.id] = true;
       let result = false;
       switch (exp.type) {
         case ExpType.TERM:
-          result = exp == this.grammar.Null;
+          result = false;
           break;
         case ExpType.NON_TERM:
           result = this.isNullable((exp as NonTerm).rules);
@@ -178,6 +168,17 @@ export class FirstSets {
     }
   }
 
+  addNull(exp: Exp): boolean {
+    if (!(exp.id in this.entries)) {
+      this.entries[exp.id] = new TermSet(this.grammar);
+    }
+    const entries = this.entries[exp.id];
+    if (entries.hasNull) return false;
+    entries.hasNull = true;
+    this._count++;
+    return true;
+  }
+
   add(exp: Exp, term: Term): boolean {
     if (!(exp.id in this.entries)) {
       this.entries[exp.id] = new TermSet(this.grammar);
@@ -241,11 +242,11 @@ export class FirstSets {
         this.visit(exp as NonTerm, populated);
         break;
       case ExpType.OPTIONAL:
-        this.add(parent, this.grammar.Null);
+        this.addNull(parent);
         this.processRule(exp, (exp as Opt).exp, populated);
         break;
       case ExpType.ATLEAST_0:
-        this.add(parent, this.grammar.Null);
+        this.addNull(parent);
         this.processRule(exp, (exp as Atleast0).exp, populated);
         break;
       case ExpType.ATLEAST_1:
@@ -298,6 +299,17 @@ export class FollowSets {
 
   entriesFor(exp: Exp): TermSet {
     return this.entries[exp.id];
+  }
+
+  addNull(exp: Exp): boolean {
+    if (!(exp.id in this.entries)) {
+      this.entries[exp.id] = new TermSet(this.grammar);
+    }
+    const entries = this.entries[exp.id];
+    if (entries.hasNull) return false;
+    entries.hasNull = true;
+    this._count++;
+    return true;
   }
 
   add(exp: Exp, term: Term): boolean {
@@ -385,7 +397,6 @@ export class FollowSets {
       case ExpType.SEQ:
         const exps = (exp as ExpList).exps;
         const firstSets = this.firstSets;
-        const Null = this.grammar.Null;
 
         // Rule 1 (i == exps.length - 1):
         //  If A -> a B:

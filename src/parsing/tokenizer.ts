@@ -168,7 +168,7 @@ export abstract class Tokenizer {
         return null;
       }
     } else if (ensure) {
-      throw new ParseError(-1, -1, "Unexpected end of tape");
+      throw new ParseError(-1, -1, "Unexpected end of input.");
     }
     return token;
   }
@@ -179,6 +179,10 @@ export abstract class Tokenizer {
 
   expectToken(...expected: TokenType[]): Token {
     return this.match((t) => t.isOneOf(...expected), true, true) as Token;
+  }
+
+  ensureToken(...expected: TokenType[]): Token {
+    return this.match((t) => t.isOneOf(...expected), true, false) as Token;
   }
 
   nextMatches(...expected: TokenType[]): Nullable<Token> {
