@@ -11,6 +11,16 @@ export class TermSet {
     this.grammar = grammar;
   }
 
+  get labels(): string[] {
+    const out: string[] = [];
+    for (const i of this.entries) {
+      const exp = this.grammar.expById(i) as Term;
+      assert(exp != null);
+      out.push(exp.label);
+    }
+    return out;
+  }
+
   addTo(another: TermSet): number {
     const before = another.entries.size;
     for (const termid of this.entries) {
@@ -139,6 +149,7 @@ export class FirstSets {
     this.refresh();
   }
 
+  /*
   get nonterms(): NumMap<NonTerm[]> {
     const out: NumMap<NonTerm[]> = {};
     for (const id in this.entries) {
@@ -149,6 +160,7 @@ export class FirstSets {
     }
     return out;
   }
+  */
 
   get count(): number {
     let c = 0;
