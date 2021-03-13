@@ -54,14 +54,41 @@ describe("EBNF Tests", () => {
       Expr : Term ( "+" | "-" ) Expr ;
       Term : Factor ( DIV | MULT ) Term ;
       Factor : NUM | "(" Expr ")" ;
-      X : A B C D ;
+      X : A B C D Z 1 2 3;
+      Y : A ? [ B C D ]  [ X | Y | Z ] * [ 1 2 3 ] + ;
     `).grammar;
 
-    expectListsEqual(symLabels(g.nonTerminals), ["Expr", "Term", "Factor", "X"]);
-    expectListsEqual(symLabels(g.terminals), ['"+"', '"-"', "A", "B", "C", "D", "DIV", "MULT", '"("', '")"', "NUM"]);
+    expectListsEqual(symLabels(g.nonTerminals), ["Y", "Expr", "Term", "Factor", "X"]);
+    expectListsEqual(symLabels(g.terminals), [
+      "1",
+      "2",
+      "3",
+      '"+"',
+      "Z",
+      '"-"',
+      "A",
+      "B",
+      "C",
+      "D",
+      "DIV",
+      "MULT",
+      '"("',
+      '")"',
+      "NUM",
+    ]);
     expectRules(g, "Expr", g.seq("Term", g.anyof('"+"', '"-"'), "Expr"));
     expectRules(g, "Term", g.seq("Factor", g.anyof("DIV", "MULT"), "Term"));
-    expectRules(g, "X", g.seq("A", "B", "C", "D"));
+    expectRules(g, "X", g.seq("A", "B", "C", "D", "Z", "1", "2", "3"));
     expectRules(g, "Factor", "NUM", g.seq('"("', "Expr", '")"'));
+    expectRules(
+      g,
+      "Y",
+      g.seq(
+        g.opt("A"),
+        g.opt(g.seq("B", "C", "D")),
+        g.atleast0(g.opt(g.anyof("X", "Y", "Z"))),
+        g.atleast1(g.opt(g.seq("1", "2", "3"))),
+      ),
+    );
   });
 });
