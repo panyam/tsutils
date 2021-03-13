@@ -2,7 +2,7 @@ import { Nullable, StringMap } from "../types";
 import { Token, Tokenizer as TokenizerBase } from "./tokenizer";
 import { ParseError, UnexpectedTokenError } from "./errors";
 import { Grammar } from "./grammar";
-import { Exp, ExpType } from "./grammar";
+import { Null, Exp } from "./grammar";
 import { PTNode } from "./parser";
 import { assert } from "../utils/misc";
 
@@ -74,6 +74,7 @@ export enum NodeType {
   GRAMMAR = "GRAMMAR",
   DECL = "DECL",
   RULE = "RULE",
+  PROD_NULL = "PROD_NULL",
   PROD_SEQ = "PROD_SEQ",
   PROD_UNION = "PROD_UNION",
   PROD_NAME = "PROD_NAME",
@@ -273,7 +274,14 @@ export class EBNFParser {
       ) {
         const prod = this.parseProd();
         out.add(prod);
-        this.tokenizer.consumeIf(TokenType.PIPE);
+        // "|" ";" is a null production
+        if (this.tokenizer.consumeIf(TokenType.PIPE)) {
+          if (this.tokenizer.nextMatches(TokenType.SEMI_COLON)) {
+            const t2 = newNode(NodeType.PROD_SEQ);
+            t2.add(newNode(NodeType.PROD_NULL));
+            out.add(t2);
+          }
+        }
       } else {
         break;
       }
@@ -427,6 +435,10 @@ export class EBNFParser {
       // TODO - ensure we can add literal into our
       // Tokenizer so it will prioritize this over its rules
       return grammar.term(prod.token!.value + "");
+    } else if (prod.tag == NodeType.PROD_NULL) {
+      return Null;
+    } else {
+      throw new Error("Invalid Prod: " + prod.tag);
     }
     return null;
   }

@@ -1,4 +1,4 @@
-import { Term, NonTerm, ExpType, Exp, Grammar } from "../grammar";
+import { Null, Term, NonTerm, ExpType, Exp, Grammar } from "../grammar";
 import { EBNFParser } from "../ebnf";
 import { assert } from "../../utils/misc";
 
@@ -90,5 +90,16 @@ describe("EBNF Tests", () => {
         g.atleast1(g.opt(g.seq("1", "2", "3"))),
       ),
     );
+  });
+
+  test("Test3", () => {
+    const g = new EBNFParser(`
+      X: A | B | ;
+      Y: B | ;
+    `).grammar;
+
+    expectListsEqual(symLabels(g.nonTerminals), ["X", "Y"]);
+    expectListsEqual(symLabels(g.terminals), ["A", "B"]);
+    expectRules(g, "X", "A", "B", Null);
   });
 });
