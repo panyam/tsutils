@@ -123,15 +123,17 @@ export abstract class Tokenizer {
     this.tape = tape;
   }
 
-  peek(): Nullable<Token> {
-    return this.next(false);
-  }
-
   /**
    * Performs the real work of extracting the next token from
    * the tape based on the current state of the tokenizer.
+   *
+   * Returns NULL if end of input reached.
    */
   protected abstract extractNext(): Nullable<Token>;
+
+  peek(): Nullable<Token> {
+    return this.next(false);
+  }
 
   next(extract = true): Nullable<Token> {
     if (this.peekedToken == null) {

@@ -1,5 +1,6 @@
 import { Nullable } from "../types";
-import { Token } from "./tokenizer";
+import { Token, Tokenizer } from "./tokenizer";
+import { Grammar } from "./grammar";
 
 type NodeType = number | string;
 
@@ -29,4 +30,15 @@ export class PTNode {
     node.parent = this;
     this._children.push(node);
   }
+}
+
+export abstract class Parser {
+  tokenizer: Tokenizer;
+  grammar: Grammar;
+  constructor(grammar: Grammar, tokenizer: Tokenizer) {
+    this.tokenizer = tokenizer;
+    this.grammar = grammar;
+  }
+
+  abstract parse(): Nullable<PTNode>;
 }

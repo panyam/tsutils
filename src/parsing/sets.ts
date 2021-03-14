@@ -215,9 +215,9 @@ class NonTermTermSets {
 export class FirstSets extends NonTermTermSets {
   readonly nullables: NullableSet;
 
-  constructor(grammar: Grammar, nullables: NullableSet) {
+  constructor(grammar: Grammar, nullables?: NullableSet) {
     super(grammar);
-    this.nullables = nullables;
+    this.nullables = nullables || new NullableSet(grammar);
     this.refresh();
   }
 
@@ -306,9 +306,9 @@ export class FollowSets extends NonTermTermSets {
   readonly firstSets: FirstSets;
   readonly cumFirstSets: FirstSets;
 
-  constructor(grammar: Grammar, firstSets: FirstSets) {
+  constructor(grammar: Grammar, firstSets?: FirstSets) {
     super(grammar);
-    this.firstSets = firstSets;
+    this.firstSets = firstSets || new FirstSets(grammar);
     this.cumFirstSets = new FirstSets(grammar, firstSets.nullables);
     this.refresh();
   }
