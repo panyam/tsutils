@@ -4,13 +4,16 @@ import { assert } from "../utils/misc";
 export enum ExpType {
   TERM = 0,
   NON_TERM = 1,
-  OPTIONAL = 2,
-  ATLEAST_0 = 3,
-  ATLEAST_1 = 4,
-  ANY_OF = 5,
-  SEQ = 6,
-  MAX_TYPE = 7,
-  NULL = 8,
+  STR = 2,
+  MAX_TYPE = 3,
+  NULL = 4,
+}
+
+export enum Cardinality {
+  ATMOST_1 = -2,
+  ATLEAST_0 = -1,
+  EXACTLY_1 = 1,
+  ATLEAST_1 = 2,
 }
 
 export abstract class Exp {
@@ -43,17 +46,14 @@ export class NullExp extends Exp {
 }
 export const Null = NullExp.INSTANCE;
 
-export abstract class Sym extends Exp {
-  readonly tag: ExpType;
+export class Term extends Exp {
+  readonly tag: ExpType = ExpType.TERM;
   readonly label: string;
-  readonly isTerminal: boolean;
   precedence = 1;
   assocLeft = true;
-  constructor(label: string, isTerminal = true) {
+  constructor(label: string) {
     super();
     this.label = label;
-    this.isTerminal = isTerminal;
-    this.tag = isTerminal ? ExpType.TERM : ExpType.NON_TERM;
   }
 
   equals(another: this): boolean {
@@ -61,34 +61,54 @@ export abstract class Sym extends Exp {
   }
 }
 
-export class Term extends Sym {
+export class NonTerm extends Exp {
+  readonly tag: ExpType = ExpType.NON_TERM;
+  readonly label: string;
+  precedence = 1;
+  assocLeft = true;
+  // rules: AnyOf = new AnyOf();
+  rules: Str[] = [];
   constructor(label: string) {
-    super(label);
-  }
-}
-
-export class NonTerm extends Sym {
-  rules: AnyOf = new AnyOf();
-  constructor(label: string) {
-    super(label, false);
+    super();
+    this.label = label;
   }
 
-  add(exp: Exp): void {
-    if (this.findRule(exp) >= 0) {
+  equals(another: this): boolean {
+    return super.equals(another) && this.label == another.label;
+  }
+
+  add(production: Str): void {
+    if (this.findRule(production) >= 0) {
       throw new Error("Duplicate rule");
     }
-    const rules = exp.tag == ExpType.ANY_OF ? (exp as AnyOf).exps : [exp];
-    for (const r of rules) {
-      this.rules.add(r);
-    }
+    this.rules.push(production);
   }
 
   /**
    * Checks if a rule already exists in the list of productions for
    * this non terminal.
    */
-  findRule(exp: Exp): number {
-    return this.rules.indexOf(exp);
+  findRule(production: Str): number {
+    for (let i = this.rules.length - 1; i >= 0; i--) {
+      if (this.rules[i].equals(production)) return i;
+    }
+    return -1;
+  }
+
+  /**
+   * Returns true if the rules of this non-term match the rules of
+   * another non terminal.
+   * This is used for seeing if duplicates exist when creating auxiliary
+   * non-terminals so duplicates are not created.
+   */
+  rulesEqual(another: NonTerm): boolean {
+    if (this.rules.length != another.rules.length) return false;
+    for (let i = this.rules.length - 1; i >= 0; i--) {
+      if (!this.rules[i].equals(another.rules[i])) {
+        return false;
+      }
+    }
+    return true;
   }
 }
 
@@ -150,12 +170,53 @@ export abstract class ExpList extends Exp {
   }
 }
 
-export class AnyOf extends ExpList {
-  readonly tag: ExpType = ExpType.ANY_OF;
+export class Sym {
+  readonly value: Term | NonTerm;
+  readonly isTerminal: boolean;
+  readonly cardinality: Cardinality;
+  constructor(value: Term | NonTerm, cardinality: Cardinality = Cardinality.EXACTLY_1) {
+    this.value = value;
+    this.cardinality = cardinality;
+    this.isTerminal = value.tag == ExpType.TERM;
+  }
+
+  equals(another: Sym): boolean {
+    if (this.value.tag != another.value.tag) return false;
+    if (this.cardinality != another.cardinality) return false;
+    if (this.isTerminal) {
+      if (!(this.value as Term).equals(another.value as Term)) return false;
+    } else {
+      if (!(this.value as NonTerm).equals(another.value as NonTerm)) return false;
+    }
+    return true;
+  }
 }
 
-export class Seq extends ExpList {
-  readonly tag: ExpType = ExpType.SEQ;
+export class Str extends Exp {
+  readonly tag: ExpType = ExpType.STR;
+  syms: Sym[];
+
+  constructor(...syms: (Term | NonTerm)[]) {
+    super();
+    this.syms = syms.map((s) => new Sym(s));
+  }
+
+  add(sym: Sym): void {
+    this.syms.push(sym);
+  }
+
+  get length(): number {
+    return this.syms.length;
+  }
+
+  equals(another: this): boolean {
+    if (!super.equals(another)) return false;
+    if (this.syms.length != another.syms.length) return false;
+    for (let i = 0; i < this.syms.length; i++) {
+      if (!this.syms[i].equals(another.syms[i])) return false;
+    }
+    return true;
+  }
 }
 
 export class Grammar {
@@ -224,17 +285,17 @@ export class Grammar {
    *
    * Null production can be represented with an empty exps list.
    */
-  add(nt: string, ...exps: (Exp | string)[]): this {
+  add(nt: string, ...syms: (Term | NonTerm | string)[]): this {
     const nonterm = this.nonterm(nt);
-    let newExp: Exp;
-    if (exps.length == 0) {
-      newExp = Null;
-    } else if (exps.length == 1) {
-      newExp = this.normalizeExp(exps[0]);
+    let newSym: Sym;
+    if (syms.length == 0) {
+      newSym = Null;
+    } else if (syms.length == 1) {
+      newSym = this.normalizeSym(syms[0]);
     } else {
-      newExp = this.anyof(...exps);
+      newSym = this.anyof(...syms);
     }
-    nonterm.add(newExp);
+    nonterm.add(newSym);
     return this;
   }
 
@@ -251,7 +312,7 @@ export class Grammar {
     return this.addR(...exps);
   }
 
-  addR(...exps: (Exp | string)[]): this {
+  addR(...exps: (Term | NonTerm | string)[]): this {
     assert(this.currentNonTerm != null);
     let newExp: Exp;
     if (exps.length == 0) {
@@ -386,7 +447,7 @@ export class Grammar {
     if (exps.length == 1) {
       return this.normalizeExp(exps[0]);
     } else {
-      return this.wrapExp(new Seq(...exps.map((e) => this.normalizeExp(e))));
+      return this.wrapExp(new Str(...exps.map((e) => this.normalizeExp(e))));
     }
   }
 
