@@ -1,5 +1,5 @@
 import { NumMap } from "../types";
-import { Null, Grammar, Term, NonTerm, ExpType, Exp, ExpList, Opt, Atleast0, Atleast1 } from "./grammar";
+import { Seq, Null, Grammar, Term, NonTerm, ExpType, Exp, ExpList, Opt, Atleast0, Atleast1 } from "./grammar";
 import { assert } from "../utils/misc";
 
 export class TermSet {
@@ -22,12 +22,18 @@ export class TermSet {
     return out;
   }
 
-  addTo(another: TermSet): number {
+  addFrom(another: TermSet, includeNull = true): number {
+    return another.addTo(this, includeNull);
+  }
+
+  addTo(another: TermSet, includeNull = true): number {
     const before = another.entries.size;
     for (const termid of this.entries) {
       another.entries.add(termid);
     }
-    another.hasNull = this.hasNull || another.hasNull;
+    if (includeNull) {
+      another.hasNull = this.hasNull || another.hasNull;
+    }
     return another.entries.size - before;
   }
 
@@ -66,7 +72,7 @@ export class NullableSet {
     const out: NonTerm[] = [];
     this.entries.forEach((id) => {
       const e = this.grammar.expById(id);
-      if (e != null && e.type == ExpType.NON_TERM) out.push(e as NonTerm);
+      if (e != null && e.tag == ExpType.NON_TERM) out.push(e as NonTerm);
     });
     return out;
   }
@@ -76,22 +82,19 @@ export class NullableSet {
     this.entries = new Set();
     this.visited = {};
 
-    while (true) {
-      const beforeCount = this.entries.size;
+    let beforeCount = 0;
+    do {
+      beforeCount = this.entries.size;
       this.grammar.nonTerminals.forEach((nt) => this.isNullable(nt));
-      if (beforeCount == this.entries.size) {
-        // no more first set entries found
-        break;
-      }
-    }
+    } while (beforeCount != this.entries.size);
   }
 
   isNullable(exp: Exp): boolean {
-    if (exp.type == ExpType.NULL) return true;
+    if (exp.tag == ExpType.NULL) return true;
     if (!this.entries.has(exp.id) && !this.visited[exp.id]) {
       this.visited[exp.id] = true;
       let result = false;
-      switch (exp.type) {
+      switch (exp.tag) {
         case ExpType.TERM:
           result = false;
           break;
@@ -127,7 +130,7 @@ export class NullableSet {
           break;
         default:
           console.log("Unhandled expression type: ", exp);
-          assert(false, "Unhandled expression type: " + exp.type);
+          assert(false, "Unhandled expression type: " + exp.tag);
       }
       if (result) this.entries.add(exp.id);
     }
@@ -135,34 +138,19 @@ export class NullableSet {
   }
 }
 
-/**
- * For each symbol maps its label to a list of terminals that
- * start that non terminal.
- */
-export class FirstSets {
+class NonTermTermSets {
   readonly grammar: Grammar;
-  readonly nullables: NullableSet;
   entries: NumMap<TermSet> = {};
   private _count = 0;
 
-  constructor(grammar: Grammar, nullables: NullableSet) {
+  constructor(grammar: Grammar) {
     this.grammar = grammar;
-    this.nullables = nullables;
-    this.refresh();
   }
 
-  /*
-  get nonterms(): NumMap<NonTerm[]> {
-    const out: NumMap<NonTerm[]> = {};
-    for (const id in this.entries) {
-      const i = parseInt(id);
-      out[i] = [];
-      const e = this.grammar.expById(parseInt(id));
-      if (e != null && e.type == ExpType.NON_TERM) out[i].push(e as NonTerm);
-    }
-    return out;
+  refresh(): void {
+    this.entries = {};
+    this._count = 0;
   }
-  */
 
   get count(): number {
     let c = 0;
@@ -182,37 +170,55 @@ export class FirstSets {
     }
   }
 
+  /**
+   * Add the null symbol into this set of terminals for a given expression.
+   */
   addNull(exp: Exp): boolean {
-    if (!(exp.id in this.entries)) {
-      this.entries[exp.id] = new TermSet(this.grammar);
-    }
-    const entries = this.entries[exp.id];
-    if (entries.hasNull) return false;
-    entries.hasNull = true;
-    this._count++;
-    return true;
-  }
-
-  add(exp: Exp, term: Term): boolean {
-    if (!(exp.id in this.entries)) {
-      this.entries[exp.id] = new TermSet(this.grammar);
-    }
-    const entries = this.entries[exp.id];
-    if (entries.has(term)) return false;
-    entries.add(term);
-    this._count++;
-    return true;
+    return this.add(exp, Null);
   }
 
   /**
-   * Adds all entries in ntFrom's firstSet into the firstSet of ntTo.
+   * Add a Null, term or another expression to the set of terminals
+   * for a given expression.  If source is an expression then all
+   * of the source expression's terminal symbosl are added to exp's
+   * term set.
    */
-  addTo(ntTo: Exp, ntFrom: Exp): number {
-    const srcEntries = this.entriesFor(ntFrom);
-    const destEntries = this.entriesFor(ntTo);
-    const count = srcEntries.addTo(destEntries);
-    this._count += count;
-    return count;
+  add(exp: Exp, source: Exp, includeNull = true): boolean {
+    if (!(exp.id in this.entries)) {
+      this.entries[exp.id] = new TermSet(this.grammar);
+    }
+    const entries = this.entries[exp.id];
+    if (source.tag == ExpType.NULL) {
+      if (entries.hasNull) return false;
+      // console.log(`Adding Null to Set of ${exp.id}`);
+      entries.hasNull = true;
+    } else if (source.tag == ExpType.TERM) {
+      const term = source as Term;
+      if (entries.has(term)) return false;
+      // console.log(`Adding Term(${term.label}) to Set of ${exp.id}`);
+      entries.add(term);
+      this._count++;
+    } else {
+      const srcEntries = this.entriesFor(source);
+      const destEntries = this.entriesFor(exp);
+      const count = srcEntries.addTo(destEntries, includeNull);
+      this._count += count;
+    }
+    return true;
+  }
+}
+
+/**
+ * For each symbol maps its label to a list of terminals that
+ * start that non terminal.
+ */
+export class FirstSets extends NonTermTermSets {
+  readonly nullables: NullableSet;
+
+  constructor(grammar: Grammar, nullables: NullableSet) {
+    super(grammar);
+    this.nullables = nullables;
+    this.refresh();
   }
 
   /**
@@ -220,18 +226,14 @@ export class FirstSets {
    * This method assumes that the grammar's nullables are fresh.
    */
   refresh(): void {
-    this.entries = {};
-    this._count = 0;
+    super.refresh();
     this.grammar.terminals.forEach((t) => this.add(t, t));
 
-    while (true) {
-      const beforeCount = this.count;
+    let beforeCount = 0;
+    do {
+      beforeCount = this.count;
       this.grammar.nonTerminals.forEach((nt) => this.visit(nt, {}));
-      if (beforeCount == this.count) {
-        // no more first set entries found
-        break;
-      }
-    }
+    } while (beforeCount != this.count);
   }
 
   // Here we start with each NT and in a Depth First manner process
@@ -248,7 +250,7 @@ export class FirstSets {
   }
 
   processRule(parent: Exp, exp: Exp, populated: NumMap<NonTerm>): void {
-    switch (exp.type) {
+    switch (exp.tag) {
       case ExpType.NULL:
         // Nothing
         this.addNull(parent);
@@ -257,7 +259,8 @@ export class FirstSets {
         this.add(parent, exp as Term);
         break;
       case ExpType.NON_TERM:
-        this.visit(exp as NonTerm, populated);
+        // Do nothing
+        // this.visit(exp as NonTerm, populated);
         break;
       case ExpType.OPTIONAL:
         this.addNull(parent);
@@ -289,9 +292,9 @@ export class FirstSets {
         }
         break;
       default:
-        assert(false, "Unhandled expression type: " + exp.type);
+        assert(false, "Unhandled expression type: " + exp.tag);
     }
-    this.addTo(parent, exp);
+    this.add(parent, exp, this.nullables.isNullable(exp));
   }
 }
 
@@ -299,57 +302,15 @@ export class FirstSets {
  * For each symbol maps its label to a list of terminals that
  * start that non terminal.
  */
-export class FollowSets {
-  readonly grammar: Grammar;
+export class FollowSets extends NonTermTermSets {
   readonly firstSets: FirstSets;
-  entries: NumMap<TermSet> = {};
-  private _count = 0;
+  readonly cumFirstSets: FirstSets;
 
   constructor(grammar: Grammar, firstSets: FirstSets) {
-    this.grammar = grammar;
+    super(grammar);
     this.firstSets = firstSets;
+    this.cumFirstSets = new FirstSets(grammar, firstSets.nullables);
     this.refresh();
-  }
-
-  get count(): number {
-    return this._count;
-  }
-
-  entriesFor(exp: Exp): TermSet {
-    return this.entries[exp.id];
-  }
-
-  addNull(exp: Exp): boolean {
-    if (!(exp.id in this.entries)) {
-      this.entries[exp.id] = new TermSet(this.grammar);
-    }
-    const entries = this.entries[exp.id];
-    if (entries.hasNull) return false;
-    entries.hasNull = true;
-    this._count++;
-    return true;
-  }
-
-  add(exp: Exp, term: Term): boolean {
-    if (!(exp.id in this.entries)) {
-      this.entries[exp.id] = new TermSet(this.grammar);
-    }
-    const entries = this.entries[exp.id];
-    if (!entries.has(term)) return false;
-    entries.add(term);
-    this._count++;
-    return true;
-  }
-
-  /**
-   * Adds all entries in ntFrom's firstSet into the firstSet of ntTo.
-   */
-  addFrom(ntFrom: Exp, ntTo: Exp): number {
-    const srcEntries = this.entries[ntFrom.id];
-    const destEntries = this.entries[ntTo.id];
-    const count = srcEntries.addTo(destEntries);
-    this._count += count;
-    return count;
   }
 
   /**
@@ -358,93 +319,102 @@ export class FollowSets {
    * up-to-date.
    */
   refresh(): void {
-    this.entries = {};
-    this._count = 0;
+    super.refresh();
     const g = this.grammar;
-    this.add(g.startSymbol!, g.Eof);
+    assert(g.startSymbol != null, "Select start symbol of the grammar");
+    this.add(g.startSymbol, g.Eof);
 
-    while (true) {
-      const beforeCount = this.count;
+    // Augmented start symbol
+    // const augStart = new NonTerm("");
+    // augStart.add(new Seq(g.startSymbol, g.Eof));
+
+    let beforeCount = 0;
+    do {
+      beforeCount = this.count;
       for (const nt of g.nonTerminals) {
-        this.visit(nt, {});
+        this.processRule(nt, nt.rules);
+        // console.log("NT: ", nt.label, ", FS: ", this.entriesFor(nt).labels);
       }
-      if (beforeCount == this.count) {
-        // no more first set entries found
-        break;
-      }
-    }
-  }
-
-  visit(nt: NonTerm, visited: any): void {
-    if (!visited[nt.id]) {
-      visited[nt.id] = true;
-      this.processRule(nt, nt.rules);
-    }
+    } while (beforeCount != this.count);
   }
 
   /**
    * Add Follows[source] into Follows[dest] recursively.
    */
   processRule(parent: Exp, exp: Exp): void {
-    switch (exp.type) {
-      case ExpType.TERM:
+    switch (exp.tag) {
+      case ExpType.NULL:
         // Do nothing
-        break;
-      case ExpType.NON_TERM:
-        // Do nothing
-        this.addFrom(parent, exp);
         break;
       case ExpType.OPTIONAL:
-        this.addFrom(parent, exp);
+        this.add(exp, parent);
         this.processRule(exp, (exp as Opt).exp);
         break;
       case ExpType.ATLEAST_0:
-        this.addFrom(parent, exp);
+        this.add(exp, parent);
         this.processRule(exp, (exp as Atleast0).exp);
         break;
       case ExpType.ATLEAST_1:
-        this.addFrom(parent, exp);
+        this.add(exp, parent);
         this.processRule(exp, (exp as Atleast1).exp);
         break;
       case ExpType.ANY_OF:
-        this.addFrom(parent, exp);
+        this.add(exp, parent);
         for (const e of (exp as ExpList).exps) {
           this.processRule(exp, e);
         }
         break;
+      case ExpType.TERM:
+        // Do nothing
+        break;
+      case ExpType.NON_TERM:
+        // Do nothing?
+        this.add(exp, parent);
+        break;
       case ExpType.SEQ:
         const exps = (exp as ExpList).exps;
         const firstSets = this.firstSets;
+        const nullables = this.firstSets.nullables;
 
-        // Rule 1 (i == exps.length - 1):
-        //  If A -> a B:
-        //    Follow(A) -> Follow(B)
-        //
-        // Rule 2 (Null.id in firsts):
-        //  If A -> aBb and eps is in First(b):
-        //    Follow(A) -> Follow(B)
-        for (let i = exps.length - 1; i >= 0; i--) {
-          const expi = exps[i];
-          const firsts = firstSets.entriesFor(expi);
-          if (i == exps.length - 1 || Null.id in firsts) {
-            this.addFrom(expi, parent);
-          } else {
-            break;
+        // recurse first if there are any rules
+        for (let i = 0; i < exps.length - 1; i++) {
+          this.processRule(exp, exps[i]);
+        }
+
+        // Rule 1:
+        //  If A -> aBb1b2b3..bn:
+        //    Follow(B) = Follow(B) U { First(b1b2b3...bn) - eps }
+        for (let i = 0; i < exps.length - 1; i++) {
+          if (exps[i].tag != ExpType.NULL && exps[i].tag != ExpType.TERM) {
+            const entries = this.entriesFor(exps[i]);
+            // This needs to be memoized
+            for (let j = i + 1; j < exps.length; j++) {
+              firstSets.entriesFor(exps[j]).addTo(entries, false);
+              if (!nullables.isNullable(exps[j])) break;
+            }
           }
         }
 
-        // Rule 3:
-        //  If A -> aBb:
-        //    { First(b) - eps } -> Follow(B)
-        for (let i = exps.length - 1; i > 0; i--) {
-          const expi = exps[i];
-          const firsts = firstSets.entriesFor(expi);
-          const expi1 = exps[i - 1];
-          firsts.addTo(this.entriesFor(expi1));
+        // Rule 2:
+        //  If A -> aBb1b2b3..bn:
+        //    if Nullable(b1b2b3...bn):
+        //      Follow(B) = Follow(B) U Follow(N)
+        for (let i = exps.length - 1; i >= 0; i--) {
+          // This needs to be memoized??
+          let allNullable = true;
+          for (let j = i + 1; j < exps.length; j++) {
+            if (!nullables.isNullable(exps[j])) {
+              allNullable = false;
+              break;
+            }
+          }
+          if (allNullable) {
+            this.add(exps[i], parent);
+          }
         }
         break;
       default:
-        assert(false, "Unhandled expression type");
+        assert(false, "Unhandled expression type: " + exp.tag);
     }
   }
 }

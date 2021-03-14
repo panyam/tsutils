@@ -24,7 +24,7 @@ export abstract class Exp {
    */
   index: number;
   grammar: Grammar;
-  abstract readonly type: ExpType;
+  abstract readonly tag: ExpType;
 
   private static idCounter = -1;
 
@@ -33,18 +33,18 @@ export abstract class Exp {
     this.index = Exp.idCounter--;
   }
   equals(another: Exp): boolean {
-    return this.type == another.type;
+    return this.tag == another.tag;
   }
 }
 
 export class NullExp extends Exp {
-  readonly type: ExpType = ExpType.NULL;
+  readonly tag: ExpType = ExpType.NULL;
   static readonly INSTANCE = new NullExp();
 }
 export const Null = NullExp.INSTANCE;
 
 export abstract class Sym extends Exp {
-  readonly type: ExpType;
+  readonly tag: ExpType;
   readonly label: string;
   readonly isTerminal: boolean;
   precedence = 1;
@@ -53,7 +53,7 @@ export abstract class Sym extends Exp {
     super();
     this.label = label;
     this.isTerminal = isTerminal;
-    this.type = isTerminal ? ExpType.TERM : ExpType.NON_TERM;
+    this.tag = isTerminal ? ExpType.TERM : ExpType.NON_TERM;
   }
 
   equals(another: this): boolean {
@@ -77,7 +77,7 @@ export class NonTerm extends Sym {
     if (this.findRule(exp) >= 0) {
       throw new Error("Duplicate rule");
     }
-    const rules = exp.type == ExpType.ANY_OF ? (exp as AnyOf).exps : [exp];
+    const rules = exp.tag == ExpType.ANY_OF ? (exp as AnyOf).exps : [exp];
     for (const r of rules) {
       this.rules.add(r);
     }
@@ -105,19 +105,19 @@ export abstract class WrapperExp extends Exp {
 }
 
 export class Opt extends WrapperExp {
-  readonly type: ExpType = ExpType.OPTIONAL;
+  readonly tag: ExpType = ExpType.OPTIONAL;
 }
 
 export class Atleast0 extends WrapperExp {
-  readonly type: ExpType = ExpType.ATLEAST_0;
+  readonly tag: ExpType = ExpType.ATLEAST_0;
 }
 
 export class Atleast1 extends WrapperExp {
-  readonly type: ExpType = ExpType.ATLEAST_1;
+  readonly tag: ExpType = ExpType.ATLEAST_1;
 }
 
 export abstract class ExpList extends Exp {
-  readonly type: ExpType;
+  readonly tag: ExpType;
   exps: Exp[];
 
   constructor(...exps: Exp[]) {
@@ -151,11 +151,11 @@ export abstract class ExpList extends Exp {
 }
 
 export class AnyOf extends ExpList {
-  readonly type: ExpType = ExpType.ANY_OF;
+  readonly tag: ExpType = ExpType.ANY_OF;
 }
 
 export class Seq extends ExpList {
-  readonly type: ExpType = ExpType.SEQ;
+  readonly tag: ExpType = ExpType.SEQ;
 }
 
 export class Grammar {
@@ -168,6 +168,10 @@ export class Grammar {
   protected expsById: Exp[] = [];
   protected expsByType: Exp[][] = [[], [], [], [], [], [], []];
   protected currentNonTerm: Nullable<NonTerm> = null;
+
+  constructor() {
+    this.wrapExp(this.Eof);
+  }
 
   /**
    * A way of creating Grammars with a "single expresssion".
@@ -298,8 +302,8 @@ export class Grammar {
   /**
    * Return an expression of a particular type given its index.
    */
-  expByType(type: ExpType, index: number): Nullable<Exp> {
-    return this.expsByType[type][index] || null;
+  expByType(tag: ExpType, index: number): Nullable<Exp> {
+    return this.expsByType[tag][index] || null;
   }
 
   /**
@@ -401,8 +405,8 @@ export class Grammar {
     exp.id = this.expsById.length;
     this.expsById.push(exp);
 
-    exp.index = this.expsByType[exp.type].length;
-    this.expsByType[exp.type].push(exp);
+    exp.index = this.expsByType[exp.tag].length;
+    this.expsByType[exp.tag].push(exp);
     return exp;
   }
 }
