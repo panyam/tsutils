@@ -1,9 +1,9 @@
-import { Null, Term, NonTerm, ExpType, Exp, Grammar } from "../grammar";
+import { Term, NonTerm, Exp, Grammar } from "../grammar";
 import { EBNFParser } from "../ebnf";
 import { assert } from "../../utils/misc";
 
-function symLabels(s: readonly (Term | NonTerm)[]): string[] {
-  return s.map((x: Term | NonTerm) => x.label);
+function symLabels(s: readonly (Term | NonTerm)[], skipAux = true): string[] {
+  return s.filter((l) => !skipAux || !l.isAuxiliary).map((x: Term | NonTerm) => x.label);
 }
 
 function expectListsEqual(l1: string[], l2: string[]): void {
@@ -13,11 +13,12 @@ function expectListsEqual(l1: string[], l2: string[]): void {
 }
 
 function expectRules(g: Grammar, nt: string, ...rules: (string | Exp)[]) {
-  const nonterm = g.nonterm(nt);
-  expect(nonterm.rules.length).toBe(rules.length);
+  const nonterm = g.getNT(nt);
+  expect(nonterm?.rules.length).toBe(rules.length);
   for (let i = 0; i < rules.length; i++) {
-    const eq = nonterm.rules.exps[i].equals(g.normalizeExp(rules[i]));
+    const eq = nonterm?.rules[i].equals(g.normalizeExp(rules[i]));
     if (!eq) {
+      console.log("Expected: ", rules[i], "Found: ", nonterm?.rules[i]);
       assert(false, `Rule ${i} does not match`);
     }
   }
@@ -26,6 +27,7 @@ function expectRules(g: Grammar, nt: string, ...rules: (string | Exp)[]) {
 describe("EBNF Tests", () => {
   test("Test1", () => {
     const g = new EBNFParser(`S : A | B | C ;`).grammar;
+    // console.log("G.nonTerminals: ", g.nonTerminals);
 
     expect(g.nonTerminals.length).toBe(1);
     expect(g.terminals.length).toBe(3);
@@ -100,6 +102,7 @@ describe("EBNF Tests", () => {
 
     expectListsEqual(symLabels(g.nonTerminals), ["X", "Y"]);
     expectListsEqual(symLabels(g.terminals), ["A", "B"]);
-    expectRules(g, "X", "A", "B", Null);
+    expectRules(g, "X", "A", "B");
+    expect(g.getNT("X")?.hasNull).toBe(true);
   });
 });

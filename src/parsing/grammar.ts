@@ -1,22 +1,18 @@
-import { Nullable, StringMap, NumMap, MAX_INT } from "../types";
+import { Nullable, StringMap } from "../types";
 import { assert } from "../utils/misc";
 
-export enum ExpType {
-  TERM = 0,
-  NON_TERM = 1,
-  STR = 2,
-  MAX_TYPE = 3,
-  NULL = 4,
+export enum IDType {
+  TERM,
+  NON_TERM,
+  STR,
+  SYM,
+  MAX_TYPES,
 }
 
-export enum Cardinality {
-  ATMOST_1 = -2,
-  ATLEAST_0 = -1,
-  EXACTLY_1 = 1,
-  ATLEAST_1 = 2,
-}
+abstract class GObj {
+  grammar: Grammar;
+  abstract readonly tag: IDType;
 
-export abstract class Exp {
   /**
    * ID unique across all expression within the grammar.
    */
@@ -26,29 +22,39 @@ export abstract class Exp {
    * Index unique across all expressions of a particular type within the grammar.
    */
   index: number;
-  grammar: Grammar;
-  abstract readonly tag: ExpType;
 
   private static idCounter = -1;
-
   constructor() {
-    this.id = Exp.idCounter--;
-    this.index = Exp.idCounter--;
+    this.id = GObj.idCounter--;
+    this.index = GObj.idCounter--;
   }
-  equals(another: Exp): boolean {
+
+  equals(another: GObj): boolean {
     return this.tag == another.tag;
   }
 }
 
-export class NullExp extends Exp {
-  readonly tag: ExpType = ExpType.NULL;
-  static readonly INSTANCE = new NullExp();
+export enum Cardinality {
+  ATMOST_1 = -2,
+  ATLEAST_0 = -1,
+  EXACTLY_1 = 1,
+  ATLEAST_1 = 2,
 }
-export const Null = NullExp.INSTANCE;
 
-export class Term extends Exp {
-  readonly tag: ExpType = ExpType.TERM;
+export abstract class Exp extends GObj {
+  abstract readonly isString: boolean;
+  equals(another: this): boolean {
+    return super.equals(another) && this.isString == another.isString;
+  }
+
+  abstract toString(): string;
+}
+
+export abstract class Lit extends GObj {
+  abstract readonly isTerminal: boolean;
   readonly label: string;
+  readonly isString = false;
+  isAuxiliary = false;
   precedence = 1;
   assocLeft = true;
   constructor(label: string) {
@@ -59,38 +65,57 @@ export class Term extends Exp {
   equals(another: this): boolean {
     return super.equals(another) && this.label == another.label;
   }
+
+  toString(): string {
+    return this.label;
+  }
 }
 
-export class NonTerm extends Exp {
-  readonly tag: ExpType = ExpType.NON_TERM;
-  readonly label: string;
-  precedence = 1;
-  assocLeft = true;
-  // rules: AnyOf = new AnyOf();
-  rules: Str[] = [];
-  constructor(label: string) {
-    super();
-    this.label = label;
+export class Term extends Lit {
+  readonly tag: IDType = IDType.TERM;
+  readonly isTerminal = true;
+}
+
+export class NonTerm extends Lit {
+  readonly tag: IDType = IDType.NON_TERM;
+  readonly isTerminal = false;
+  rules: Exp[] = [];
+  protected _hasNull = false;
+
+  set hasNull(v: boolean) {
+    this._hasNull = v;
+  }
+  get hasNull(): boolean {
+    return this._hasNull || this.rules.length == 0;
   }
 
   equals(another: this): boolean {
     return super.equals(another) && this.label == another.label;
   }
 
-  add(production: Str): void {
+  add(production: Exp): void {
+    if (production.tag != IDType.SYM && production.tag != IDType.STR) {
+      assert(false, "Invalid production");
+    }
     if (this.findRule(production) >= 0) {
       throw new Error("Duplicate rule");
     }
-    this.rules.push(production);
+    if (production.tag == IDType.STR && (production as Str).syms.length == 0) {
+      this.hasNull = true;
+    } else {
+      this.rules.push(production);
+    }
   }
 
   /**
    * Checks if a rule already exists in the list of productions for
    * this non terminal.
    */
-  findRule(production: Str): number {
+  findRule(production: Exp): number {
     for (let i = this.rules.length - 1; i >= 0; i--) {
-      if (this.rules[i].equals(production)) return i;
+      const rule = this.rules[i];
+      if (rule == production) return i;
+      if (rule.equals(production)) return i;
     }
     return -1;
   }
@@ -101,10 +126,10 @@ export class NonTerm extends Exp {
    * This is used for seeing if duplicates exist when creating auxiliary
    * non-terminals so duplicates are not created.
    */
-  rulesEqual(another: NonTerm): boolean {
-    if (this.rules.length != another.rules.length) return false;
+  rulesEqual(rules: Exp[]): boolean {
+    if (this.rules.length != rules.length) return false;
     for (let i = this.rules.length - 1; i >= 0; i--) {
-      if (!this.rules[i].equals(another.rules[i])) {
+      if (!this.rules[i].equals(rules[i])) {
         return false;
       }
     }
@@ -112,93 +137,57 @@ export class NonTerm extends Exp {
   }
 }
 
-export abstract class WrapperExp extends Exp {
-  readonly exp: Exp;
-  constructor(exp: Exp) {
+export class Sym extends Exp {
+  readonly tag: IDType = IDType.SYM;
+  readonly isString: false;
+  readonly value: Lit;
+  cardinality: Cardinality = Cardinality.EXACTLY_1;
+  constructor(value: Lit) {
     super();
-    this.exp = exp;
-  }
-
-  equals(another: this): boolean {
-    return super.equals(another) && this.exp.equals(another.exp);
-  }
-}
-
-export class Opt extends WrapperExp {
-  readonly tag: ExpType = ExpType.OPTIONAL;
-}
-
-export class Atleast0 extends WrapperExp {
-  readonly tag: ExpType = ExpType.ATLEAST_0;
-}
-
-export class Atleast1 extends WrapperExp {
-  readonly tag: ExpType = ExpType.ATLEAST_1;
-}
-
-export abstract class ExpList extends Exp {
-  readonly tag: ExpType;
-  exps: Exp[];
-
-  constructor(...exps: Exp[]) {
-    super();
-    this.exps = exps;
-  }
-
-  add(exp: Exp): void {
-    this.exps.push(exp);
-  }
-
-  get length(): number {
-    return this.exps.length;
-  }
-
-  indexOf(exp: Exp): number {
-    for (let i = 0; i < this.exps.length; i++) {
-      if (this.exps[i].equals(exp)) return i;
-    }
-    return -1;
-  }
-
-  equals(another: this): boolean {
-    if (!super.equals(another)) return false;
-    if (this.exps.length != another.exps.length) return false;
-    for (let i = 0; i < this.exps.length; i++) {
-      if (!this.exps[i].equals(another.exps[i])) return false;
-    }
-    return true;
-  }
-}
-
-export class Sym {
-  readonly value: Term | NonTerm;
-  readonly isTerminal: boolean;
-  readonly cardinality: Cardinality;
-  constructor(value: Term | NonTerm, cardinality: Cardinality = Cardinality.EXACTLY_1) {
     this.value = value;
-    this.cardinality = cardinality;
-    this.isTerminal = value.tag == ExpType.TERM;
+  }
+
+  toString(): string {
+    let out = this.value.toString();
+    switch (this.cardinality) {
+      case Cardinality.ATLEAST_1:
+        out += " + ";
+        break;
+      case Cardinality.ATMOST_1:
+        out += " ? ";
+        break;
+      case Cardinality.ATLEAST_0:
+        out += " * ";
+        break;
+      default:
+        break;
+    }
+    return out;
+  }
+
+  get isNullable(): boolean {
+    return this.cardinality == Cardinality.ATLEAST_0 || this.cardinality == Cardinality.ATMOST_1;
+  }
+
+  get isTerminal(): boolean {
+    return this.value.isTerminal;
   }
 
   equals(another: Sym): boolean {
-    if (this.value.tag != another.value.tag) return false;
     if (this.cardinality != another.cardinality) return false;
-    if (this.isTerminal) {
-      if (!(this.value as Term).equals(another.value as Term)) return false;
-    } else {
-      if (!(this.value as NonTerm).equals(another.value as NonTerm)) return false;
-    }
+    if (!this.value.equals(another.value)) return false;
     return true;
   }
 }
 
 export class Str extends Exp {
-  readonly tag: ExpType = ExpType.STR;
+  readonly tag: IDType = IDType.STR;
+  readonly isString: true;
   syms: Sym[];
 
-  constructor(...syms: (Term | NonTerm)[]) {
+  constructor(...syms: Sym[]) {
     super();
-    this.syms = syms.map((s) => new Sym(s));
+    this.syms = syms || [];
   }
 
   add(sym: Sym): void {
@@ -207,6 +196,10 @@ export class Str extends Exp {
 
   get length(): number {
     return this.syms.length;
+  }
+
+  toString(): string {
+    return this.syms.map((s) => s.toString()).join(" ");
   }
 
   equals(another: this): boolean {
@@ -223,15 +216,36 @@ export class Grammar {
   public startSymbol: Nullable<NonTerm> = null;
   private _modified = true;
   protected _terminals: Term[] = [];
-  protected _nonTerminals: NonTerm[] = [];
   protected terminalsByName: StringMap<Term> = {};
+  protected _nonTerminals: NonTerm[] = [];
   protected nonTerminalsByName: StringMap<NonTerm> = {};
-  protected expsById: Exp[] = [];
-  protected expsByType: Exp[][] = [[], [], [], [], [], [], []];
+  protected _auxNonTerminals: NonTerm[] = [];
+  protected auxNonTerminalsByName: StringMap<NonTerm> = {};
+  protected objsById: GObj[] = [];
+  protected objsByType: GObj[][] = [[], [], [], [], [], [], []];
   protected currentNonTerm: Nullable<NonTerm> = null;
+
+  readonly Eof = new Term("<EOF>");
 
   constructor() {
     this.wrapExp(this.Eof);
+    for (let i = 0; i < IDType.MAX_TYPES; i++) {
+      this.objsByType.push([]);
+    }
+  }
+
+  /**
+   * Return a terminal by its ID.
+   */
+  objById(id: number): Nullable<GObj> {
+    return this.objsById[id] || null;
+  }
+
+  /**
+   * Return an expression of a particular type given its index.
+   */
+  objByType(tag: IDType, index: number): Nullable<GObj> {
+    return this.objsByType[tag][index] || null;
   }
 
   /**
@@ -245,7 +259,7 @@ export class Grammar {
 
   addTerminals(...terminals: string[]): void {
     for (const t of terminals) {
-      this.term(t);
+      this.newTerm(t);
     }
   }
 
@@ -257,72 +271,41 @@ export class Grammar {
     return this._nonTerminals;
   }
 
-  private _currTime = 0;
-  get currTime(): number {
-    return this._currTime;
+  get auxNonTerminals(): ReadonlyArray<NonTerm> {
+    return this._auxNonTerminals;
   }
 
-  advanceTime(): number {
-    return ++this._currTime;
-  }
-
-  get modified(): boolean {
-    return this._modified;
-  }
-
-  readonly Eof = new Term("<EOF>");
-
-  withNT(nt: string): this {
-    this.nonterm(nt);
-    return this;
+  /**
+   * A way to quickly iterate through all non-terminals.
+   */
+  forEachNT(visitor: (nt: NonTerm) => void | boolean | undefined | null): void {
+    for (const nt of this._nonTerminals) {
+      if (visitor(nt) == false) return;
+    }
+    for (const nt of this._auxNonTerminals) {
+      if (visitor(nt) == false) return;
+    }
   }
 
   /**
    * Adds a new rule to a particular non terminal of the grammar
    * Each rule represents a production of the form:
    *
-   * name -> exp1 | exp2 | exp3 | ... | expn
+   * name -> A B C D;
    *
    * Null production can be represented with an empty exps list.
    */
-  add(nt: string, ...syms: (Term | NonTerm | string)[]): this {
-    const nonterm = this.nonterm(nt);
-    let newSym: Sym;
-    if (syms.length == 0) {
-      newSym = Null;
-    } else if (syms.length == 1) {
-      newSym = this.normalizeSym(syms[0]);
+  add(nt: string, production: Exp): this {
+    let nonterm = this.getLit(nt);
+    if (nonterm == null) {
+      // create it
+      nonterm = this.newNT(nt);
     } else {
-      newSym = this.anyof(...syms);
+      if (nonterm.isTerminal) {
+        throw new Error("Cannot add rules to a terminal");
+      }
     }
-    nonterm.add(newSym);
-    return this;
-  }
-
-  /**
-   * A slighty different way of adding rules where each
-   * exp is part of a string on the production side.
-   *
-   * eg:
-   *
-   * name -> exp1 exp2 exp3 ... expn
-   */
-  addS(nt: string, ...exps: (Exp | string)[]): this {
-    this.nonterm(nt);
-    return this.addR(...exps);
-  }
-
-  addR(...exps: (Term | NonTerm | string)[]): this {
-    assert(this.currentNonTerm != null);
-    let newExp: Exp;
-    if (exps.length == 0) {
-      newExp = Null;
-    } else if (exps.length == 1) {
-      newExp = this.normalizeExp(exps[0]);
-    } else {
-      newExp = this.seq(...exps);
-    }
-    this.currentNonTerm.add(newExp);
+    (nonterm as NonTerm).add(production);
     return this;
   }
 
@@ -335,40 +318,53 @@ export class Grammar {
    * This also ensures that users are not able mix terminal
    * and non terminal labels.
    */
-  term(labelOrIndex: string | number): Term {
-    if (typeof labelOrIndex === "number") {
-      assert(labelOrIndex >= 0, "Index cannot be negative");
-      return this._terminals[labelOrIndex];
-    } else {
-      const label = labelOrIndex;
-      if (label in this.nonTerminalsByName) {
-        throw new Error(`${label} is already a non terminal`);
-      } else if (label in this.terminalsByName) {
-        return this.terminalsByName[label];
-      }
-      const out = this.wrapExp(new Term(label));
-      this.terminalsByName[label] = out;
-      this._terminals.push(out);
-      return out;
+  getLit(label: string): Nullable<Lit> {
+    if (this.isTerminal(label)) {
+      return this.terminalsByName[label];
+    } else if (this.isNT(label)) {
+      return this.nonTerminalsByName[label];
+    } else if (this.isAuxNT(label)) {
+      return this.auxNonTerminalsByName[label];
     }
+    return null;
+  }
+
+  getTerm(label: string, ensure = false): Nullable<NonTerm> {
+    let lit = this.getLit(label);
+    if (lit == null) {
+      if (ensure) {
+        lit = this.newTerm(label);
+      }
+    } else if (!lit.isTerminal) {
+      return null;
+    }
+    return lit as NonTerm;
+  }
+
+  getNT(label: string, ensure = false): Nullable<NonTerm> {
+    let lit = this.getLit(label);
+    if (lit == null) {
+      if (ensure) {
+        lit = this.newNT(label);
+      }
+    } else if (lit.isTerminal) {
+      return null;
+    }
+    return lit as NonTerm;
+  }
+
+  newTerm(label: string): Term {
+    if (this.getLit(label) != null) {
+      throw new Error(`${label} is already exists`);
+    }
+    const out = this.wrapExp(new Term(label));
+    this.terminalsByName[label] = out;
+    this._terminals.push(out);
+    return out;
   }
 
   /**
-   * Return a terminal by its ID.
-   */
-  expById(id: number): Nullable<Exp> {
-    return this.expsById[id] || null;
-  }
-
-  /**
-   * Return an expression of a particular type given its index.
-   */
-  expByType(tag: ExpType, index: number): Nullable<Exp> {
-    return this.expsByType[tag][index] || null;
-  }
-
-  /**
-   * Gets or creates a non terminal with the given label.
+   * Creates a non terminal with the given label.
    * The grammar acts as a factory for non terminal symbols
    * so that we can reuse symbols instead of having
    * users create new symbols each time.
@@ -376,28 +372,23 @@ export class Grammar {
    * This also ensures that users are not able mix terminal
    * and non terminal labels.
    */
-  nonterm(labelOrIndex: string | number): NonTerm {
-    if (typeof labelOrIndex === "number") {
-      assert(labelOrIndex >= 0, "Index cannot be negative");
-      return this._nonTerminals[labelOrIndex];
+  newNT(label: string, isAuxiliary = false): NonTerm {
+    if (this.getLit(label) != null) {
+      throw new Error(`Non-terminal ${label} is already exists`);
+    }
+    const out = this.wrapExp(new NonTerm(label));
+    out.isAuxiliary = isAuxiliary;
+    if (isAuxiliary) {
+      this.auxNonTerminalsByName[label] = out;
+      this._auxNonTerminals.push(out);
     } else {
-      const label = labelOrIndex;
-      if (this.isTerminal(label)) {
-        throw new Error(`${label} is already a terminal`);
-      } else if (label in this.nonTerminalsByName) {
-        return this.nonTerminalsByName[label];
-      }
-
-      const out = this.wrapExp(new NonTerm(label));
-      this.wrapExp(out.rules);
       this.nonTerminalsByName[label] = out;
       this._nonTerminals.push(out);
       if (this.startSymbol == null) {
         this.startSymbol = out;
       }
-      this.currentNonTerm = out;
-      return out;
     }
+    return out;
   }
 
   /**
@@ -408,54 +399,55 @@ export class Grammar {
   }
 
   /**
-   * Checks if a given label is a terminal.
+   * Checks if a given label is a non-terminal.
    */
-  isNonterm(label: string): boolean {
+  isNT(label: string): boolean {
     return label in this.nonTerminalsByName;
   }
 
-  normalizeExp(exp: Exp | string): Exp {
-    if (typeof exp !== "string") {
-      return exp;
-    }
-    if (this.isTerminal(exp)) {
-      return this.term(exp);
-    } else if (this.isNonterm(exp)) {
-      return this.nonterm(exp);
-    } else {
-      // TODO - should we by default allow non existing symbols
-      // to default to a nonterm since it is expected tokens
-      // are already known in a parser.
-      return this.nonterm(exp);
-      // throw new Error(`${exp} is neither a terminal nor a non terminal.  Add it first.`);
-    }
+  /**
+   * Checks if a given label is an auxiliary non-terminal.
+   */
+  isAuxNT(label: string): boolean {
+    return label in this.auxNonTerminalsByName;
   }
 
   opt(exp: Exp | string): Exp {
-    return this.wrapExp(new Opt(this.normalizeExp(exp)));
+    // Convert Opt into either a symbol *or* another Sym over an auxiliar
+    // non-term
+    const nexp = this.ensureSym(this.normalizeExp(exp));
+    nexp.cardinality = Cardinality.ATMOST_1;
+    return nexp;
   }
 
   atleast0(exp: Exp | string): Exp {
-    return this.wrapExp(new Atleast0(this.normalizeExp(exp)));
+    const nexp = this.ensureSym(this.normalizeExp(exp));
+    nexp.cardinality = Cardinality.ATLEAST_0;
+    return nexp;
   }
 
   atleast1(exp: Exp | string): Exp {
-    return this.wrapExp(new Atleast1(this.normalizeExp(exp)));
+    const nexp = this.ensureSym(this.normalizeExp(exp));
+    nexp.cardinality = Cardinality.ATLEAST_1;
+    return nexp;
   }
 
   seq(...exps: (Exp | string)[]): Exp {
     if (exps.length == 1) {
-      return this.normalizeExp(exps[0]);
+      return this.ensureSym(this.normalizeExp(exps[0]));
     } else {
-      return this.wrapExp(new Str(...exps.map((e) => this.normalizeExp(e))));
+      return this.wrapExp(new Str(...exps.map((e) => this.ensureSym(this.normalizeExp(e)))));
     }
   }
 
   anyof(...exps: (Exp | string)[]): Exp {
     if (exps.length == 1) {
-      return this.normalizeExp(exps[0]);
+      return this.ensureSym(this.normalizeExp(exps[0]));
     } else {
-      return this.wrapExp(new AnyOf(...exps.map((e) => this.normalizeExp(e))));
+      // see if there is already NT with the exact set of rules
+      // reuse if it exists.  That would make this method
+      // Idempotent (which it needs to be).
+      return this.ensureAuxNT(...(exps.map(e => this.normalizeExp(e))));
     }
   }
 
@@ -463,11 +455,73 @@ export class Grammar {
     assert(exp.id < 0, "Expression already wrapped: " + exp.id);
     assert(exp.index < 0, "Expression already wrapped: " + exp.index);
     exp.grammar = this;
-    exp.id = this.expsById.length;
-    this.expsById.push(exp);
+    exp.id = this.objsById.length;
+    this.objsById.push(exp);
 
-    exp.index = this.expsByType[exp.tag].length;
-    this.expsByType[exp.tag].push(exp);
+    exp.index = this.objsByType[exp.tag].length;
+    this.objsByType[exp.tag].push(exp);
     return exp;
+  }
+
+  ensureSym(exp: Exp): Sym {
+    if (exp.tag == IDType.STR) {
+      const str = exp as Str;
+      if (str.length == 1) {
+        return str.syms[0];
+      } else {
+        return this.wrapExp(new Sym(this.ensureAuxNT(str)));
+      }
+    } else {
+      return exp as Sym;
+    }
+  }
+
+  normalizeExp(exp: Exp | string): Exp {
+    if (typeof exp === "string") {
+      const lit = this.getLit(exp);
+      if (lit == null) throw new Error(`Invalid symbol: '${exp}'`);
+      return this.wrapExp(new Sym(lit));
+    } else if (exp.tag == IDType.TERM) {
+      return this.wrapExp(new Sym(exp as Term));
+    } else if (exp.tag == IDType.NON_TERM) {
+      return this.wrapExp(new Sym(exp as NonTerm));
+    } else {
+      // We have an expression that needs to be fronted by an
+      // auxiliarry non-terminal
+      assert(exp.tag == IDType.STR || exp.tag == IDType.SYM, "Found tag: " + exp.tag);
+      return exp;
+    }
+  }
+
+  // Override this to have a different
+  protected auxNTCount = 0;
+  protected newAuxNTName(): string {
+    return "$" + this.auxNTCount++;
+  }
+
+  public newAuxNT(): NonTerm {
+    const ntName = this.newAuxNTName();
+    return this.newNT(ntName, true);
+  }
+
+  protected ensureAuxNT(...exps: Exp[]): NonTerm {
+    let nt = this.findAuxNT(...exps);
+    if (nt == null) {
+      nt = this.newAuxNT();
+      for (const exp of exps) nt.add(exp);
+    }
+    return nt;
+  }
+
+  /**
+   * Find an auxiliary rule that has the same rules as the ones here.
+   * This can be used to ensure duplicate rules are not created for
+   * union expressions.
+   */
+  findAuxNT(...exps: Exp[]): Nullable<NonTerm> {
+    for (const auxNT of this._auxNonTerminals) {
+      if (auxNT.rulesEqual(exps)) return auxNT;
+    }
+    return null;
   }
 }

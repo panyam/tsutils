@@ -1,5 +1,5 @@
 import { NumMap } from "../types";
-import { Seq, Null, Grammar, Term, NonTerm, ExpType, Exp, ExpList, Opt, Atleast0, Atleast1 } from "./grammar";
+import { Grammar, Lit, Term, NonTerm, IDType, Exp, Sym, Str } from "./grammar";
 import { assert } from "../utils/misc";
 
 export class TermSet {
@@ -11,12 +11,12 @@ export class TermSet {
     this.grammar = grammar;
   }
 
-  get labels(): string[] {
+  labels(skipAux = false): string[] {
     const out: string[] = [];
     for (const i of this.entries) {
-      const exp = this.grammar.expById(i) as Term;
+      const exp = this.grammar.objById(i) as Lit;
       assert(exp != null);
-      out.push(exp.label);
+      if (!skipAux || !exp.isAuxiliary) out.push(exp.label);
     }
     if (this.hasNull) out.push("");
     return out;
@@ -71,8 +71,8 @@ export class NullableSet {
   get nonterms(): NonTerm[] {
     const out: NonTerm[] = [];
     this.entries.forEach((id) => {
-      const e = this.grammar.expById(id);
-      if (e != null && e.tag == ExpType.NON_TERM) out.push(e as NonTerm);
+      const e = this.grammar.objById(id);
+      if (e != null && e.tag == IDType.NON_TERM) out.push(e as NonTerm);
     });
     return out;
   }
@@ -85,56 +85,42 @@ export class NullableSet {
     let beforeCount = 0;
     do {
       beforeCount = this.entries.size;
-      this.grammar.nonTerminals.forEach((nt) => this.isNullable(nt));
+      this.grammar.forEachNT((nt) => this.visit(nt));
     } while (beforeCount != this.entries.size);
   }
 
-  isNullable(exp: Exp): boolean {
-    if (exp.tag == ExpType.NULL) return true;
-    if (!this.entries.has(exp.id) && !this.visited[exp.id]) {
-      this.visited[exp.id] = true;
-      let result = false;
-      switch (exp.tag) {
-        case ExpType.TERM:
-          result = false;
+  protected visit(nt: NonTerm): void {
+    const rules = nt.rules;
+    let nullable = nt.rules.length == 0 || nt.hasNull;
+    if (!nullable) {
+      for (const rule of nt.rules) {
+        if (this.evaluate(rule)) {
+          nullable = true;
           break;
-        case ExpType.NON_TERM:
-          result = this.isNullable((exp as NonTerm).rules);
-          break;
-        case ExpType.OPTIONAL:
-          result = true;
-          break;
-        case ExpType.ATLEAST_0:
-          result = true;
-          break;
-        case ExpType.ATLEAST_1:
-          result = this.isNullable((exp as Atleast1).exp);
-          break;
-        case ExpType.ANY_OF:
-          result = (exp as ExpList).length == 0;
-          if (!result) {
-            for (const e of (exp as ExpList).exps) {
-              result = this.isNullable(e);
-              if (result) {
-                break;
-              }
-            }
-          }
-          break;
-        case ExpType.SEQ:
-          result = true;
-          for (const e of (exp as ExpList).exps) {
-            result = this.isNullable(e);
-            if (!result) break;
-          }
-          break;
-        default:
-          console.log("Unhandled expression type: ", exp);
-          assert(false, "Unhandled expression type: " + exp.tag);
+        }
       }
-      if (result) this.entries.add(exp.id);
     }
-    return this.entries.has(exp.id);
+    if (nullable) this.add(nt);
+  }
+
+  isNullable(nt: NonTerm): boolean {
+    return nt.id in this.entries;
+  }
+
+  add(nt: NonTerm): void {
+    this.entries.add(nt.id);
+  }
+
+  protected evaluate(exp: Exp): boolean {
+    if (exp.isString) {
+      for (const e of (exp as Str).syms) {
+        if (!this.evaluate(e)) return false;
+      }
+      return true;
+    } else {
+      const sym = exp as Sym;
+      return sym.isNullable;
+    }
   }
 }
 
@@ -160,12 +146,12 @@ class NonTermTermSets {
     // return this._count;
   }
 
-  entriesFor(exp: Exp): TermSet {
-    if (exp.id in this.entries) {
-      return this.entries[exp.id];
+  entriesFor(lit: Lit): TermSet {
+    if (lit.id in this.entries) {
+      return this.entries[lit.id];
     } else {
       const out = new TermSet(this.grammar);
-      this.entries[exp.id] = out;
+      this.entries[lit.id] = out;
       return out;
     }
   }
@@ -173,8 +159,11 @@ class NonTermTermSets {
   /**
    * Add the null symbol into this set of terminals for a given expression.
    */
-  addNull(exp: Exp): boolean {
-    return this.add(exp, Null);
+  addNull(nt: NonTerm): boolean {
+    const entries = this.entriesFor(nt);
+    if (entries.hasNull) return false;
+    entries.hasNull = true;
+    return true;
   }
 
   /**
@@ -183,16 +172,9 @@ class NonTermTermSets {
    * of the source expression's terminal symbosl are added to exp's
    * term set.
    */
-  add(exp: Exp, source: Exp, includeNull = true): boolean {
-    if (!(exp.id in this.entries)) {
-      this.entries[exp.id] = new TermSet(this.grammar);
-    }
-    const entries = this.entries[exp.id];
-    if (source.tag == ExpType.NULL) {
-      if (entries.hasNull) return false;
-      // console.log(`Adding Null to Set of ${exp.id}`);
-      entries.hasNull = true;
-    } else if (source.tag == ExpType.TERM) {
+  add(nt: Lit, source: Lit, includeNull = true): boolean {
+    const entries = this.entriesFor(nt);
+    if (source.isTerminal) {
       const term = source as Term;
       if (entries.has(term)) return false;
       // console.log(`Adding Term(${term.label}) to Set of ${exp.id}`);
@@ -200,7 +182,7 @@ class NonTermTermSets {
       this._count++;
     } else {
       const srcEntries = this.entriesFor(source);
-      const destEntries = this.entriesFor(exp);
+      const destEntries = this.entriesFor(nt);
       const count = srcEntries.addTo(destEntries, includeNull);
       this._count += count;
     }
@@ -232,69 +214,37 @@ export class FirstSets extends NonTermTermSets {
     let beforeCount = 0;
     do {
       beforeCount = this.count;
-      this.grammar.nonTerminals.forEach((nt) => this.visit(nt, {}));
+      this.grammar.forEachNT((nt) => this.visit(nt));
     } while (beforeCount != this.count);
   }
 
-  // Here we start with each NT and in a Depth First manner process
-  // its rules to extract its first sets.
-  // This method is co-recursive with the processRule method
-  // that calls back this method when it encounters a new non
-  // terminal in one of its production rules.
-  protected visit(nonterm: NonTerm, populated: NumMap<NonTerm>): void {
-    // Only process its rules if it has not already been processed
-    if (!(nonterm.id in populated)) {
-      populated[nonterm.id] = nonterm;
-      this.processRule(nonterm, nonterm.rules, populated);
+  protected visit(nt: NonTerm): void {
+    if (nt.hasNull) {
+      this.addNull(nt);
+    } else {
+      for (const rule of nt.rules) {
+        this.processRule(nt, rule);
+      }
     }
   }
 
-  processRule(parent: Exp, exp: Exp, populated: NumMap<NonTerm>): void {
-    switch (exp.tag) {
-      case ExpType.NULL:
-        // Nothing
-        this.addNull(parent);
-        break;
-      case ExpType.TERM:
-        this.add(parent, exp as Term);
-        break;
-      case ExpType.NON_TERM:
-        // Do nothing
-        // this.visit(exp as NonTerm, populated);
-        break;
-      case ExpType.OPTIONAL:
-        this.addNull(parent);
-        this.processRule(exp, (exp as Opt).exp, populated);
-        break;
-      case ExpType.ATLEAST_0:
-        this.addNull(parent);
-        this.processRule(exp, (exp as Atleast0).exp, populated);
-        break;
-      case ExpType.ATLEAST_1:
-        this.processRule(exp, (exp as Atleast1).exp, populated);
-        break;
-      case ExpType.ANY_OF:
-        for (const e of (exp as ExpList).exps) {
-          this.processRule(exp, e, populated);
+  processRule(nonterm: NonTerm, exp: Exp): void {
+    if (exp.isString) {
+      const str = exp as Str;
+      const nullables = this.nullables;
+      for (const s of str.syms) {
+        // First(s) will be in First(nonterm)
+        this.add(nonterm, s.value, true);
+        if (!s.isTerminal && !nullables.isNullable(s.value as NonTerm)) {
+          // since s is not nullable the next rule's first set
+          // cannot affect nonterm's firs set
+          break;
         }
-        break;
-      case ExpType.SEQ:
-        const exps = (exp as ExpList).exps;
-        const nullables = this.nullables;
-        for (const e of exps) {
-          // First(e) will be in First(nonterm)
-          this.processRule(exp, e, populated);
-          if (!nullables.isNullable(e)) {
-            // since e is not nullable the next rule's first set
-            // cannot affect nonterm's firs set
-            break;
-          }
-        }
-        break;
-      default:
-        assert(false, "Unhandled expression type: " + exp.tag);
+      }
+    } else {
+      const sym = exp as Sym;
+      this.add(nonterm, sym.value, true);
     }
-    this.add(parent, exp, this.nullables.isNullable(exp));
   }
 }
 
@@ -304,12 +254,10 @@ export class FirstSets extends NonTermTermSets {
  */
 export class FollowSets extends NonTermTermSets {
   readonly firstSets: FirstSets;
-  readonly cumFirstSets: FirstSets;
 
   constructor(grammar: Grammar, firstSets?: FirstSets) {
     super(grammar);
     this.firstSets = firstSets || new FirstSets(grammar);
-    this.cumFirstSets = new FirstSets(grammar, firstSets.nullables);
     this.refresh();
   }
 
@@ -331,90 +279,72 @@ export class FollowSets extends NonTermTermSets {
     let beforeCount = 0;
     do {
       beforeCount = this.count;
-      for (const nt of g.nonTerminals) {
-        this.processRule(nt, nt.rules);
-        // console.log("NT: ", nt.label, ", FS: ", this.entriesFor(nt).labels);
-      }
+      this.grammar.forEachNT((nt) => this.visit(nt));
     } while (beforeCount != this.count);
+  }
+
+  protected visit(nt: NonTerm): void {
+    if (nt.hasNull) {
+      this.addNull(nt);
+    } else {
+      for (const rule of nt.rules) {
+        this.processRule(nt, rule);
+      }
+    }
   }
 
   /**
    * Add Follows[source] into Follows[dest] recursively.
    */
-  processRule(parent: Exp, exp: Exp): void {
-    switch (exp.tag) {
-      case ExpType.NULL:
-        // Do nothing
-        break;
-      case ExpType.OPTIONAL:
-        this.add(exp, parent);
-        this.processRule(exp, (exp as Opt).exp);
-        break;
-      case ExpType.ATLEAST_0:
-        this.add(exp, parent);
-        this.processRule(exp, (exp as Atleast0).exp);
-        break;
-      case ExpType.ATLEAST_1:
-        this.add(exp, parent);
-        this.processRule(exp, (exp as Atleast1).exp);
-        break;
-      case ExpType.ANY_OF:
-        this.add(exp, parent);
-        for (const e of (exp as ExpList).exps) {
-          this.processRule(exp, e);
-        }
-        break;
-      case ExpType.TERM:
-        // Do nothing
-        break;
-      case ExpType.NON_TERM:
-        // Do nothing?
-        this.add(exp, parent);
-        break;
-      case ExpType.SEQ:
-        const exps = (exp as ExpList).exps;
-        const firstSets = this.firstSets;
-        const nullables = this.firstSets.nullables;
+  processRule(nonterm: NonTerm, exp: Exp): void {
+    const nullables = this.firstSets.nullables;
+    if (exp.isString) {
+      const str = exp as Str;
+      const syms = str.syms;
+      const firstSets = this.firstSets;
+      const nullables = this.firstSets.nullables;
 
-        // recurse first if there are any rules
-        for (let i = 0; i < exps.length - 1; i++) {
-          this.processRule(exp, exps[i]);
-        }
-
-        // Rule 1:
-        //  If A -> aBb1b2b3..bn:
-        //    Follow(B) = Follow(B) U { First(b1b2b3...bn) - eps }
-        for (let i = 0; i < exps.length - 1; i++) {
-          if (exps[i].tag != ExpType.NULL && exps[i].tag != ExpType.TERM) {
-            const entries = this.entriesFor(exps[i]);
-            // This needs to be memoized
-            for (let j = i + 1; j < exps.length; j++) {
-              firstSets.entriesFor(exps[j]).addTo(entries, false);
-              if (!nullables.isNullable(exps[j])) break;
-            }
+      // Rule 1:
+      //  If A -> aBb1b2b3..bn:
+      //    Follow(B) = Follow(B) U { First(b1b2b3...bn) - eps }
+      for (let i = 0; i < syms.length - 1; i++) {
+        const sym = syms[i];
+        if (!sym.isTerminal) {
+          const entries = this.entriesFor(sym.value);
+          // This needs to be memoized
+          for (let j = i + 1; j < syms.length; j++) {
+            const symj = syms[j];
+            firstSets.entriesFor(symj.value).addTo(entries, false);
+            if (symj.isTerminal) break;
+            if (!nullables.isNullable(symj.value as NonTerm)) break;
           }
         }
+      }
 
-        // Rule 2:
-        //  If A -> aBb1b2b3..bn:
-        //    if Nullable(b1b2b3...bn):
-        //      Follow(B) = Follow(B) U Follow(N)
-        for (let i = exps.length - 1; i >= 0; i--) {
-          // This needs to be memoized??
-          let allNullable = true;
-          for (let j = i + 1; j < exps.length; j++) {
-            if (!nullables.isNullable(exps[j])) {
-              allNullable = false;
-              break;
-            }
-          }
-          if (allNullable) {
-            this.add(exps[i], parent);
+      // Rule 2:
+      //  If A -> aBb1b2b3..bn:
+      //    if Nullable(b1b2b3...bn):
+      //      Follow(B) = Follow(B) U Follow(N)
+      for (let i = syms.length - 1; i >= 0; i--) {
+        // This needs to be memoized??
+        let allNullable = true;
+        for (let j = i + 1; j < syms.length; j++) {
+          const symj = syms[j];
+          if (symj.isTerminal) break;
+          if (symj.isTerminal || !nullables.isNullable(symj.value as NonTerm)) {
+            allNullable = false;
+            break;
           }
         }
-        break;
-      default:
-        assert(false, "Unhandled expression type: " + exp.tag);
+        if (allNullable) {
+          this.add(syms[i].value, nonterm);
+        }
+      }
+    } else {
+      const sym = exp as Sym;
+      if (!sym.isTerminal) {
+        this.add(sym.value, nonterm);
+      }
     }
   }
 }

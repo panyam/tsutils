@@ -1,13 +1,6 @@
-import { Null, ExpType, Exp, Grammar } from "../grammar";
-import { FirstSets, NullableSet, FollowSets } from "../sets";
-import { streamDict, mapStream, filterStream, collectStream } from "../../utils/streams";
+import { NullableSet } from "../sets";
 import { EBNFParser } from "../ebnf";
-
-function expectListsEqual(l1: string[], l2: string[]): void {
-  l1 = l1.sort();
-  l2 = l2.sort();
-  expect(l1).toEqual(l2);
-}
+import { Sym, Grammar } from "../grammar";
 
 describe("Grammar Tests", () => {
   test("Constructor", () => {
@@ -19,9 +12,22 @@ describe("Grammar Tests", () => {
     `).grammar;
 
     expect(g.terminals.length).toBe(2);
-    expect(() => g.term("A")).toThrowError();
-    expect(g.nonterm("B").label).toBe("B");
+    expect(() => g.newTerm("A")).toThrowError();
+    expect(g.getNT("B")?.label).toBe("B");
     const ns = new NullableSet(g).nonterms.map((n) => n.label);
     expect(ns).toEqual([]);
+  });
+
+  test("Auxilliary Rules", () => {
+    const g = new Grammar();
+    const x = g.newAuxNT();
+    const A = g.newTerm("a");
+    const B = g.newTerm("b");
+    const C = g.newTerm("c");
+    x.add(g.normalizeExp(A));
+    x.add(g.normalizeExp(B));
+    x.add(g.normalizeExp(C));
+
+    expect(g.anyof(A, B, C)).toEqual(x);
   });
 });

@@ -1,6 +1,5 @@
-import { Null, ExpType, Exp, Grammar } from "../grammar";
+import { Grammar } from "../grammar";
 import { FirstSets, NullableSet, FollowSets } from "../sets";
-import { streamDict, mapStream, filterStream, collectStream } from "../../utils/streams";
 import { EBNFParser } from "../ebnf";
 import { assert } from "../../utils/misc";
 import { StringMap } from "../../types";
@@ -18,7 +17,7 @@ function listsEqual(l1: string[], l2: string[]): boolean {
 function expectFSEntries(g: Grammar, fs: FirstSets | FollowSets, entries: StringMap<string[]>) {
   for (const nt in entries) {
     const exp = g.isTerminal(nt) ? g.term(nt) : g.nonterm(nt);
-    const labels = fs.entriesFor(exp).labels.sort();
+    const labels = fs.entriesFor(exp).labels(true).sort();
     const terms = entries[nt].sort();
     if (!listsEqual(labels, terms)) {
       console.log(`Expected FS[${nt}]: `, terms, ", Found: ", labels);
