@@ -1,4 +1,4 @@
-import { Str, Term, NonTerm, Exp, Grammar } from "../grammar";
+import { Str, Term, NonTerm } from "../grammar";
 import { EBNFParser } from "../ebnf";
 import { assert } from "../../utils/misc";
 import { expectRules } from "./utils";

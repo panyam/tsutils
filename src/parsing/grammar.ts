@@ -5,7 +5,7 @@ export enum IDType {
   TERM,
   NON_TERM,
   STR,
-  SYM,
+  // SYM,
   MAX_TYPES,
 }
 
@@ -16,6 +16,8 @@ abstract class GObj {
   equals(another: GObj): boolean {
     return this.tag == another.tag;
   }
+
+  abstract toString(): string;
 }
 
 export enum Cardinality {
@@ -25,13 +27,21 @@ export enum Cardinality {
   ATLEAST_1 = 2,
 }
 
-export abstract class Exp extends GObj {
-  abstract readonly isString: boolean;
-  equals(another: this): boolean {
-    return super.equals(another) && this.isString == another.isString;
-  }
+export function multiplyCardinalities(c1: Cardinality, c2: Cardinality): Cardinality {
+  // * . X = *
+  // X. * = *
+  if (c1 == Cardinality.ATLEAST_0 || c2 == Cardinality.ATLEAST_0) return Cardinality.ATLEAST_0;
 
-  abstract toString(): string;
+  // 1. X = X
+  if (c1 == Cardinality.EXACTLY_1) return c2;
+
+  // X . 1 = X
+  if (c2 == Cardinality.EXACTLY_1) return c1;
+
+  // X . X = X
+  if (c1 == c2) return c1;
+
+  return Cardinality.ATLEAST_0;
 }
 
 export abstract class Lit extends GObj {
@@ -76,14 +86,14 @@ export class Term extends Lit {
 export class NonTerm extends Lit {
   readonly tag: IDType = IDType.NON_TERM;
   readonly isTerminal = false;
-  rules: Exp[] = [];
+  rules: Str[] = [];
 
   equals(another: this): boolean {
     return super.equals(another) && this.label == another.label;
   }
 
-  add(production: Exp): void {
-    if (production.tag != IDType.SYM && production.tag != IDType.STR) {
+  add(production: Str): void {
+    if (/*production.tag != IDType.SYM && */ production.tag != IDType.STR) {
       assert(false, "Invalid production");
     }
     if (this.findRule(production) >= 0) {
@@ -96,7 +106,7 @@ export class NonTerm extends Lit {
    * Checks if a rule already exists in the list of productions for
    * this non terminal.
    */
-  findRule(production: Exp): number {
+  findRule(production: Str): number {
     for (let i = this.rules.length - 1; i >= 0; i--) {
       const rule = this.rules[i];
       if (rule == production) return i;
@@ -111,7 +121,7 @@ export class NonTerm extends Lit {
    * This is used for seeing if duplicates exist when creating auxiliary
    * non-terminals so duplicates are not created.
    */
-  rulesEqual(rules: Exp[]): boolean {
+  rulesEqual(rules: Str[]): boolean {
     if (this.rules.length != rules.length) return false;
     for (let i = this.rules.length - 1; i >= 0; i--) {
       if (!this.rules[i].equals(rules[i])) {
@@ -122,9 +132,9 @@ export class NonTerm extends Lit {
   }
 }
 
-export class Sym extends Exp {
+/*
+export class Sym extends GObj {
   readonly tag: IDType = IDType.SYM;
-  readonly isString = false;
   readonly value: Lit;
   cardinality: Cardinality = Cardinality.EXACTLY_1;
   constructor(value: Lit) {
@@ -172,19 +182,30 @@ export class Sym extends Exp {
     return out;
   }
 }
+*/
 
-export class Str extends Exp {
+export class Str extends GObj {
   readonly tag: IDType = IDType.STR;
-  readonly isString = true;
-  syms: Sym[];
+  syms: Lit[];
+  cardinalities: Cardinality[];
 
-  constructor(...syms: Sym[]) {
+  constructor(...syms: Lit[]) {
     super();
     this.syms = syms || [];
+    this.cardinalities = [];
   }
 
-  add(sym: Sym): void {
-    this.syms.push(sym);
+  add(lit: Lit, cardinality: Cardinality = Cardinality.EXACTLY_1): void {
+    this.syms.push(lit);
+    this.cardinalities.push(cardinality);
+  }
+
+  isNullable(index: number): boolean {
+    return this.cardinalities[index] == Cardinality.ATLEAST_0 || this.cardinalities[index] == Cardinality.ATMOST_1;
+  }
+
+  isTerminal(index: number): boolean {
+    return this.syms[index].isTerminal;
   }
 
   get length(): number {
@@ -200,12 +221,21 @@ export class Str extends Exp {
     if (this.syms.length != another.syms.length) return false;
     for (let i = 0; i < this.syms.length; i++) {
       if (!this.syms[i].equals(another.syms[i])) return false;
+      if (this.cardinalities[i] != another.cardinalities[i]) return false;
     }
     return true;
   }
 
   get debugString(): string {
-    return this.syms.map((s) => s.debugString).join(" ");
+    return this.syms
+      .map((lit, i) => {
+        let out = lit.label;
+        if (this.cardinalities[i] == Cardinality.ATLEAST_0) out += "*";
+        else if (this.cardinalities[i] == Cardinality.ATLEAST_1) out += "+";
+        else if (this.cardinalities[i] == Cardinality.ATMOST_1) out += "?";
+        return out;
+      })
+      .join(" ");
   }
 }
 
@@ -265,7 +295,7 @@ export class Grammar {
    *
    * @param visitor
    */
-  forEachRule(visitor: (nt: NonTerm, rule: Exp, index: number) => void | boolean | undefined | null): void {
+  forEachRule(visitor: (nt: NonTerm, rule: Str, index: number) => void | boolean | undefined | null): void {
     this.forEachNT((nt: NonTerm) => {
       for (let i = 0; i < nt.rules.length; i++) {
         if (visitor(nt, nt.rules[i], i) == false) return false;
@@ -281,7 +311,7 @@ export class Grammar {
    *
    * Null production can be represented with an empty exps list.
    */
-  add(nt: string, production: Exp): this {
+  add(nt: string, production: Str): this {
     let nonterm = this.getLit(nt);
     if (nonterm == null) {
       // create it
@@ -390,42 +420,63 @@ export class Grammar {
     return t != null && !t.isTerminal && t.isAuxiliary;
   }
 
-  opt(exp: Exp | string): Exp {
-    // Convert Opt into either a symbol *or* another Sym over an auxiliar
-    // non-term
-    const nexp = this.ensureSym(this.normalizeExp(exp));
-    nexp.cardinality = Cardinality.ATMOST_1;
-    return nexp;
+  protected cardinal(exp: Str | string, cardinality: Cardinality): Str {
+    // Convert into either a symbol *or* another Sym over an auxiliar
+    // non-term and then apply cardinality
+    let str = this.normalizeRule(exp);
+    if (str.length > 1) {
+      // if we have a multi length string then create an Aux NT out of this
+      const nt = this.ensureAuxNT(str);
+      str = new Str(nt);
+    }
+    str.cardinalities[0] = multiplyCardinalities(str.cardinalities[0], cardinality);
+    return str;
   }
 
-  atleast0(exp: Exp | string): Exp {
-    const nexp = this.ensureSym(this.normalizeExp(exp));
-    nexp.cardinality = Cardinality.ATLEAST_0;
-    return nexp;
+  opt(exp: Str | string): Str {
+    return this.cardinal(exp, Cardinality.ATMOST_1);
   }
 
-  atleast1(exp: Exp | string): Exp {
-    const nexp = this.ensureSym(this.normalizeExp(exp));
-    nexp.cardinality = Cardinality.ATLEAST_1;
-    return nexp;
+  atleast0(exp: Str | string): Str {
+    return this.cardinal(exp, Cardinality.ATLEAST_0);
   }
 
-  seq(...exps: (Exp | string)[]): Exp {
+  atleast1(exp: Str | string): Str {
+    return this.cardinal(exp, Cardinality.ATLEAST_1);
+  }
+
+  seq(...exps: (Str | string)[]): Str {
     if (exps.length == 1) {
-      return this.ensureSym(this.normalizeExp(exps[0]));
+      return this.normalizeRule(exps[0]);
     } else {
-      return new Str(...exps.map((e) => this.ensureSym(this.normalizeExp(e))));
+      const out = new Str();
+      for (const e of exps) {
+        const s = this.normalizeRule(e);
+        // insert string here inline
+        // A ( B C D ) => A B C D
+        for (let i = 0; i < s.length; i++) {
+          out.add(s.syms[i], s.cardinalities[i]);
+        }
+      }
+      return out;
     }
   }
 
-  anyof(...exps: (Exp | string)[]): Exp {
-    if (exps.length == 1) {
-      return this.ensureSym(this.normalizeExp(exps[0]));
+  /**
+   * Provides a union rule:
+   *
+   * (A | B | C | D)
+   *
+   * Each of A, B, C or D themselves could be strings or literals.
+   */
+  anyof(...rules: (Str | string)[]): Str {
+    if (rules.length == 1) {
+      return this.normalizeRule(rules[0]);
     } else {
       // see if there is already NT with the exact set of rules
       // reuse if it exists.  That would make this method
       // Idempotent (which it needs to be).
-      return new Sym(this.ensureAuxNT(...exps.map((e) => this.normalizeExp(e))));
+      return new Str(this.ensureAuxNT(...rules.map((r) => this.normalizeRule(r))));
     }
   }
 
@@ -450,24 +501,11 @@ export class Grammar {
     return lit as T;
   }
 
-  ensureSym(exp: Exp): Sym {
-    if (exp.tag == IDType.STR) {
-      const str = exp as Str;
-      if (str.length == 1) {
-        return str.syms[0];
-      } else {
-        return new Sym(this.ensureAuxNT(str));
-      }
-    } else {
-      return exp as Sym;
-    }
-  }
-
-  normalizeExp(exp: Exp | string): Exp {
+  normalizeRule(exp: Str | string): Str {
     if (typeof exp === "string") {
       const lit = this.getLit(exp);
       if (lit == null) throw new Error(`Invalid symbol: '${exp}'`);
-      return new Sym(lit);
+      return new Str(lit);
       /*} else if (exp.tag == IDType.TERM) {
       return new Sym(exp as Term);
     } else if (exp.tag == IDType.NON_TERM) {
@@ -475,7 +513,7 @@ export class Grammar {
     } else {
       // We have an expression that needs to be fronted by an
       // auxiliarry non-terminal
-      assert(exp.tag == IDType.STR || exp.tag == IDType.SYM, "Found tag: " + exp.tag);
+      assert(exp.tag == IDType.STR /* || exp.tag == IDType.SYM */, "Found tag: " + exp.tag);
       return exp;
     }
   }
@@ -491,11 +529,11 @@ export class Grammar {
     return this.newNT(ntName, true);
   }
 
-  protected ensureAuxNT(...exps: Exp[]): NonTerm {
-    let nt = this.findAuxNT(...exps);
+  protected ensureAuxNT(...rules: Str[]): NonTerm {
+    let nt = this.findAuxNT(...rules);
     if (nt == null) {
       nt = this.newAuxNT();
-      for (const exp of exps) nt.add(exp);
+      for (const rule of rules) nt.add(rule);
     }
     return nt;
   }
@@ -505,9 +543,9 @@ export class Grammar {
    * This can be used to ensure duplicate rules are not created for
    * union expressions.
    */
-  findAuxNT(...exps: Exp[]): Nullable<NonTerm> {
+  findAuxNT(...rules: Str[]): Nullable<NonTerm> {
     for (const auxNT of this._auxNonTerminals) {
-      if (auxNT.rulesEqual(exps)) return auxNT;
+      if (auxNT.rulesEqual(rules)) return auxNT;
     }
     return null;
   }

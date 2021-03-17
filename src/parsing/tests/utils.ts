@@ -1,4 +1,4 @@
-import { Exp, Grammar } from "../grammar";
+import { Str, Grammar } from "../grammar";
 import { assert } from "../../utils/misc";
 import { StringMap } from "../../types";
 import { FirstSets, NullableSet, FollowSets } from "../sets";
@@ -33,11 +33,11 @@ export function expectFSEntries(g: Grammar, fs: FirstSets | FollowSets, entries:
   }
 }
 
-export function expectRules(g: Grammar, nt: string, ...rules: (string | Exp)[]): void {
+export function expectRules(g: Grammar, nt: string, ...rules: (string | Str)[]): void {
   const nonterm = g.getNT(nt);
   expect(nonterm?.rules.length).toBe(rules.length);
   for (let i = 0; i < rules.length; i++) {
-    const eq = nonterm?.rules[i].equals(g.normalizeExp(rules[i]));
+    const eq = nonterm?.rules[i].equals(g.normalizeRule(rules[i]));
     if (!eq) {
       console.log("Expected: ", rules[i], "Found: ", nonterm?.rules[i]);
       assert(false, `Rule ${i} does not match`);

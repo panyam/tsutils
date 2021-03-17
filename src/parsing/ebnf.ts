@@ -1,8 +1,7 @@
 import { Nullable, StringMap } from "../types";
 import { Token, Tokenizer as TokenizerBase } from "./tokenizer";
 import { ParseError, UnexpectedTokenError } from "./errors";
-import { NonTerm, Grammar, Sym } from "./grammar";
-import { Exp } from "./grammar";
+import { NonTerm, Grammar, Str } from "./grammar";
 import { PTNode } from "./parser";
 import { assert } from "../utils/misc";
 
@@ -364,25 +363,25 @@ export class EBNFParser {
     return nonterm;
   }
 
-  processProdSeq(grammar: Grammar, prods: PTNode): Nullable<Exp> {
+  processProdSeq(grammar: Grammar, prods: PTNode): Nullable<Str> {
     assert(prods.tag == NodeType.PROD_STR);
     const children = prods.children;
-    const exps: Exp[] = [];
+    const strs: Str[] = [];
     for (const prod of children) {
-      const exp: Nullable<Exp> = this.processProd(grammar, prod);
-      if (exp != null) {
-        exps.push(exp);
+      const str: Nullable<Str> = this.processProd(grammar, prod);
+      if (str != null) {
+        strs.push(str);
       }
     }
-    if (exps.length == 1) return exps[0];
-    else return grammar.seq(...exps);
+    if (strs.length == 1) return strs[0];
+    else return grammar.seq(...strs);
   }
 
-  processProd(grammar: Grammar, prod: PTNode): Nullable<Exp> {
+  processProd(grammar: Grammar, prod: PTNode): Nullable<Str> {
     if (prod.tag == NodeType.PROD_STR) {
       return this.processProdSeq(grammar, prod);
     } else if (prod.tag == NodeType.PROD_UNION) {
-      return new Sym(this.processProdUnion(grammar, prod));
+      return new Str(this.processProdUnion(grammar, prod));
     } else if (prod.tag == NodeType.PROD_OPTIONAL) {
       assert(prod.children.length == 1);
       const exp = this.processProd(grammar, prod.children[0]);
@@ -407,19 +406,19 @@ export class EBNFParser {
     } else if (prod.tag == NodeType.PROD_IDENT) {
       const token = prod.token!;
       if (grammar.isNT(token.value)) {
-        return new Sym(grammar.getNT(token.value)!);
+        return new Str(grammar.getNT(token.value)!);
       } else {
         // we have a terminal
-        return new Sym(grammar.getTerm(token.value, true)!);
+        return new Str(grammar.getTerm(token.value, true)!);
       }
     } else if (prod.tag == NodeType.PROD_STRING) {
       // TODO - ensure we can add literal into our
       // Tokenizer so it will prioritize this over its rules
-      return new Sym(grammar.getTerm('"' + prod.token!.value + '"', true)!);
+      return new Str(grammar.getTerm('"' + prod.token!.value + '"', true)!);
     } else if (prod.tag == NodeType.PROD_NUM) {
       // TODO - ensure we can add literal into our
       // Tokenizer so it will prioritize this over its rules
-      return new Sym(grammar.getTerm(prod.token!.value + "", true)!);
+      return new Str(grammar.getTerm(prod.token!.value + "", true)!);
     } else if (prod.tag == NodeType.PROD_NULL) {
       return null;
     } else {
