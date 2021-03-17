@@ -11,10 +11,14 @@ export class TermSet {
     this.grammar = grammar;
   }
 
+  get debugString(): string {
+    return this.labels().sort().join(", ");
+  }
+
   labels(skipAux = false): string[] {
     const out: string[] = [];
     for (const i of this.entries) {
-      const exp = this.grammar.objById(i) as Lit;
+      const exp = this.grammar.getLitById(i) as Lit;
       assert(exp != null);
       if (!skipAux || !exp.isAuxiliary) out.push(exp.label);
     }
@@ -71,7 +75,7 @@ export class NullableSet {
   get nonterms(): NonTerm[] {
     const out: NonTerm[] = [];
     this.entries.forEach((id) => {
-      const e = this.grammar.objById(id);
+      const e = this.grammar.getLitById(id);
       if (e != null && e.tag == IDType.NON_TERM) out.push(e as NonTerm);
     });
     return out;
@@ -90,21 +94,18 @@ export class NullableSet {
   }
 
   protected visit(nt: NonTerm): void {
-    const rules = nt.rules;
-    let nullable = nt.rules.length == 0 || nt.hasNull;
-    if (!nullable) {
+    if (nt.rules.length > 0) {
       for (const rule of nt.rules) {
         if (this.evaluate(rule)) {
-          nullable = true;
+          this.add(nt);
           break;
         }
       }
     }
-    if (nullable) this.add(nt);
   }
 
-  isNullable(nt: NonTerm): boolean {
-    return nt.id in this.entries;
+  isNullable(nt: Lit): boolean {
+    return this.entries.has(nt.id);
   }
 
   add(nt: NonTerm): void {
@@ -119,7 +120,7 @@ export class NullableSet {
       return true;
     } else {
       const sym = exp as Sym;
-      return sym.isNullable;
+      return sym.isNullable || this.isNullable(sym.value);
     }
   }
 }
@@ -136,6 +137,12 @@ class NonTermTermSets {
   refresh(): void {
     this.entries = {};
     this._count = 0;
+  }
+  
+  get debugString(): any {
+    let out = {} as any;
+    for (const x in this.entries) out[this.grammar.getLitById(x as any)!.label] = this.entries[x].debugString;
+    return out;
   }
 
   get count(): number {
@@ -173,6 +180,9 @@ class NonTermTermSets {
    * term set.
    */
   add(nt: Lit, source: Lit, includeNull = true): boolean {
+    if (nt.isTerminal) {
+      assert(false, "Should not be here");
+    }
     const entries = this.entriesFor(nt);
     if (source.isTerminal) {
       const term = source as Term;
@@ -199,7 +209,10 @@ export class FirstSets extends NonTermTermSets {
 
   constructor(grammar: Grammar, nullables?: NullableSet) {
     super(grammar);
-    this.nullables = nullables || new NullableSet(grammar);
+    if (!nullables) {
+      nullables = new NullableSet(grammar);
+    }
+    this.nullables = nullables;
     this.refresh();
   }
 
@@ -209,7 +222,7 @@ export class FirstSets extends NonTermTermSets {
    */
   refresh(): void {
     super.refresh();
-    this.grammar.terminals.forEach((t) => this.add(t, t));
+    // this.grammar.terminals.forEach((t) => this.add(t, t));
 
     let beforeCount = 0;
     do {
@@ -219,12 +232,8 @@ export class FirstSets extends NonTermTermSets {
   }
 
   protected visit(nt: NonTerm): void {
-    if (nt.hasNull) {
-      this.addNull(nt);
-    } else {
-      for (const rule of nt.rules) {
-        this.processRule(nt, rule);
-      }
+    for (const rule of nt.rules) {
+      this.processRule(nt, rule);
     }
   }
 
@@ -232,15 +241,19 @@ export class FirstSets extends NonTermTermSets {
     if (exp.isString) {
       const str = exp as Str;
       const nullables = this.nullables;
+      let allNullable = true;
       for (const s of str.syms) {
-        // First(s) will be in First(nonterm)
-        this.add(nonterm, s.value, true);
-        if (!s.isTerminal && !nullables.isNullable(s.value as NonTerm)) {
+        // First(s) - null will be in First(nonterm)
+        // Null will onlybe added if all symbols are nullable
+        this.add(nonterm, s.value, false);
+        if (s.isTerminal || !nullables.isNullable(s.value as NonTerm)) {
           // since s is not nullable the next rule's first set
           // cannot affect nonterm's firs set
+          allNullable = false;
           break;
         }
       }
+      if (allNullable) this.addNull(nonterm);
     } else {
       const sym = exp as Sym;
       this.add(nonterm, sym.value, true);
@@ -284,12 +297,8 @@ export class FollowSets extends NonTermTermSets {
   }
 
   protected visit(nt: NonTerm): void {
-    if (nt.hasNull) {
-      this.addNull(nt);
-    } else {
-      for (const rule of nt.rules) {
-        this.processRule(nt, rule);
-      }
+    for (const rule of nt.rules) {
+      this.processRule(nt, rule);
     }
   }
 
@@ -297,7 +306,6 @@ export class FollowSets extends NonTermTermSets {
    * Add Follows[source] into Follows[dest] recursively.
    */
   processRule(nonterm: NonTerm, exp: Exp): void {
-    const nullables = this.firstSets.nullables;
     if (exp.isString) {
       const str = exp as Str;
       const syms = str.syms;
@@ -307,15 +315,19 @@ export class FollowSets extends NonTermTermSets {
       // Rule 1:
       //  If A -> aBb1b2b3..bn:
       //    Follow(B) = Follow(B) U { First(b1b2b3...bn) - eps }
-      for (let i = 0; i < syms.length - 1; i++) {
+      for (let i = 0; i < syms.length; i++) {
         const sym = syms[i];
-        if (!sym.isTerminal) {
-          const entries = this.entriesFor(sym.value);
-          // This needs to be memoized
-          for (let j = i + 1; j < syms.length; j++) {
-            const symj = syms[j];
-            firstSets.entriesFor(symj.value).addTo(entries, false);
-            if (symj.isTerminal) break;
+        if (sym.isTerminal) continue;
+        const entries = this.entriesFor(sym.value);
+        // This needs to be memoized
+        for (let j = i + 1; j < syms.length; j++) {
+          const symj = syms[j];
+          if (symj.isTerminal) {
+            this.add(sym.value, symj.value);
+            break;
+          } else {
+            const symEntries = firstSets.entriesFor(symj.value)
+            symEntries.addTo(entries, false);
             if (!nullables.isNullable(symj.value as NonTerm)) break;
           }
         }
@@ -326,11 +338,12 @@ export class FollowSets extends NonTermTermSets {
       //    if Nullable(b1b2b3...bn):
       //      Follow(B) = Follow(B) U Follow(N)
       for (let i = syms.length - 1; i >= 0; i--) {
+        if (syms[i].value.isTerminal) continue;
+
         // This needs to be memoized??
         let allNullable = true;
         for (let j = i + 1; j < syms.length; j++) {
           const symj = syms[j];
-          if (symj.isTerminal) break;
           if (symj.isTerminal || !nullables.isNullable(symj.value as NonTerm)) {
             allNullable = false;
             break;

@@ -3,6 +3,7 @@ import { FirstSets, NullableSet, FollowSets } from "../sets";
 import { EBNFParser } from "../ebnf";
 import { assert } from "../../utils/misc";
 import { StringMap } from "../../types";
+import { printGrammar, printRule, printRules } from "../utils";
 
 function listsEqual(l1: string[], l2: string[]): boolean {
   l1 = l1.sort();
@@ -14,9 +15,17 @@ function listsEqual(l1: string[], l2: string[]): boolean {
   return true;
 }
 
+function expectNullables(nullables: NullableSet, terms: string[]) {
+  const ns = nullables.nonterms.map((n) => n.label).sort();
+  if (!listsEqual(ns, terms)) {
+    console.log(`Nullables Expected FS[${ns}]: `, terms, ", Found: ", terms);
+    assert(false);
+  }
+}
+
 function expectFSEntries(g: Grammar, fs: FirstSets | FollowSets, entries: StringMap<string[]>) {
   for (const nt in entries) {
-    const exp = g.isTerminal(nt) ? g.term(nt) : g.nonterm(nt);
+    const exp = g.getLit(nt)!;
     const labels = fs.entriesFor(exp).labels(true).sort();
     const terms = entries[nt].sort();
     if (!listsEqual(labels, terms)) {
@@ -47,8 +56,7 @@ describe("Nullable Tests", () => {
       C : c C | c ;
     `).grammar;
 
-    const ns = new NullableSet(g).nonterms.map((n) => n.label).sort();
-    expect(ns).toEqual(["S"]);
+    expectNullables(new NullableSet(g), ["S"]);
   });
 
   test("Nullables Tests 3", () => {
@@ -59,8 +67,7 @@ describe("Nullable Tests", () => {
       C : c C | ;
     `).grammar;
 
-    const ns = new NullableSet(g).nonterms.map((n) => n.label).sort();
-    expect(ns).toEqual(["A", "B", "C", "S"]);
+    expectNullables(new NullableSet(g), ["A", "B", "C", "S"]);
   });
 
   test("Nullables Tests 4", () => {
@@ -71,8 +78,7 @@ describe("Nullable Tests", () => {
       C : c C | c;
     `).grammar;
 
-    const ns = new NullableSet(g).nonterms.map((n) => n.label).sort();
-    expect(ns).toEqual(["S"]);
+    expectNullables(new NullableSet(g), ["S"]);
   });
 });
 
@@ -88,7 +94,6 @@ describe("First Sets tests", () => {
     const ns = new NullableSet(g);
     const fs = new FirstSets(g, ns);
     expectFSEntries(g, fs, {
-      a: ["a"],
       S: ["a", "b", "c"],
       A: ["a", "b", "c"],
       B: ["b"],
@@ -176,18 +181,20 @@ describe("FollowSet Tests", () => {
     `).grammar;
 
     const ns = new NullableSet(g);
-    const fs = new FollowSets(g, new FirstSets(g, ns));
-    expectFSEntries(g, fs.firstSets, {
-      int: ["int"],
-      PLUS: ["PLUS"],
-      STAR: ["STAR"],
-      OPEN: ["OPEN"],
-      CLOSE: ["CLOSE"],
+    const firstSets = new FirstSets(g, ns);
+    expectFSEntries(g, firstSets, {
+      // int: ["int"],
+      // PLUS: ["PLUS"],
+      // STAR: ["STAR"],
+      // OPEN: ["OPEN"],
+      // CLOSE: ["CLOSE"],
       Y: ["STAR", ""],
       X: ["PLUS", ""],
       T: ["int", "OPEN"],
       E: ["int", "OPEN"],
     });
+
+    const fs = new FollowSets(g, firstSets);
     expectFSEntries(g, fs, {
       Y: [g.Eof.label, "CLOSE", "PLUS"],
       X: [g.Eof.label, "CLOSE"],
@@ -196,7 +203,7 @@ describe("FollowSet Tests", () => {
     });
   });
 
-  test("Tests 4", () => {
+  test("Tests 5", () => {
     const g = new EBNFParser(`
       S : T U V W | W V U T ;
       T : a T | e ;
@@ -204,17 +211,21 @@ describe("FollowSet Tests", () => {
       V : c V | ;
       W : W d | ;
     `).grammar;
+    const printed = printGrammar(g);
 
     const ns = new NullableSet(g);
-    const fs = new FollowSets(g, new FirstSets(g, ns));
-    expectFSEntries(g, fs.firstSets, {
+    expectNullables(ns, ["V", "W"]);
+    const firstSets = new FirstSets(g, ns);
+    expectFSEntries(g, firstSets, {
       S: ["a", "e", "d", "c", "f"],
       T: ["a", "e"],
       U: ["f"],
       V: ["c", ""],
       W: ["d", ""],
     });
-    expectFSEntries(g, fs, {
+
+    const followSets = new FollowSets(g, firstSets);
+    expectFSEntries(g, followSets, {
       S: [g.Eof.label],
       T: ["f", g.Eof.label],
       U: [g.Eof.label, "a", "b", "c", "d", "e"],

@@ -24,10 +24,11 @@ describe("Grammar Tests", () => {
     const A = g.newTerm("a");
     const B = g.newTerm("b");
     const C = g.newTerm("c");
-    x.add(g.normalizeExp(A));
-    x.add(g.normalizeExp(B));
-    x.add(g.normalizeExp(C));
+    x.add(new Sym(A));
+    x.add(new Sym(B));
+    x.add(new Sym(C));
 
-    expect(g.anyof(A, B, C)).toEqual(x);
+    const y = g.anyof(new Sym(A), new Sym(B), new Sym(C)) as Sym;
+    expect(y.value).toBe(x);
   });
 });

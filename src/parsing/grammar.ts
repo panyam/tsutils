@@ -13,22 +13,6 @@ abstract class GObj {
   grammar: Grammar;
   abstract readonly tag: IDType;
 
-  /**
-   * ID unique across all expression within the grammar.
-   */
-  id: number;
-
-  /**
-   * Index unique across all expressions of a particular type within the grammar.
-   */
-  index: number;
-
-  private static idCounter = -1;
-  constructor() {
-    this.id = GObj.idCounter--;
-    this.index = GObj.idCounter--;
-  }
-
   equals(another: GObj): boolean {
     return this.tag == another.tag;
   }
@@ -53,12 +37,25 @@ export abstract class Exp extends GObj {
 export abstract class Lit extends GObj {
   abstract readonly isTerminal: boolean;
   readonly label: string;
-  readonly isString = false;
   isAuxiliary = false;
   precedence = 1;
   assocLeft = true;
-  constructor(label: string) {
+
+  private static idCounter = -1;
+
+  /**
+   * ID unique across all expression within the grammar.
+   */
+  id: number = Lit.idCounter--;
+
+  /**
+   * Index unique across all expressions of a particular type within the grammar.
+   */
+  index = -1;
+
+  constructor(label: string, isAuxiliary = false) {
     super();
+    this.isAuxiliary = isAuxiliary;
     this.label = label;
   }
 
@@ -80,14 +77,6 @@ export class NonTerm extends Lit {
   readonly tag: IDType = IDType.NON_TERM;
   readonly isTerminal = false;
   rules: Exp[] = [];
-  protected _hasNull = false;
-
-  set hasNull(v: boolean) {
-    this._hasNull = v;
-  }
-  get hasNull(): boolean {
-    return this._hasNull || this.rules.length == 0;
-  }
 
   equals(another: this): boolean {
     return super.equals(another) && this.label == another.label;
@@ -100,11 +89,7 @@ export class NonTerm extends Lit {
     if (this.findRule(production) >= 0) {
       throw new Error("Duplicate rule");
     }
-    if (production.tag == IDType.STR && (production as Str).syms.length == 0) {
-      this.hasNull = true;
-    } else {
-      this.rules.push(production);
-    }
+    this.rules.push(production);
   }
 
   /**
@@ -139,7 +124,7 @@ export class NonTerm extends Lit {
 
 export class Sym extends Exp {
   readonly tag: IDType = IDType.SYM;
-  readonly isString: false;
+  readonly isString = false;
   readonly value: Lit;
   cardinality: Cardinality = Cardinality.EXACTLY_1;
   constructor(value: Lit) {
@@ -178,11 +163,19 @@ export class Sym extends Exp {
     if (!this.value.equals(another.value)) return false;
     return true;
   }
+
+  get debugString(): string {
+    let out = this.value.label;
+    if (this.cardinality == Cardinality.ATLEAST_0) out += "*";
+    else if (this.cardinality == Cardinality.ATLEAST_1) out += "+";
+    else if (this.cardinality == Cardinality.ATMOST_1) out += "?";
+    return out;
+  }
 }
 
 export class Str extends Exp {
   readonly tag: IDType = IDType.STR;
-  readonly isString: true;
+  readonly isString = true;
   syms: Sym[];
 
   constructor(...syms: Sym[]) {
@@ -210,43 +203,23 @@ export class Str extends Exp {
     }
     return true;
   }
+
+  get debugString(): string {
+    return this.syms.map(s => s.debugString).join(" ");
+  }
 }
 
 export class Grammar {
   public startSymbol: Nullable<NonTerm> = null;
   private _modified = true;
   protected _terminals: Term[] = [];
-  protected terminalsByName: StringMap<Term> = {};
   protected _nonTerminals: NonTerm[] = [];
-  protected nonTerminalsByName: StringMap<NonTerm> = {};
   protected _auxNonTerminals: NonTerm[] = [];
-  protected auxNonTerminalsByName: StringMap<NonTerm> = {};
-  protected objsById: GObj[] = [];
-  protected objsByType: GObj[][] = [[], [], [], [], [], [], []];
+  protected literalsByName: StringMap<Lit> = {};
+  protected literalsById: Lit[] = [];
   protected currentNonTerm: Nullable<NonTerm> = null;
 
   readonly Eof = new Term("<EOF>");
-
-  constructor() {
-    this.wrapExp(this.Eof);
-    for (let i = 0; i < IDType.MAX_TYPES; i++) {
-      this.objsByType.push([]);
-    }
-  }
-
-  /**
-   * Return a terminal by its ID.
-   */
-  objById(id: number): Nullable<GObj> {
-    return this.objsById[id] || null;
-  }
-
-  /**
-   * Return an expression of a particular type given its index.
-   */
-  objByType(tag: IDType, index: number): Nullable<GObj> {
-    return this.objsByType[tag][index] || null;
-  }
 
   /**
    * A way of creating Grammars with a "single expresssion".
@@ -319,14 +292,12 @@ export class Grammar {
    * and non terminal labels.
    */
   getLit(label: string): Nullable<Lit> {
-    if (this.isTerminal(label)) {
-      return this.terminalsByName[label];
-    } else if (this.isNT(label)) {
-      return this.nonTerminalsByName[label];
-    } else if (this.isAuxNT(label)) {
-      return this.auxNonTerminalsByName[label];
-    }
-    return null;
+    return this.literalsByName[label] || null;
+  }
+
+  getLitById(id: number): Nullable<Lit> {
+    if (id < 0) return this.Eof;
+    return this.literalsById[id] || null;
   }
 
   getTerm(label: string, ensure = false): Nullable<NonTerm> {
@@ -357,10 +328,7 @@ export class Grammar {
     if (this.getLit(label) != null) {
       throw new Error(`${label} is already exists`);
     }
-    const out = this.wrapExp(new Term(label));
-    this.terminalsByName[label] = out;
-    this._terminals.push(out);
-    return out;
+    return this.wrapLit(new Term(label));
   }
 
   /**
@@ -376,14 +344,8 @@ export class Grammar {
     if (this.getLit(label) != null) {
       throw new Error(`Non-terminal ${label} is already exists`);
     }
-    const out = this.wrapExp(new NonTerm(label));
-    out.isAuxiliary = isAuxiliary;
-    if (isAuxiliary) {
-      this.auxNonTerminalsByName[label] = out;
-      this._auxNonTerminals.push(out);
-    } else {
-      this.nonTerminalsByName[label] = out;
-      this._nonTerminals.push(out);
+    const out = this.wrapLit(new NonTerm(label, isAuxiliary)) as NonTerm;
+    if (!isAuxiliary) {
       if (this.startSymbol == null) {
         this.startSymbol = out;
       }
@@ -395,21 +357,24 @@ export class Grammar {
    * Checks if a given label is a terminal.
    */
   isTerminal(label: string): boolean {
-    return label in this.terminalsByName;
+    const t = this.literalsByName[label] || null;
+    return t != null && t.isTerminal;
   }
 
   /**
    * Checks if a given label is a non-terminal.
    */
   isNT(label: string): boolean {
-    return label in this.nonTerminalsByName;
+    const t = this.literalsByName[label] || null;
+    return t != null && !t.isTerminal && !t.isAuxiliary;
   }
 
   /**
    * Checks if a given label is an auxiliary non-terminal.
    */
   isAuxNT(label: string): boolean {
-    return label in this.auxNonTerminalsByName;
+    const t = this.literalsByName[label] || null;
+    return t != null && !t.isTerminal && t.isAuxiliary;
   }
 
   opt(exp: Exp | string): Exp {
@@ -436,7 +401,7 @@ export class Grammar {
     if (exps.length == 1) {
       return this.ensureSym(this.normalizeExp(exps[0]));
     } else {
-      return this.wrapExp(new Str(...exps.map((e) => this.ensureSym(this.normalizeExp(e)))));
+      return new Str(...exps.map((e) => this.ensureSym(this.normalizeExp(e))));
     }
   }
 
@@ -447,20 +412,29 @@ export class Grammar {
       // see if there is already NT with the exact set of rules
       // reuse if it exists.  That would make this method
       // Idempotent (which it needs to be).
-      return this.ensureAuxNT(...(exps.map(e => this.normalizeExp(e))));
+      return new Sym(this.ensureAuxNT(...exps.map((e) => this.normalizeExp(e))));
     }
   }
 
-  protected wrapExp<T extends Exp>(exp: T): T {
-    assert(exp.id < 0, "Expression already wrapped: " + exp.id);
-    assert(exp.index < 0, "Expression already wrapped: " + exp.index);
-    exp.grammar = this;
-    exp.id = this.objsById.length;
-    this.objsById.push(exp);
+  protected wrapLit<T extends Lit>(lit: Lit): T {
+    assert(lit.id < 0, "Literal already wrapped: " + lit.id);
+    assert(lit.index < 0, "Literal already wrapped: " + lit.index);
+    lit.grammar = this;
+    lit.id = this.literalsById.length;
+    this.literalsById.push(lit);
+    if (lit.isTerminal) {
+      lit.index = this._terminals.length;
+      this._terminals.push(lit as Term);
+    } else if (lit.isAuxiliary) {
+      lit.index = this._auxNonTerminals.length;
+      this._auxNonTerminals.push(lit as NonTerm);
+    } else {
+      lit.index = this._nonTerminals.length;
+      this._nonTerminals.push(lit as NonTerm);
+    }
+    this.literalsByName[lit.label] = lit;
 
-    exp.index = this.objsByType[exp.tag].length;
-    this.objsByType[exp.tag].push(exp);
-    return exp;
+    return lit as T;
   }
 
   ensureSym(exp: Exp): Sym {
@@ -469,7 +443,7 @@ export class Grammar {
       if (str.length == 1) {
         return str.syms[0];
       } else {
-        return this.wrapExp(new Sym(this.ensureAuxNT(str)));
+        return new Sym(this.ensureAuxNT(str));
       }
     } else {
       return exp as Sym;
@@ -480,11 +454,11 @@ export class Grammar {
     if (typeof exp === "string") {
       const lit = this.getLit(exp);
       if (lit == null) throw new Error(`Invalid symbol: '${exp}'`);
-      return this.wrapExp(new Sym(lit));
-    } else if (exp.tag == IDType.TERM) {
-      return this.wrapExp(new Sym(exp as Term));
+      return new Sym(lit);
+      /*} else if (exp.tag == IDType.TERM) {
+      return new Sym(exp as Term);
     } else if (exp.tag == IDType.NON_TERM) {
-      return this.wrapExp(new Sym(exp as NonTerm));
+      return new Sym(exp as NonTerm);*/
     } else {
       // We have an expression that needs to be fronted by an
       // auxiliarry non-terminal
