@@ -1,4 +1,4 @@
-import { NumMap } from "../types";
+import { NumMap, Nullable } from "../types";
 import { Grammar, Lit, Term, NonTerm, IDType, Exp, Sym, Str } from "./grammar";
 import { assert } from "../utils/misc";
 
@@ -89,7 +89,7 @@ export class NullableSet {
     let beforeCount = 0;
     do {
       beforeCount = this.entries.size;
-      this.grammar.forEachNT((nt) => this.visit(nt));
+      this.grammar.forEachRule((nt) => this.visit(nt));
     } while (beforeCount != this.entries.size);
   }
 
@@ -105,7 +105,17 @@ export class NullableSet {
   }
 
   isNullable(nt: Lit): boolean {
-    return this.entries.has(nt.id);
+    return !nt.isTerminal && this.entries.has(nt.id);
+  }
+
+  isStrNullable(str: Str, fromIndex = 0): boolean {
+    for (let i = fromIndex; i < str.length; i++) {
+      const sym = str.syms[i];
+      if (!sym.isNullable && !this.isNullable(sym.value)) {
+        return false;
+      }
+    }
+    return true;
   }
 
   add(nt: NonTerm): void {
@@ -138,9 +148,19 @@ class NonTermTermSets {
     this.entries = {};
     this._count = 0;
   }
-  
+
+  forEachTerm(nt: NonTerm, visitor: (x: Nullable<Term>) => boolean | void): void {
+    const entries = this.entriesFor(nt);
+    entries.entries.forEach((x) => {
+      const term = this.grammar.getLitById(x);
+      assert(term != null && term.isTerminal);
+      visitor(term as Term);
+    });
+    if (entries.hasNull) visitor(null);
+  }
+
   get debugString(): any {
-    let out = {} as any;
+    const out = {} as any;
     for (const x in this.entries) out[this.grammar.getLitById(x as any)!.label] = this.entries[x].debugString;
     return out;
   }
@@ -217,6 +237,39 @@ export class FirstSets extends NonTermTermSets {
   }
 
   /**
+   * For a given string return the first(str) starting at a given index.
+   * Including eps if it exists.
+   */
+  forEachTermIn(exp: Exp, fromIndex = 0, visitor: (term: Nullable<Term>) => void): void {
+    // This needs to be memoized by exp.id + index
+    if (!exp.isString) {
+      exp = new Str(exp as Sym);
+    }
+    const syms = (exp as Str).syms;
+    const visited = {} as any;
+    let allNullable = true;
+    for (let j = fromIndex; allNullable && j < syms.length; j++) {
+      const symj = syms[j];
+      if (symj.isTerminal) {
+        visitor(symj.value as Term);
+        allNullable = false;
+      } else {
+        const nt = symj.value as NonTerm;
+        this.forEachTerm(nt, (term) => {
+          if (term != null && !(term.id in visited)) {
+            visited[term.id] = true;
+            visitor(term as Term);
+          }
+        });
+        if (!this.nullables.isNullable(symj.value as NonTerm)) {
+          allNullable = false;
+        }
+      }
+    }
+    if (allNullable) visitor(null);
+  }
+
+  /**
    * Reevaluates the first sets of a grammar.
    * This method assumes that the grammar's nullables are fresh.
    */
@@ -227,14 +280,10 @@ export class FirstSets extends NonTermTermSets {
     let beforeCount = 0;
     do {
       beforeCount = this.count;
-      this.grammar.forEachNT((nt) => this.visit(nt));
+      this.grammar.forEachRule((nt, exp) => {
+        this.processRule(nt, exp);
+      });
     } while (beforeCount != this.count);
-  }
-
-  protected visit(nt: NonTerm): void {
-    for (const rule of nt.rules) {
-      this.processRule(nt, rule);
-    }
   }
 
   processRule(nonterm: NonTerm, exp: Exp): void {
@@ -274,6 +323,10 @@ export class FollowSets extends NonTermTermSets {
     this.refresh();
   }
 
+  get nullables(): NullableSet {
+    return this.firstSets.nullables;
+  }
+
   /**
    * Reevaluates the follow sets of each expression in our grammar.
    * This method assumes that the grammar's nullables and firstSets are
@@ -292,14 +345,8 @@ export class FollowSets extends NonTermTermSets {
     let beforeCount = 0;
     do {
       beforeCount = this.count;
-      this.grammar.forEachNT((nt) => this.visit(nt));
+      this.grammar.forEachRule((nt, rule) => this.processRule(nt, rule));
     } while (beforeCount != this.count);
-  }
-
-  protected visit(nt: NonTerm): void {
-    for (const rule of nt.rules) {
-      this.processRule(nt, rule);
-    }
   }
 
   /**
@@ -316,21 +363,11 @@ export class FollowSets extends NonTermTermSets {
       //  If A -> aBb1b2b3..bn:
       //    Follow(B) = Follow(B) U { First(b1b2b3...bn) - eps }
       for (let i = 0; i < syms.length; i++) {
-        const sym = syms[i];
+        const sym = str.syms[i];
         if (sym.isTerminal) continue;
-        const entries = this.entriesFor(sym.value);
-        // This needs to be memoized
-        for (let j = i + 1; j < syms.length; j++) {
-          const symj = syms[j];
-          if (symj.isTerminal) {
-            this.add(sym.value, symj.value);
-            break;
-          } else {
-            const symEntries = firstSets.entriesFor(symj.value)
-            symEntries.addTo(entries, false);
-            if (!nullables.isNullable(symj.value as NonTerm)) break;
-          }
-        }
+        firstSets.forEachTermIn(str, i + 1, (term) => {
+          if (term != null) this.add(sym.value, term);
+        });
       }
 
       // Rule 2:

@@ -1,6 +1,7 @@
 import { Str, Term, NonTerm, Exp, Grammar } from "../grammar";
 import { EBNFParser } from "../ebnf";
 import { assert } from "../../utils/misc";
+import { expectRules } from "./utils";
 
 function symLabels(s: readonly (Term | NonTerm)[], skipAux = true): string[] {
   return s.filter((l) => !skipAux || !l.isAuxiliary).map((x: Term | NonTerm) => x.label);
@@ -10,18 +11,6 @@ function expectListsEqual(l1: string[], l2: string[]): void {
   l1 = l1.sort();
   l2 = l2.sort();
   expect(l1).toEqual(l2);
-}
-
-function expectRules(g: Grammar, nt: string, ...rules: (string | Exp)[]) {
-  const nonterm = g.getNT(nt);
-  expect(nonterm?.rules.length).toBe(rules.length);
-  for (let i = 0; i < rules.length; i++) {
-    const eq = nonterm?.rules[i].equals(g.normalizeExp(rules[i]));
-    if (!eq) {
-      console.log("Expected: ", rules[i], "Found: ", nonterm?.rules[i]);
-      assert(false, `Rule ${i} does not match`);
-    }
-  }
 }
 
 describe("EBNF Tests", () => {

@@ -205,7 +205,7 @@ export class Str extends Exp {
   }
 
   get debugString(): string {
-    return this.syms.map(s => s.debugString).join(" ");
+    return this.syms.map((s) => s.debugString).join(" ");
   }
 }
 
@@ -258,6 +258,19 @@ export class Grammar {
     for (const nt of this._auxNonTerminals) {
       if (visitor(nt) == false) return;
     }
+  }
+
+  /**
+   * A iterator across all the rules of all non terminals in this grammar.
+   *
+   * @param visitor
+   */
+  forEachRule(visitor: (nt: NonTerm, rule: Exp, index: number) => void | boolean | undefined | null): void {
+    this.forEachNT((nt: NonTerm) => {
+      for (let i = 0; i < nt.rules.length; i++) {
+        if (visitor(nt, nt.rules[i], i) == false) return false;
+      }
+    });
   }
 
   /**

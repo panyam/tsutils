@@ -1,39 +1,7 @@
-import { Grammar } from "../grammar";
 import { FirstSets, NullableSet, FollowSets } from "../sets";
 import { EBNFParser } from "../ebnf";
-import { assert } from "../../utils/misc";
-import { StringMap } from "../../types";
-import { printGrammar, printRule, printRules } from "../utils";
-
-function listsEqual(l1: string[], l2: string[]): boolean {
-  l1 = l1.sort();
-  l2 = l2.sort();
-  if (l1.length != l2.length) return false;
-  for (let i = 0; i < l1.length; i++) {
-    if (l2[i] != l1[i]) return false;
-  }
-  return true;
-}
-
-function expectNullables(nullables: NullableSet, terms: string[]) {
-  const ns = nullables.nonterms.map((n) => n.label).sort();
-  if (!listsEqual(ns, terms)) {
-    console.log(`Nullables Expected FS[${ns}]: `, terms, ", Found: ", terms);
-    assert(false);
-  }
-}
-
-function expectFSEntries(g: Grammar, fs: FirstSets | FollowSets, entries: StringMap<string[]>) {
-  for (const nt in entries) {
-    const exp = g.getLit(nt)!;
-    const labels = fs.entriesFor(exp).labels(true).sort();
-    const terms = entries[nt].sort();
-    if (!listsEqual(labels, terms)) {
-      console.log(`Expected FS[${nt}]: `, terms, ", Found: ", labels);
-      assert(false);
-    }
-  }
-}
+import { printGrammar } from "../utils";
+import { listsEqual, expectNullables, expectFSEntries } from "./utils";
 
 describe("Nullable Tests", () => {
   test("Nullables Tests 1", () => {
@@ -138,7 +106,8 @@ describe("FollowSet Tests", () => {
     `).grammar;
 
     const ns = new NullableSet(g);
-    const fs = new FollowSets(g, new FirstSets(g, ns));
+    const firstSets = new FirstSets(g, ns);
+    const fs = new FollowSets(g, firstSets);
     expectFSEntries(g, fs, {
       A: [g.Eof.label],
       B: ["a"],
@@ -155,14 +124,16 @@ describe("FollowSet Tests", () => {
     `).grammar;
 
     const ns = new NullableSet(g);
-    const fs = new FollowSets(g, new FirstSets(g, ns));
-    expectFSEntries(g, fs.firstSets, {
+    const firstSets = new FirstSets(g, ns);
+    expectFSEntries(g, firstSets, {
       E: ["OPEN", "id"],
       T: ["OPEN", "id"],
       F: ["OPEN", "id"],
       E1: ["PLUS", ""],
       T1: ["STAR", ""],
     });
+
+    const fs = new FollowSets(g, firstSets);
     expectFSEntries(g, fs, {
       E: [g.Eof.label, "CLOSE"],
       E1: [g.Eof.label, "CLOSE"],
