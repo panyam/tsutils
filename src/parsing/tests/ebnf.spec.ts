@@ -1,11 +1,11 @@
-import { Grammar, Str, Term, NonTerm } from "../grammar";
+import { Grammar, Str, Sym } from "../grammar";
 import { EBNFParser } from "../ebnf";
 import { assert } from "../../utils/misc";
 import { expectRules } from "./utils";
 import { printGrammar } from "../utils";
 
-function symLabels(s: readonly (Term | NonTerm)[], skipAux = true): string[] {
-  return s.filter((l) => !skipAux || !l.isAuxiliary).map((x: Term | NonTerm) => x.label);
+function symLabels(s: readonly Sym[], skipAux = true): string[] {
+  return s.filter((l) => !skipAux || !l.isAuxiliary).map((x: Sym) => x.label);
 }
 
 function expectListsEqual(l1: string[], l2: string[]): void {

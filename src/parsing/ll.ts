@@ -1,6 +1,6 @@
-import { Lit, NonTerm, Term, Str, Grammar } from "./grammar";
+import { Sym, Str, Grammar } from "./grammar";
 import { Token } from "./tokenizer";
-import { Tokenizer, PTNode, Parser as ParserBase, ParseTable, ParseTableItem } from "./parser";
+import { Tokenizer, PTNode, PTNTerm, PTNNonTerm, Parser as ParserBase, ParseTable, ParseTableItem } from "./parser";
 import { Nullable } from "../types";
 import { assert } from "../utils/misc";
 
@@ -12,7 +12,7 @@ export class LL1ParseTable extends ParseTable {
     });
   }
 
-  processRule(nt: NonTerm, rule: Str, index: number): void {
+  processRule(nt: Sym, rule: Str, index: number): void {
     const firstSets = this.followSets.firstSets;
     // Rule 1
     // For each a in First(rule) add A -> rule to M[A,a]
@@ -39,6 +39,43 @@ export class LL1ParseTable extends ParseTable {
   }
 }
 
+export class ParseStack {
+  readonly Grammar: Grammar;
+  readonly parseTable: ParseTable;
+  readonly ptnStack: PTNode[];
+  readonly rootNode: PTNode;
+  readonly stack: Sym[];
+  constructor(g: Grammar, parseTable: ParseTable) {
+    this.ptnStack = [];
+    this.parseTable = parseTable;
+    assert(g.startSymbol != null, "Start symbol not selected");
+    this.rootNode = new PTNNonTerm(g.startSymbol);
+    this.stack = [g.Eof, g.startSymbol!];
+  }
+
+  top(): Sym {
+    return this.stack[this.stack.length - 1];
+  }
+
+  pop(): Sym {
+    return this.stack.pop()!;
+  }
+
+  push(val: Sym): void {
+    this.stack.push(val);
+  }
+
+  pushStr(str: Str): void {
+    for (let i = str.syms.length - 1; i >= 0; i--) {
+      this.stack.push(str.syms[i]);
+    }
+  }
+
+  get isEmpty(): boolean {
+    return this.stack.length == 0;
+  }
+}
+
 export class LLParser extends ParserBase {
   parseTable: ParseTable;
   constructor(grammar: Grammar, parseTable?: ParseTable) {
@@ -51,46 +88,52 @@ export class LLParser extends ParserBase {
    */
   parse(tokenizer: Tokenizer): Nullable<PTNode> {
     const g = this.grammar;
-    assert(g.startSymbol != null, "Start symbol not selected");
-    const stack: Lit[] = [g.Eof, g.startSymbol!];
-    const ptnodeStack: PTNode[] = [new PTNode("ROOT", null)];
+    const stack = new ParseStack(this.grammar, this.parseTable);
     do {
-      const topItem = stack.pop()!;
+      const topItem = stack.top();
       const token = tokenizer.peek();
-      const nextLit = token == null ? g.Eof : this.getLit(token);
+      const nextSym = token == null ? g.Eof : this.getSym(token);
       const nextValue = token == null ? null : token.value;
       if (topItem.isTerminal) {
-        if (topItem == nextLit) {
+        if (topItem == nextSym) {
           // Something must happen here to stack symbol to build
           // the parse tree
-          this.popAndReduce(stack, nextLit, nextValue);
-          tokenizer.next();
+          this.popAndReduce(tokenizer, stack, nextSym, nextValue);
         } else {
-          this.processInvalidToken(stack, nextLit, nextValue);
+          this.processInvalidToken(tokenizer, stack, nextSym, nextValue);
         }
       } else {
-        const entries = this.parseTable.get(topItem as NonTerm, nextLit);
+        const entries = this.parseTable.get(topItem, nextSym);
         if (entries.length != 1) {
-          this.processInvalidReductions(stack, nextLit, nextValue, entries);
+          this.processInvalidReductions(tokenizer, stack, nextSym, nextValue, entries);
         } else {
           // TODO: Something with the reduction
           stack.pop();
           stack.push(entries[0].nt);
         }
       }
-    } while (stack.length > 0);
-    return null;
+    } while (!stack.isEmpty);
+    return stack.rootNode;
   }
 
-  popAndReduce(stack: Lit[], nextLit: Lit, nextToken: Token): void {
+  popAndReduce(tokenizer: Tokenizer, stack: ParseStack, nextSym: Sym, nextToken: Token): void {
+    tokenizer.next();
     stack.pop();
   }
 
-  processInvalidToken(stack: Lit[], nextLit: Lit, nextValue: any): boolean {
+  processInvalidToken(tokenizer: Tokenizer, stack: ParseStack, nextSym: Sym, nextValue: any): boolean {
+    throw new Error("Invalid token: " + nextSym.label);
     return true;
   }
 
-  processInvalidReductions(stack: Lit[], nextLit: Lit, nextValue: any, entries: ParseTableItem[]): boolean {
+  processInvalidReductions(
+    tokenizer: Tokenizer,
+    stack: ParseStack,
+    nextSym: Sym,
+    nextValue: any,
+    entries: ParseTableItem[],
+  ): boolean {
+    throw new Error("Invalid # reductions found: " + entries.length);
     return true;
   }
 }

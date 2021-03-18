@@ -1,5 +1,5 @@
 import { NumMap, Nullable } from "../types";
-import { Grammar, Lit, Term, NonTerm, IDType, Str } from "./grammar";
+import { Grammar, Sym, IDType, Str } from "./grammar";
 import { assert } from "../utils/misc";
 
 export class TermSet {
@@ -18,7 +18,7 @@ export class TermSet {
   labels(skipAux = false): string[] {
     const out: string[] = [];
     for (const i of this.entries) {
-      const exp = this.grammar.getLitById(i) as Lit;
+      const exp = this.grammar.getSymById(i);
       assert(exp != null);
       if (!skipAux || !exp.isAuxiliary) out.push(exp.label);
     }
@@ -41,16 +41,17 @@ export class TermSet {
     return another.entries.size - before;
   }
 
-  has(term: Term): boolean {
+  has(term: Sym): boolean {
     return this.entries.has(term.id);
   }
 
-  add(term: Term): this {
+  add(term: Sym): this {
+    assert(term.isTerminal);
     this.entries.add(term.id);
     return this;
   }
 
-  delete(term: Term): boolean {
+  delete(term: Sym): boolean {
     return this.entries.delete(term.id);
   }
 
@@ -72,11 +73,12 @@ export class NullableSet {
     this.refresh();
   }
 
-  get nonterms(): NonTerm[] {
-    const out: NonTerm[] = [];
+  get nonterms(): Sym[] {
+    const out: Sym[] = [];
     this.entries.forEach((id) => {
-      const e = this.grammar.getLitById(id);
-      if (e != null && e.tag == IDType.NON_TERM) out.push(e as NonTerm);
+      const e = this.grammar.getSymById(id);
+      assert(e != null && !e.isTerminal);
+      out.push(e);
     });
     return out;
   }
@@ -93,7 +95,7 @@ export class NullableSet {
     } while (beforeCount != this.entries.size);
   }
 
-  protected visit(nt: NonTerm): void {
+  protected visit(nt: Sym): void {
     if (nt.rules.length > 0) {
       for (const rule of nt.rules) {
         if (this.evaluate(rule)) {
@@ -104,7 +106,7 @@ export class NullableSet {
     }
   }
 
-  isNullable(nt: Lit): boolean {
+  isNullable(nt: Sym): boolean {
     return !nt.isTerminal && this.entries.has(nt.id);
   }
 
@@ -117,7 +119,8 @@ export class NullableSet {
     return true;
   }
 
-  add(nt: NonTerm): void {
+  add(nt: Sym): void {
+    assert(!nt.isTerminal);
     this.entries.add(nt.id);
   }
 
@@ -126,7 +129,7 @@ export class NullableSet {
   }
 }
 
-class NonTermTermSets {
+class SymTermSets {
   readonly grammar: Grammar;
   entries: NumMap<TermSet> = {};
   private _count = 0;
@@ -140,19 +143,19 @@ class NonTermTermSets {
     this._count = 0;
   }
 
-  forEachTerm(nt: NonTerm, visitor: (x: Nullable<Term>) => boolean | void): void {
+  forEachTerm(nt: Sym, visitor: (x: Nullable<Sym>) => boolean | void): void {
     const entries = this.entriesFor(nt);
     entries.entries.forEach((x) => {
-      const term = this.grammar.getLitById(x);
+      const term = this.grammar.getSymById(x);
       assert(term != null && term.isTerminal);
-      visitor(term as Term);
+      visitor(term);
     });
     if (entries.hasNull) visitor(null);
   }
 
   get debugString(): any {
     const out = {} as any;
-    for (const x in this.entries) out[this.grammar.getLitById(x as any)!.label] = this.entries[x].debugString;
+    for (const x in this.entries) out[this.grammar.getSymById(x as any)!.label] = this.entries[x].debugString;
     return out;
   }
 
@@ -164,12 +167,12 @@ class NonTermTermSets {
     // return this._count;
   }
 
-  entriesFor(lit: Lit): TermSet {
-    if (lit.id in this.entries) {
-      return this.entries[lit.id];
+  entriesFor(sym: Sym): TermSet {
+    if (sym.id in this.entries) {
+      return this.entries[sym.id];
     } else {
       const out = new TermSet(this.grammar);
-      this.entries[lit.id] = out;
+      this.entries[sym.id] = out;
       return out;
     }
   }
@@ -177,7 +180,7 @@ class NonTermTermSets {
   /**
    * Add the null symbol into this set of terminals for a given expression.
    */
-  addNull(nt: NonTerm): boolean {
+  addNull(nt: Sym): boolean {
     const entries = this.entriesFor(nt);
     if (entries.hasNull) return false;
     entries.hasNull = true;
@@ -190,16 +193,15 @@ class NonTermTermSets {
    * of the source expression's terminal symbosl are added to exp's
    * term set.
    */
-  add(nt: Lit, source: Lit, includeNull = true): boolean {
+  add(nt: Sym, source: Sym, includeNull = true): boolean {
     if (nt.isTerminal) {
       assert(false, "Should not be here");
     }
     const entries = this.entriesFor(nt);
     if (source.isTerminal) {
-      const term = source as Term;
-      if (entries.has(term)) return false;
+      if (entries.has(source)) return false;
       // console.log(`Adding Term(${term.label}) to Set of ${exp.id}`);
-      entries.add(term);
+      entries.add(source);
       this._count++;
     } else {
       const srcEntries = this.entriesFor(source);
@@ -215,7 +217,7 @@ class NonTermTermSets {
  * For each symbol maps its label to a list of terminals that
  * start that non terminal.
  */
-export class FirstSets extends NonTermTermSets {
+export class FirstSets extends SymTermSets {
   readonly nullables: NullableSet;
 
   constructor(grammar: Grammar, nullables?: NullableSet) {
@@ -231,7 +233,7 @@ export class FirstSets extends NonTermTermSets {
    * For a given string return the first(str) starting at a given index.
    * Including eps if it exists.
    */
-  forEachTermIn(str: Str, fromIndex = 0, visitor: (term: Nullable<Term>) => void): void {
+  forEachTermIn(str: Str, fromIndex = 0, visitor: (term: Nullable<Sym>) => void): void {
     // This needs to be memoized by exp.id + index
     const syms = str.syms;
     const visited = {} as any;
@@ -239,17 +241,17 @@ export class FirstSets extends NonTermTermSets {
     for (let j = fromIndex; allNullable && j < syms.length; j++) {
       const symj = syms[j];
       if (symj.isTerminal) {
-        visitor(symj as Term);
+        visitor(symj);
         allNullable = false;
       } else {
-        const nt = symj as NonTerm;
+        const nt = symj as Sym;
         this.forEachTerm(nt, (term) => {
           if (term != null && !(term.id in visited)) {
             visited[term.id] = true;
-            visitor(term as Term);
+            visitor(term);
           }
         });
-        if (!this.nullables.isNullable(symj as NonTerm)) {
+        if (!this.nullables.isNullable(symj as Sym)) {
           allNullable = false;
         }
       }
@@ -274,14 +276,14 @@ export class FirstSets extends NonTermTermSets {
     } while (beforeCount != this.count);
   }
 
-  processRule(nonterm: NonTerm, rule: Str): void {
+  processRule(nonterm: Sym, rule: Str): void {
     const nullables = this.nullables;
     let allNullable = true;
     for (const s of rule.syms) {
       // First(s) - null will be in First(nonterm)
       // Null will onlybe added if all symbols are nullable
       this.add(nonterm, s, false);
-      if (s.isTerminal || !nullables.isNullable(s as NonTerm)) {
+      if (s.isTerminal || !nullables.isNullable(s as Sym)) {
         // since s is not nullable the next rule's first set
         // cannot affect nonterm's firs set
         allNullable = false;
@@ -296,7 +298,7 @@ export class FirstSets extends NonTermTermSets {
  * For each symbol maps its label to a list of terminals that
  * start that non terminal.
  */
-export class FollowSets extends NonTermTermSets {
+export class FollowSets extends SymTermSets {
   readonly firstSets: FirstSets;
 
   constructor(grammar: Grammar, firstSets?: FirstSets) {
@@ -321,7 +323,7 @@ export class FollowSets extends NonTermTermSets {
     this.add(g.startSymbol, g.Eof);
 
     // Augmented start symbol
-    // const augStart = new NonTerm("");
+    // const augStart = new Sym("");
     // augStart.add(new Seq(g.startSymbol, g.Eof));
 
     let beforeCount = 0;
@@ -334,7 +336,7 @@ export class FollowSets extends NonTermTermSets {
   /**
    * Add Follows[source] into Follows[dest] recursively.
    */
-  processRule(nonterm: NonTerm, rule: Str): void {
+  processRule(nonterm: Sym, rule: Str): void {
     const syms = rule.syms;
     const firstSets = this.firstSets;
     const nullables = this.firstSets.nullables;
@@ -361,7 +363,7 @@ export class FollowSets extends NonTermTermSets {
       let allNullable = true;
       for (let j = i + 1; j < syms.length; j++) {
         const symj = syms[j];
-        if (symj.isTerminal || !nullables.isNullable(symj as NonTerm)) {
+        if (symj.isTerminal || !nullables.isNullable(symj as Sym)) {
           allNullable = false;
           break;
         }

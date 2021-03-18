@@ -1,7 +1,7 @@
 import { Nullable, StringMap } from "../types";
 import { Token, Tokenizer as TokenizerBase } from "./tokenizer";
 import { ParseError, UnexpectedTokenError } from "./errors";
-import { NonTerm, Grammar, Str } from "./grammar";
+import { Sym, Grammar, Str } from "./grammar";
 import { PTNode } from "./parser";
 import { assert } from "../utils/misc";
 
@@ -86,10 +86,6 @@ export enum NodeType {
   IDENT = "IDENT",
   ERROR = "ERROR",
   COMMENT = "COMMENT",
-}
-
-function newNode(type: NodeType, value: any = null): PTNode {
-  return new PTNode(type, value);
 }
 
 class Tokenizer extends TokenizerBase {
@@ -218,8 +214,7 @@ export class EBNFParser {
 
   parse(input: string): Grammar {
     this.tokenizer = new Tokenizer(input);
-    const root = this.parseGrammar();
-    return this.processParseTree(root);
+    return this.parseGrammar();
   }
 
   /**
@@ -227,28 +222,32 @@ export class EBNFParser {
    *
    * decl := rule ;
    */
-  parseGrammar(): PTNode {
-    const parent = newNode(NodeType.GRAMMAR);
+  parseGrammar(): Grammar {
+    const grammar = new Grammar();
     while (this.tokenizer.peek() != null) {
-      const decl = this.parseDecl();
-      if (decl != null) {
-        parent.add(decl);
-      }
+      this.parseDecl(grammar);
     }
-    return parent;
+    return grammar;
   }
 
-  parseDecl(): Nullable<PTNode> {
+  parseDecl(grammar: Grammar): void {
     const ident = this.tokenizer.expectToken(TokenType.IDENT);
     if (this.tokenizer.consumeIf(TokenType.COLON)) {
-      const out = newNode(NodeType.RULE);
-      out.add(newNode(NodeType.PROD_NAME, ident));
-      const prod = this.parseProductions();
-      out.add(prod);
+      let nt = grammar.getSym(ident.value);
+      if (nt == null) {
+        nt = grammar.newNT(ident.value);
+      } else if (nt.isTerminal) {
+        // it is a terminal so mark it as a non-term now that we
+        // know there is a declaration for it.
+        nt.isTerminal = false;
+      } else {
+        assert(!nt.isAuxiliary, "NT is already auxiliary and cannot be reused.");
+      }
+      for (const rule of this.parseProductions(grammar, nt)) {
+        nt.add(rule);
+      }
       this.tokenizer.expectToken(TokenType.SEMI_COLON);
-      return out;
     }
-    return null;
   }
 
   /*
@@ -259,11 +258,11 @@ export class EBNFParser {
    * prod := ( "(" productions ")" | IDENT | STRING ) ( "*" | "+" | "?" ) ?
    *      ;
    */
-  parseProductions(): PTNode {
-    const out = newNode(NodeType.PROD_UNION);
+  parseProductions(grammar: Grammar, nt: Nullable<Sym>): Str[] {
+    const out: Str[] = [];
     while (this.tokenizer.peek() != null) {
-      const curr = this.parseProd();
-      out.add(curr);
+      const rule = this.parseProd(grammar);
+      if (rule) out.push(rule);
       if (this.tokenizer.consumeIf(TokenType.PIPE)) {
         continue;
       } else if (this.tokenizer.nextMatches(TokenType.CLOSE_SQ, TokenType.CLOSE_PAREN, TokenType.SEMI_COLON)) {
@@ -273,162 +272,67 @@ export class EBNFParser {
     return out;
   }
 
-  parseProd(): PTNode {
-    const out = newNode(NodeType.PROD_STR);
+  parseProd(grammar: Grammar): Str {
+    const out = new Str();
     while (true) {
       // if we are starting with a FOLLOW symbol then return as it marks
       // the end of this production
       if (this.tokenizer.nextMatches(TokenType.CLOSE_PAREN, TokenType.CLOSE_SQ, TokenType.SEMI_COLON, TokenType.PIPE)) {
         return out;
       }
-      let curr: Nullable<PTNode> = null;
+      let curr: Nullable<Str> = null;
       if (this.tokenizer.consumeIf(TokenType.OPEN_PAREN)) {
-        const child = this.parseProductions();
-        if (child != null) {
-          curr = child;
+        const rules = this.parseProductions(grammar, null);
+        if (rules.length == 0) {
+          // nothing
+        } else if (rules.length == 1) {
+          curr = rules[0];
+        } else {
+          // create a new NT over this
+          curr = grammar.anyof(...rules);
         }
         this.tokenizer.expectToken(TokenType.CLOSE_PAREN);
       } else if (this.tokenizer.consumeIf(TokenType.OPEN_SQ)) {
-        const child = this.parseProductions();
-        if (child != null) {
-          curr = newNode(NodeType.PROD_OPTIONAL);
-          curr.add(child);
+        const rules = this.parseProductions(grammar, null);
+        if (rules.length == 0) {
+          // nothing
+        } else if (rules.length == 1) {
+          curr = grammar.opt(rules[0]);
+        } else {
+          // create a new NT over this
+          curr = grammar.opt(grammar.anyof(...rules));
         }
         this.tokenizer.expectToken(TokenType.CLOSE_SQ);
       } else if (this.tokenizer.nextMatches(TokenType.IDENT)) {
-        curr = newNode(NodeType.PROD_IDENT, this.tokenizer.next()!);
+        const token = this.tokenizer.next() as Token;
+        curr = new Str(grammar.getSym(token.value) || grammar.newTerm(token.value));
       } else if (this.tokenizer.nextMatches(TokenType.STRING)) {
-        curr = newNode(NodeType.PROD_STRING, this.tokenizer.next()!);
+        const token = this.tokenizer.next() as Token;
+        const label = '"' + token.value + '"';
+        // TODO - ensure we can add literal into our
+        // Tokenizer so it will prioritize this over its rules
+        curr = new Str(grammar.getSym(label) || grammar.newTerm(label));
       } else if (this.tokenizer.nextMatches(TokenType.NUMBER)) {
-        curr = newNode(NodeType.PROD_NUM, this.tokenizer.next()!);
+        const token = this.tokenizer.next() as Token;
+        const label = token.value + "";
+        // TODO - ensure we can add literal into our
+        // Tokenizer so it will prioritize this over its rules
+        curr = new Str(grammar.getSym(label) || grammar.newTerm(label));
       } else {
         throw new UnexpectedTokenError(this.tokenizer.peek());
       }
 
       assert(curr != null);
 
-      let postNode: Nullable<PTNode> = null;
       if (this.tokenizer.consumeIf(TokenType.STAR)) {
-        postNode = newNode(NodeType.PROD_STAR);
+        curr = grammar.atleast0(curr);
       } else if (this.tokenizer.consumeIf(TokenType.PLUS)) {
-        postNode = newNode(NodeType.PROD_PLUS);
+        curr = grammar.atleast1(curr);
       } else if (this.tokenizer.consumeIf(TokenType.QMARK)) {
-        postNode = newNode(NodeType.PROD_OPTIONAL);
+        curr = grammar.opt(curr);
       }
-      if (postNode != null) {
-        postNode.add(curr);
-        curr = postNode;
-      }
-      out.add(curr);
+      out.extend(curr);
     }
     return out;
-  }
-
-  processParseTree(pt: PTNode): Grammar {
-    const grammar = new Grammar();
-    assert(pt.tag == NodeType.GRAMMAR);
-    // extract all non terminals
-    for (const child of pt.children) {
-      assert(child.tag == NodeType.RULE);
-      assert(child.children.length == 2);
-      assert(child.children[0].isToken);
-      assert(child.children[0].tag == NodeType.PROD_NAME);
-      assert(child.children[1].tag == NodeType.PROD_UNION);
-      grammar.newNT(child.children[0].token!.value);
-    }
-
-    // now recurse down and get all terminals and create rules
-    for (const child of pt.children) {
-      const ntname = child.children[0].token!.value;
-      const prods = child.children[1];
-      const nt = grammar.getNT(ntname)!;
-      this.processProdUnion(grammar, prods, nt);
-    }
-    return grammar;
-  }
-
-  processProdUnion(grammar: Grammar, prods: PTNode, nonterm: Nullable<NonTerm> = null): NonTerm {
-    assert(prods.tag == NodeType.PROD_UNION);
-    if (nonterm == null) {
-      nonterm = grammar.newAuxNT();
-    }
-    const children = prods.children;
-    for (const prod of children) {
-      assert(prod.tag == NodeType.PROD_STR);
-      const e = this.processProdSeq(grammar, prod);
-      if (e != null) {
-        nonterm.add(e);
-      }
-    }
-    return nonterm;
-  }
-
-  processProdSeq(grammar: Grammar, prods: PTNode): Nullable<Str> {
-    assert(prods.tag == NodeType.PROD_STR);
-    const children = prods.children;
-    const strs: Str[] = [];
-    for (const prod of children) {
-      const str: Nullable<Str> = this.processProd(grammar, prod);
-      if (str != null) {
-        strs.push(str);
-      }
-    }
-    if (strs.length == 1) return strs[0];
-    else return grammar.seq(...strs);
-  }
-
-  processProd(grammar: Grammar, prod: PTNode): Nullable<Str> {
-    if (prod.tag == NodeType.PROD_STR) {
-      return this.processProdSeq(grammar, prod);
-    } else if (prod.tag == NodeType.PROD_UNION) {
-      const result = this.processProdUnion(grammar, prod);
-      if (result.rules.length == 1) {
-        return result.rules[0];
-      } else {
-        return new Str(result);
-      }
-    } else if (prod.tag == NodeType.PROD_OPTIONAL) {
-      assert(prod.children.length == 1);
-      const exp = this.processProd(grammar, prod.children[0]);
-      if (exp != null) {
-        return grammar.opt(exp);
-      }
-      return exp;
-    } else if (prod.tag == NodeType.PROD_PLUS) {
-      assert(prod.children.length == 1);
-      const exp = this.processProd(grammar, prod.children[0]);
-      if (exp != null) {
-        return grammar.atleast1(exp);
-      }
-      return exp;
-    } else if (prod.tag == NodeType.PROD_STAR) {
-      assert(prod.children.length == 1);
-      const exp = this.processProd(grammar, prod.children[0]);
-      if (exp != null) {
-        return grammar.atleast0(exp);
-      }
-      return exp;
-    } else if (prod.tag == NodeType.PROD_IDENT) {
-      const token = prod.token!;
-      if (grammar.isNT(token.value)) {
-        return new Str(grammar.getNT(token.value)!);
-      } else {
-        // we have a terminal
-        return new Str(grammar.getTerm(token.value, true)!);
-      }
-    } else if (prod.tag == NodeType.PROD_STRING) {
-      // TODO - ensure we can add literal into our
-      // Tokenizer so it will prioritize this over its rules
-      return new Str(grammar.getTerm('"' + prod.token!.value + '"', true)!);
-    } else if (prod.tag == NodeType.PROD_NUM) {
-      // TODO - ensure we can add literal into our
-      // Tokenizer so it will prioritize this over its rules
-      return new Str(grammar.getTerm(prod.token!.value + "", true)!);
-    } else if (prod.tag == NodeType.PROD_NULL) {
-      return null;
-    } else {
-      throw new Error("Invalid Prod: " + prod.tag);
-    }
-    return null;
   }
 }

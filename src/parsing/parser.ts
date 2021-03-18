@@ -1,6 +1,6 @@
 import { Nullable } from "../types";
 import { Token } from "./tokenizer";
-import { NonTerm, Term, Str, Grammar } from "./grammar";
+import { Sym, Str, Grammar } from "./grammar";
 import { FollowSets } from "./sets";
 import { assert } from "../utils/misc";
 
@@ -14,31 +14,38 @@ export interface Tokenizer {
   next(): Nullable<Token>;
 }
 
-export class PTNode {
-  readonly tag: NodeType;
+export abstract class PTNode {
+  readonly sym: Sym;
   parent: Nullable<PTNode> = null;
-  token: Nullable<Token> = null;
-  readonly _children: PTNode[];
-  constructor(tag: NodeType, token: Nullable<Token>) {
-    this._children = [];
-    this.tag = tag;
+  constructor(sym: Sym) {
+    this.sym = sym;
+  }
+
+  get isTerminal(): boolean {
+    return this.sym.isTerminal;
+  }
+}
+
+export class PTNTerm extends PTNode {
+  token: Nullable<Token>;
+  constructor(sym: Sym, token: Nullable<Token> = null) {
+    super(sym);
     this.token = token;
   }
+}
 
-  get isToken(): boolean {
-    return this.token != null;
+export class PTNNonTerm extends PTNode {
+  readonly children: PTNode[];
+  readonly ruleIndex = 0;
+  constructor(nt: Sym, ruleIndex = 0, ...children: PTNode[]) {
+    super(nt);
+    this.children = children;
   }
 
-  get children(): ReadonlyArray<PTNode> {
-    return this._children;
-  }
-
-  add(node: PTNode): void {
-    if (this.isToken) {
-      throw new Error("Cannot add _children to a token node");
-    }
+  add(node: PTNode): PTNNonTerm {
     node.parent = this;
-    this._children.push(node);
+    this.children.push(node);
+    return this;
   }
 }
 
@@ -51,8 +58,8 @@ export abstract class Parser {
   /**
    * Converts the token to a Terminal based on the tag value.
    */
-  getLit(token: Token): Term {
-    const out = this.grammar.getTerm(token.tag as string);
+  getSym(token: Token): Sym {
+    const out = this.grammar.getSym(token.tag as string);
     if (out == null) {
       throw new Error("Invalid token: " + token.value);
     }
@@ -66,10 +73,10 @@ export abstract class Parser {
 }
 
 export class ParseTableItem {
-  readonly nt: NonTerm;
+  readonly nt: Sym;
   readonly ruleIndex: number;
   readonly position: number;
-  constructor(nt: NonTerm, ruleIndex = 0, position = 0) {
+  constructor(nt: Sym, ruleIndex = 0, position = 0) {
     this.nt = nt;
     this.ruleIndex = ruleIndex;
     this.position = position;
@@ -102,7 +109,8 @@ export class ParseTable {
     return c;
   }
 
-  ensureEntry(nt: NonTerm, term: Term): ParseTableItem[] {
+  ensureEntry(nt: Sym, term: Sym): ParseTableItem[] {
+    assert(!nt.isTerminal && term.isTerminal);
     let entriesForNT = this.entries.get(nt.id) as Map<number, ParseTableItem[]>;
     if (!entriesForNT) {
       entriesForNT = new Map();
@@ -116,24 +124,24 @@ export class ParseTable {
     return entries;
   }
 
-  add(nt: NonTerm, term: Term, entry: ParseTableItem): boolean {
+  add(nt: Sym, term: Sym, entry: ParseTableItem): boolean {
     const entries = this.ensureEntry(nt, term);
     entries.push(entry);
     return entries.length == 1;
   }
 
-  get(nt: NonTerm, term: Term): ParseTableItem[] {
+  get(nt: Sym, term: Sym): ParseTableItem[] {
     return this.ensureEntry(nt, term);
   }
 
-  forEachEntry(visitor: (nonterm: NonTerm, term: Term, items: ParseTableItem[]) => boolean | void): void {
+  forEachEntry(visitor: (nonterm: Sym, term: Sym, items: ParseTableItem[]) => boolean | void): void {
     for (const ntId of this.entries.keys()) {
       const ntMap = this.entries.get(ntId) || null;
       assert(ntMap != null);
-      const nonterm = this.grammar.getLitById(ntId) as NonTerm;
+      const nonterm = this.grammar.getSymById(ntId);
       assert(nonterm != null);
       for (const termId of ntMap.keys()) {
-        const term = this.grammar.getLitById(termId) as Term;
+        const term = this.grammar.getSymById(termId);
         assert(term != null);
         const items = ntMap.get(termId) || [];
         if (visitor(nonterm, term, items) == false) return;

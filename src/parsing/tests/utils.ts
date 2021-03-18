@@ -23,7 +23,8 @@ export function expectNullables(nullables: NullableSet, terms: string[]): void {
 
 export function expectFSEntries(g: Grammar, fs: FirstSets | FollowSets, entries: StringMap<string[]>): void {
   for (const nt in entries) {
-    const exp = g.getLit(nt)!;
+    const exp = g.getSym(nt);
+    assert(exp != null, `Symbol {nt} does not exist`);
     const labels = fs.entriesFor(exp).labels(true).sort();
     const terms = entries[nt].sort();
     if (!listsEqual(labels, terms)) {
@@ -34,7 +35,8 @@ export function expectFSEntries(g: Grammar, fs: FirstSets | FollowSets, entries:
 }
 
 export function expectRules(g: Grammar, nt: string, ...rules: (string | Str)[]): void {
-  const nonterm = g.getNT(nt);
+  const nonterm = g.getSym(nt);
+  assert(nonterm != null, `Nonterminal {nt} does not exist`);
   expect(nonterm?.rules.length).toBe(rules.length);
   for (let i = 0; i < rules.length; i++) {
     const eq = nonterm?.rules[i].equals(g.normalizeRule(rules[i]));

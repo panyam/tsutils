@@ -40,7 +40,7 @@ describe("Grammar Tests", () => {
 
     expect(g.terminals.length).toBe(2);
     expect(() => g.newTerm("A")).toThrowError();
-    expect(g.getNT("B")?.label).toBe("B");
+    expect(g.getSym("B")?.label).toBe("B");
     const ns = new NullableSet(g).nonterms.map((n) => n.label);
     expect(ns).toEqual([]);
   });

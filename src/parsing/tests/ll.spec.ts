@@ -1,5 +1,5 @@
 import { Nullable } from "../../types";
-import { Term, Grammar } from "../grammar";
+import { Sym, Grammar } from "../grammar";
 import { FirstSets, NullableSet, FollowSets } from "../sets";
 import { EBNFParser } from "../ebnf";
 import { assert } from "../../utils/misc";
@@ -39,8 +39,8 @@ function expectPTabEntries(
   for (let e = 0; e < entries.length; e++) {
     const [ntL, termL, ents] = entries[e];
     ents.sort();
-    const nt = g.getNT(ntL)!;
-    const term = termL == g.Eof.label ? g.Eof : (g.getLit(termL) as Term);
+    const nt = g.getSym(ntL)!;
+    const term = termL == g.Eof.label ? g.Eof : g.getSym(termL)!;
     const ptEntry = ptab.get(nt, term) || [];
     ptEntry.sort();
     expect(ptEntry.length).toEqual(ents.length);
