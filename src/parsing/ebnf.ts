@@ -381,7 +381,12 @@ export class EBNFParser {
     if (prod.tag == NodeType.PROD_STR) {
       return this.processProdSeq(grammar, prod);
     } else if (prod.tag == NodeType.PROD_UNION) {
-      return new Str(this.processProdUnion(grammar, prod));
+      const result = this.processProdUnion(grammar, prod);
+      if (result.rules.length == 1) {
+        return result.rules[0];
+      } else {
+        return new Str(result);
+      }
     } else if (prod.tag == NodeType.PROD_OPTIONAL) {
       assert(prod.children.length == 1);
       const exp = this.processProd(grammar, prod.children[0]);

@@ -1,7 +1,6 @@
 import { FirstSets, NullableSet, FollowSets } from "../sets";
 import { EBNFParser } from "../ebnf";
-import { printGrammar } from "../utils";
-import { listsEqual, expectNullables, expectFSEntries } from "./utils";
+import { expectNullables, expectFSEntries } from "./utils";
 import Samples from "./samples";
 
 describe("FollowSet Tests", () => {
@@ -81,7 +80,6 @@ describe("FollowSet Tests", () => {
 
   test("Tests 5", () => {
     const g = new EBNFParser(Samples.Sample4).grammar;
-    const printed = printGrammar(g);
 
     const ns = new NullableSet(g);
     expectNullables(ns, ["V", "W"]);

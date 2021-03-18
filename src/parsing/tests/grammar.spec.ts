@@ -1,6 +1,7 @@
 import { NullableSet } from "../sets";
 import { EBNFParser } from "../ebnf";
 import { Str, Grammar, Cardinality, multiplyCardinalities as MC } from "../grammar";
+import { printGrammar } from "../utils";
 
 describe("Grammar Tests", () => {
   test("Cardinalities", () => {
@@ -57,5 +58,41 @@ describe("Grammar Tests", () => {
     const y = g.anyof(new Str(A), new Str(B), new Str(C));
     expect(y.length).toBe(1);
     expect(y.syms[0]).toBe(x);
+  });
+});
+
+describe("Auxilliary Rules", () => {
+  test("OptRules", () => {
+    const g = new Grammar();
+    g.newNT("A");
+    g.opt("A").syms[0]; // Create an optional here
+    const B = g.newNT("B");
+    B.add(g.opt("A"));
+
+    expect(B.rules[0].equals(g.opt("A"))).toBe(true);
+  });
+
+  test("Atleast0 Rules", () => {
+    const g = new Grammar();
+    const A = g.newNT("A");
+    const B = g.newNT("B");
+    const C = g.newNT("C");
+    B.add(g.atleast0(new Str(A, B), false));
+    C.add(g.atleast0(new Str(A, B), false));
+
+    // expect(B.rules[0].equals(g.opt("A"))).toBe(true);
+    console.log("printed: ", printGrammar(g, false));
+  });
+
+  test("Atleast1 Rules", () => {
+    const g = new Grammar();
+    const A = g.newNT("A");
+    const B = g.newNT("B");
+    const C = g.newNT("C");
+    B.add(g.atleast1(new Str(A, B), false));
+    C.add(g.atleast1(new Str(A, B), false));
+
+    // expect(B.rules[0].equals(g.opt("A"))).toBe(true);
+    console.log("printed: ", printGrammar(g, false));
   });
 });

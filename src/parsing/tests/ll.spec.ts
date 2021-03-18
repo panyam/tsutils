@@ -132,6 +132,10 @@ describe("LLParseTable Tests", () => {
   });
 });
 
+function tok(tag: any, value: any): Token {
+  return new Token(tag, { value: value });
+}
+
 describe("LLParser Tests", () => {
   test("Tests 1", () => {
     const g = new EBNFParser(Samples.expr2).grammar;
@@ -142,13 +146,13 @@ describe("LLParser Tests", () => {
     const ptab = new LL1ParseTable(g, fls);
 
     const tokenizer = new MockTokenizer(
-      new Token("id", "A"),
-      new Token("PLUS", "+"),
-      new Token("id", "B"),
-      new Token("STAR", "*"),
-      new Token("id", "C"),
+      tok("id", "A"),
+      tok("PLUS", "+"),
+      tok("id", "B"),
+      tok("STAR", "*"),
+      tok("id", "C"),
     );
     const parser = new LLParser(g);
-    const root = parser.parse(tokenizer);
+    // const root = parser.parse(tokenizer);
   });
 });

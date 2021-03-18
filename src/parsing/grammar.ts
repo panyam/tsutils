@@ -135,22 +135,38 @@ export class NonTerm extends Lit {
 export class Str extends GObj {
   readonly tag: IDType = IDType.STR;
   syms: Lit[];
-  cardinalities: Cardinality[];
+  // cardinalities: Cardinality[];
 
   constructor(...syms: Lit[]) {
     super();
     this.syms = syms || [];
-    this.cardinalities = [];
+    // this.cardinalities = [];
+  }
+
+  append(...lits: Lit[]): this {
+    for (const l of lits) this.syms.push(l);
+    return this;
+  }
+
+  extend(...strs: Str[]): this {
+    for (const s of strs) this.append(...s.syms);
+    return this;
+  }
+
+  copy(): Str {
+    return new Str(...this.syms);
   }
 
   add(lit: Lit, cardinality: Cardinality = Cardinality.EXACTLY_1): void {
     this.syms.push(lit);
-    this.cardinalities.push(cardinality);
+    // this.cardinalities.push(cardinality);
   }
 
+  /*
   isNullable(index: number): boolean {
     return this.cardinalities[index] == Cardinality.ATLEAST_0 || this.cardinalities[index] == Cardinality.ATMOST_1;
   }
+  */
 
   isTerminal(index: number): boolean {
     return this.syms[index].isTerminal;
@@ -169,19 +185,35 @@ export class Str extends GObj {
     if (this.syms.length != another.syms.length) return false;
     for (let i = 0; i < this.syms.length; i++) {
       if (!this.syms[i].equals(another.syms[i])) return false;
-      if (this.cardinalities[i] != another.cardinalities[i]) return false;
+      // if (this.cardinalities[i] != another.cardinalities[i]) return false;
     }
     return true;
+  }
+
+  /**
+   * Returns true if another string is a substring within
+   * this string at the given offset.
+   */
+  containsAt(offset: number, another: Str): boolean {
+    let i = 0;
+    for (; i < another.length && offset + i < this.syms.length; i++) {
+      if (!this.syms[offset + i].equals(another.syms[i])) return false;
+      // if (this.cardinalities[i] != another.cardinalities[i]) return false;
+    }
+    return i == another.length;
   }
 
   get debugString(): string {
     return this.syms
       .map((lit, i) => {
+        return lit.label;
+        /*
         let out = lit.label;
         if (this.cardinalities[i] == Cardinality.ATLEAST_0) out += "*";
         else if (this.cardinalities[i] == Cardinality.ATLEAST_1) out += "+";
         else if (this.cardinalities[i] == Cardinality.ATMOST_1) out += "?";
         return out;
+       */
       })
       .join(" ");
   }
@@ -368,31 +400,6 @@ export class Grammar {
     return t != null && !t.isTerminal && t.isAuxiliary;
   }
 
-  protected cardinal(exp: Str | string, cardinality: Cardinality): Str {
-    // Convert into either a symbol *or* another Sym over an auxiliar
-    // non-term and then apply cardinality
-    let str = this.normalizeRule(exp);
-    if (str.length > 1) {
-      // if we have a multi length string then create an Aux NT out of this
-      const nt = this.ensureAuxNT(str);
-      str = new Str(nt);
-    }
-    str.cardinalities[0] = multiplyCardinalities(str.cardinalities[0], cardinality);
-    return str;
-  }
-
-  opt(exp: Str | string): Str {
-    return this.cardinal(exp, Cardinality.ATMOST_1);
-  }
-
-  atleast0(exp: Str | string): Str {
-    return this.cardinal(exp, Cardinality.ATLEAST_0);
-  }
-
-  atleast1(exp: Str | string): Str {
-    return this.cardinal(exp, Cardinality.ATLEAST_1);
-  }
-
   seq(...exps: (Str | string)[]): Str {
     if (exps.length == 1) {
       return this.normalizeRule(exps[0]);
@@ -403,7 +410,8 @@ export class Grammar {
         // insert string here inline
         // A ( B C D ) => A B C D
         for (let i = 0; i < s.length; i++) {
-          out.add(s.syms[i], s.cardinalities[i]);
+          // out.add(s.syms[i], s.cardinalities[i]);
+          out.add(s.syms[i]);
         }
       }
       return out;
@@ -427,6 +435,107 @@ export class Grammar {
       return new Str(this.ensureAuxNT(...rules.map((r) => this.normalizeRule(r))));
     }
   }
+
+  opt(exp: Str | string): Str {
+    // convert to aux rule
+    return this.anyof(exp, new Str());
+    // return this.cardinal(exp, Cardinality.ATMOST_1);
+  }
+
+  atleast0(exp: Str | string, leftRec = false): Str {
+    // return this.cardinal(exp, Cardinality.ATLEAST_0);
+    const s = this.normalizeRule(exp);
+    // We want to find another auxiliary NT that has the following rules:
+    //    X -> exp X | ;    # if leftRec = true
+    //
+    //    X -> X exp | ;    # otherwise:
+    let auxNT = this.findAuxNT((auxNT) => {
+      if (auxNT.rules.length != 2) return false;
+
+      let which = 0;
+      if (auxNT.rules[0].length == 0) {
+        which = 1;
+      } else if (auxNT.rules[1].length == 0) {
+        which = 0;
+      } else {
+        return false;
+      }
+
+      const rule = auxNT.rules[which];
+      if (rule.length != 1 + exp.length) return false;
+      if (rule.syms[0].equals(auxNT)) {
+        return rule.containsAt(1, s);
+      } else if (rule.syms[rule.length - 1].equals(auxNT)) {
+        return rule.containsAt(0, s);
+      }
+      return false;
+    });
+    if (auxNT == null) {
+      auxNT = this.newAuxNT();
+      auxNT.add(new Str());
+      if (leftRec) {
+        auxNT.add(new Str(auxNT).extend(s));
+      } else {
+        auxNT.add(s.copy().append(auxNT));
+      }
+    }
+    return new Str(auxNT);
+  }
+
+  atleast1(exp: Str | string, leftRec = false): Str {
+    // return this.cardinal(exp, Cardinality.ATLEAST_1);
+    const s = this.normalizeRule(exp);
+    // We want to find another auxiliary NT that has the following rules:
+    //    X -> exp X | exp ;    # if leftRec = true
+    //
+    //    X -> X exp | exp ;    # otherwise:
+    let auxNT = this.findAuxNT((auxNT) => {
+      if (auxNT.rules.length != 2) return false;
+
+      let which = 0;
+      if (auxNT.rules[0].equals(s)) {
+        which = 1;
+      } else if (auxNT.rules[1].equals(s)) {
+        which = 0;
+      } else {
+        return false;
+      }
+
+      const rule = auxNT.rules[which];
+      if (rule.length != 1 + exp.length) return false;
+      if (rule.syms[0].equals(auxNT)) {
+        return rule.containsAt(1, s);
+      } else if (rule.syms[rule.length - 1].equals(auxNT)) {
+        return rule.containsAt(0, s);
+      }
+      return false;
+    });
+    if (auxNT == null) {
+      auxNT = this.newAuxNT();
+      auxNT.add(s);
+      if (leftRec) {
+        auxNT.add(new Str(auxNT).extend(s));
+      } else {
+        auxNT.add(s.copy().append(auxNT));
+      }
+    }
+    return new Str(auxNT);
+  }
+
+  /*
+  protected cardinal(exp: Str | string, cardinality: Cardinality): Str {
+    // Convert into either a symbol *or* another Sym over an auxiliar
+    // non-term and then apply cardinality
+    let str = this.normalizeRule(exp);
+    if (str.length > 1) {
+      // if we have a multi length string then create an Aux NT out of this
+      const nt = this.ensureAuxNT(str);
+      str = new Str(nt);
+    }
+    str.cardinalities[0] = multiplyCardinalities(str.cardinalities[0], cardinality);
+    return str;
+  }
+  */
 
   protected wrapLit<T extends Lit>(lit: Lit): T {
     assert(lit.id < 0, "Literal already wrapped: " + lit.id);
@@ -454,10 +563,6 @@ export class Grammar {
       const lit = this.getLit(exp);
       if (lit == null) throw new Error(`Invalid symbol: '${exp}'`);
       return new Str(lit);
-      /*} else if (exp.tag == IDType.TERM) {
-      return new Sym(exp as Term);
-    } else if (exp.tag == IDType.NON_TERM) {
-      return new Sym(exp as NonTerm);*/
     } else {
       // We have an expression that needs to be fronted by an
       // auxiliarry non-terminal
@@ -472,13 +577,13 @@ export class Grammar {
     return "$" + this.auxNTCount++;
   }
 
-  public newAuxNT(): NonTerm {
+  newAuxNT(): NonTerm {
     const ntName = this.newAuxNTName();
     return this.newNT(ntName, true);
   }
 
-  protected ensureAuxNT(...rules: Str[]): NonTerm {
-    let nt = this.findAuxNT(...rules);
+  ensureAuxNT(...rules: Str[]): NonTerm {
+    let nt = this.findAuxNTByRules(...rules);
     if (nt == null) {
       nt = this.newAuxNT();
       for (const rule of rules) nt.add(rule);
@@ -491,10 +596,14 @@ export class Grammar {
    * This can be used to ensure duplicate rules are not created for
    * union expressions.
    */
-  findAuxNT(...rules: Str[]): Nullable<NonTerm> {
+  findAuxNT(filter: (nt: NonTerm) => boolean): Nullable<NonTerm> {
     for (const auxNT of this._auxNonTerminals) {
-      if (auxNT.rulesEqual(rules)) return auxNT;
+      if (filter(auxNT)) return auxNT;
     }
     return null;
+  }
+
+  findAuxNTByRules(...rules: Str[]): Nullable<NonTerm> {
+    return this.findAuxNT((auxNT) => auxNT.rulesEqual(rules));
   }
 }

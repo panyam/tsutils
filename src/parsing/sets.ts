@@ -110,7 +110,7 @@ export class NullableSet {
 
   isStrNullable(str: Str, fromIndex = 0): boolean {
     for (let i = fromIndex; i < str.length; i++) {
-      if (!str.isNullable(i) && !this.isNullable(str.syms[i])) {
+      if (!this.isNullable(str.syms[i])) {
         return false;
       }
     }
@@ -123,17 +123,6 @@ export class NullableSet {
 
   protected evaluate(exp: Str): boolean {
     return this.isStrNullable(exp);
-    /*
-    if (exp.isString) {
-      for (const e of (exp as Str).syms) {
-        if (!this.evaluate(e)) return false;
-      }
-      return true;
-    } else {
-      const sym = exp as Sym;
-      return sym.isNullable || this.isNullable(sym.value);
-    }
-    */
   }
 }
 

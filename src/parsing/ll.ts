@@ -70,7 +70,7 @@ export class LLParser extends ParserBase {
         }
       } else {
         const entries = this.parseTable.get(topItem as NonTerm, nextLit);
-        if (entries.length != 0) {
+        if (entries.length != 1) {
           this.processInvalidReductions(stack, nextLit, nextValue, entries);
         } else {
           // TODO: Something with the reduction
