@@ -12,7 +12,7 @@ export class TermSet {
   }
 
   get debugString(): string {
-    return this.labels().sort().join(", ");
+    return "<" + this.labels().sort().join(", ") + ">";
   }
 
   labels(skipAux = false): string[] {

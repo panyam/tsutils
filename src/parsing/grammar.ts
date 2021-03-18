@@ -132,58 +132,6 @@ export class NonTerm extends Lit {
   }
 }
 
-/*
-export class Sym extends GObj {
-  readonly tag: IDType = IDType.SYM;
-  readonly value: Lit;
-  cardinality: Cardinality = Cardinality.EXACTLY_1;
-  constructor(value: Lit) {
-    super();
-    this.value = value;
-  }
-
-  toString(): string {
-    let out = this.value.toString();
-    switch (this.cardinality) {
-      case Cardinality.ATLEAST_1:
-        out += " + ";
-        break;
-      case Cardinality.ATMOST_1:
-        out += " ? ";
-        break;
-      case Cardinality.ATLEAST_0:
-        out += " * ";
-        break;
-      default:
-        break;
-    }
-    return out;
-  }
-
-  get isNullable(): boolean {
-    return this.cardinality == Cardinality.ATLEAST_0 || this.cardinality == Cardinality.ATMOST_1;
-  }
-
-  get isTerminal(): boolean {
-    return this.value.isTerminal;
-  }
-
-  equals(another: Sym): boolean {
-    if (this.cardinality != another.cardinality) return false;
-    if (!this.value.equals(another.value)) return false;
-    return true;
-  }
-
-  get debugString(): string {
-    let out = this.value.label;
-    if (this.cardinality == Cardinality.ATLEAST_0) out += "*";
-    else if (this.cardinality == Cardinality.ATLEAST_1) out += "+";
-    else if (this.cardinality == Cardinality.ATMOST_1) out += "?";
-    return out;
-  }
-}
-*/
-
 export class Str extends GObj {
   readonly tag: IDType = IDType.STR;
   syms: Lit[];
@@ -343,7 +291,7 @@ export class Grammar {
     return this.literalsById[id] || null;
   }
 
-  getTerm(label: string, ensure = false): Nullable<NonTerm> {
+  getTerm(label: string, ensure = false): Nullable<Term> {
     let lit = this.getLit(label);
     if (lit == null) {
       if (ensure) {
@@ -352,7 +300,7 @@ export class Grammar {
     } else if (!lit.isTerminal) {
       return null;
     }
-    return lit as NonTerm;
+    return lit as Term;
   }
 
   getNT(label: string, ensure = false): Nullable<NonTerm> {

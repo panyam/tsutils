@@ -116,13 +116,13 @@ class Tokenizer extends TokenizerBase {
       } else if (ch == '"' || ch == "'") {
         return this.extractTillEndOfString(pos, line, col, ch);
       } else if (ch in SingleChTokens) {
-        return new Token(pos, line, col, SingleChTokens[ch]);
+        return new Token(SingleChTokens[ch], { pos: pos, line: line, col: col, value: ch });
       } else if (isDigit(ch)) {
         let out = ch;
         while (this.tape.hasMore && isDigit(this.tape.peekCh())) {
           out += this.tape.nextCh();
         }
-        return new Token(pos, line, col, TokenType.NUMBER, parseInt(out));
+        return new Token(TokenType.NUMBER, { pos: pos, line: line, col: col, value: parseInt(out) });
       } else if (isIdentChar(ch)) {
         // Combination of everything else
         let lit = ch;
@@ -133,7 +133,7 @@ class Tokenizer extends TokenizerBase {
           }
           lit += this.tape.nextCh();
         }
-        return new Token(pos, line, col, TokenType.IDENT, lit);
+        return new Token(TokenType.IDENT, { pos: pos, line: line, col: col, value: lit });
       }
 
       // Fall through - error char found
@@ -179,7 +179,7 @@ class Tokenizer extends TokenizerBase {
       const currCh = this.tape.nextCh();
       if (currCh == ender) {
         // good
-        return new Token(pos, line, col, TokenType.STRING, out);
+        return new Token(TokenType.STRING, { pos: pos, line: line, col: col, value: out });
       } else if (currCh == "\\") {
         if (!this.tape.hasMore) {
           break;

@@ -4,18 +4,22 @@ import { ParseError, UnexpectedTokenError } from "./errors";
 type TokenType = number | string;
 
 export class Token {
-  tag: TokenType;
+  readonly tag: TokenType;
+  value?: any;
+  // Location info
   pos: number;
   line: number;
   col: number;
-  value?: any;
+  index: number;
 
-  constructor(pos: number, line: number, col: number, type: TokenType, value: any = null) {
-    this.pos = pos;
-    this.line = line;
-    this.col = col;
+  constructor(type: TokenType, options: any = null) {
+    options = options || {};
     this.tag = type;
-    this.value = value;
+    this.value = options.value != null ? options.value : null;
+    this.pos = options.pos || -1;
+    this.line = options.line || -1;
+    this.col = options.col || -1;
+    this.index = options.index || -1;
   }
 
   isOneOf(...expected: any[]): boolean {
