@@ -1,4 +1,4 @@
-import { NonTerm, Term, Exp, Sym, Str, Grammar } from "./grammar";
+import { NonTerm, Term, Str, Grammar } from "./grammar";
 import { FollowSets } from "./sets";
 import { Tokenizer } from "./tokenizer";
 import { PTNode, Parser as ParserBase } from "./parser";
@@ -65,7 +65,7 @@ export class LL1ParseTable extends ParseTable {
     });
   }
 
-  processRule(nt: NonTerm, rule: Exp, index: number): void {
+  processRule(nt: NonTerm, rule: Str, index: number): void {
     const firstSets = this.followSets.firstSets;
     // Rule 1
     // For each a in First(rule) add A -> rule to M[A,a]
