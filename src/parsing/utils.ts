@@ -1,4 +1,4 @@
-import { Cardinality, Str, NonTerm, Grammar } from "./grammar";
+import { Str, Grammar } from "./grammar";
 
 export function printGrammar(g: Grammar, hideAux = true): string {
   let out = "";

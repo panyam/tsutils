@@ -4,7 +4,7 @@ import { FirstSets, NullableSet, FollowSets } from "../sets";
 import { EBNFParser } from "../ebnf";
 import { assert } from "../../utils/misc";
 import { LL1ParseTable, LLParser } from "../ll";
-import { ParseTable, Tokenizer } from "../parser";
+import { PTNode, ParseTable, Tokenizer } from "../parser";
 import { Token } from "../tokenizer";
 import { expectFSEntries } from "./utils";
 import Samples from "./samples";
@@ -26,6 +26,7 @@ export class MockTokenizer implements Tokenizer {
 
   next(): Nullable<Token> {
     const out = this.peek();
+    this.peeked = null;
     this.current++;
     return out;
   }
@@ -153,6 +154,18 @@ describe("LLParser Tests", () => {
       tok("id", "C"),
     );
     const parser = new LLParser(g);
-    // const root = parser.parse(tokenizer);
+    const root = parser.parse(tokenizer);
+    console.log("Tree: \n", printTree(root!));
+    expect(root?.sym.label).toBe("E");
   });
 });
+
+function printTree(node: PTNode, level = 0): string {
+  let out = "";
+  let indentStr = "";
+  for (let i = 0; i < level; i++) indentStr += "  ";
+  out += indentStr + node.sym.label + " - " + node.value;
+  for (const child of node.children)
+    out += "\n" + printTree(child, level + 1)
+  return out;
+}

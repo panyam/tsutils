@@ -1,10 +1,8 @@
 import { Nullable } from "../types";
 import { Token } from "./tokenizer";
-import { Sym, Str, Grammar } from "./grammar";
+import { Sym, Grammar } from "./grammar";
 import { FollowSets } from "./sets";
 import { assert } from "../utils/misc";
-
-type NodeType = number | string;
 
 /**
  * A tokenizer interface used by our parser.
@@ -14,35 +12,24 @@ export interface Tokenizer {
   next(): Nullable<Token>;
 }
 
-export abstract class PTNode {
+export class PTNode {
   readonly sym: Sym;
   parent: Nullable<PTNode> = null;
-  constructor(sym: Sym) {
+  value: any;
+  readonly children: PTNode[] = [];
+  constructor(sym: Sym, value: any = null) {
     this.sym = sym;
+    this.value = value;
   }
 
   get isTerminal(): boolean {
     return this.sym.isTerminal;
   }
-}
 
-export class PTNTerm extends PTNode {
-  token: Nullable<Token>;
-  constructor(sym: Sym, token: Nullable<Token> = null) {
-    super(sym);
-    this.token = token;
-  }
-}
-
-export class PTNNonTerm extends PTNode {
-  readonly children: PTNode[];
-  readonly ruleIndex = 0;
-  constructor(nt: Sym, ruleIndex = 0, ...children: PTNode[]) {
-    super(nt);
-    this.children = children;
-  }
-
-  add(node: PTNode): PTNNonTerm {
+  add(node: PTNode): this {
+    if (this.isTerminal) {
+      throw new Error(`Cannot add children (${node.sym.label}) to a terminal node: ${this.sym.label}`);
+    }
     node.parent = this;
     this.children.push(node);
     return this;
