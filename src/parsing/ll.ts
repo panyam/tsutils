@@ -105,7 +105,7 @@ export class LLParser extends ParserBase {
         if (topItem == nextSym) {
           // Something must happen here to stack symbol to build
           // the parse tree
-          this.popAndReduce(tokenizer, stack, nextSym, nextValue);
+          this.consumeTokenAndPop(tokenizer, stack, nextSym, nextValue);
         } else {
           this.processInvalidToken(tokenizer, stack, nextSym, nextValue);
         }
@@ -134,7 +134,7 @@ export class LLParser extends ParserBase {
       ptnode.children.splice(0, 0, node);
     }
   }
-  popAndReduce(tokenizer: Tokenizer, stack: ParseStack, nextSym: Sym, nextToken: Token): void {
+  consumeTokenAndPop(tokenizer: Tokenizer, stack: ParseStack, nextSym: Sym, nextToken: Token): void {
     const [sym, ptnode] = stack.top();
     assert(sym == nextSym);
     assert(ptnode.sym == nextSym);
