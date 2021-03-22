@@ -3,34 +3,12 @@ import { Sym, Grammar } from "../grammar";
 import { FirstSets, NullableSet, FollowSets } from "../sets";
 import { EBNFParser } from "../ebnf";
 import { assert } from "../../utils/misc";
-import { LL1ParseTable, LLParser } from "../ll";
-import { PTNode, ParseTable, Tokenizer } from "../parser";
+import { LL1ParseTable, LLParser, ParseTable } from "../ll";
+import { PTNode, Tokenizer } from "../parser";
 import { Token } from "../tokenizer";
 import { expectFSEntries } from "./utils";
 import Samples from "./samples";
-
-export class MockTokenizer implements Tokenizer {
-  tokens: Token[];
-  current = 0;
-  peeked: Nullable<Token> = null;
-  constructor(...tokens: Token[]) {
-    this.tokens = tokens;
-  }
-
-  peek(): Nullable<Token> {
-    if (!this.peeked && this.current < this.tokens.length) {
-      this.peeked = this.tokens[this.current];
-    }
-    return this.peeked;
-  }
-
-  next(): Nullable<Token> {
-    const out = this.peek();
-    this.peeked = null;
-    this.current++;
-    return out;
-  }
-}
+import { MockTokenizer } from "./mocks";
 
 function expectPTabEntries(
   g: Grammar,
@@ -68,9 +46,9 @@ function expectPTabEntries(
 describe("LLParseTable Tests", () => {
   test("Tests 1", () => {
     const g = new EBNFParser(`
-      S : i E t S S1 | a;
-      S1 : e S | ;
-      E : b ;
+      S -> i E t S S1 | a;
+      S1 -> e S | ;
+      E -> b ;
     `).grammar;
 
     const ns = new NullableSet(g);
@@ -165,7 +143,6 @@ function printTree(node: PTNode, level = 0): string {
   let indentStr = "";
   for (let i = 0; i < level; i++) indentStr += "  ";
   out += indentStr + node.sym.label + " - " + node.value;
-  for (const child of node.children)
-    out += "\n" + printTree(child, level + 1)
+  for (const child of node.children) out += "\n" + printTree(child, level + 1);
   return out;
 }

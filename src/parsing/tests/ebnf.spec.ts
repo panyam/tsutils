@@ -22,7 +22,7 @@ function loadGrammar(input: string, print = false): Grammar {
 
 describe("EBNF Tests", () => {
   test("Test1", () => {
-    const g = new EBNFParser(`S : A | B | C ;`).grammar;
+    const g = new EBNFParser(`S -> A | B | C ;`).grammar;
     // console.log("G.nonTerminals: ", g.nonTerminals);
 
     expect(g.nonTerminals.length).toBe(1);
@@ -31,11 +31,11 @@ describe("EBNF Tests", () => {
 
   test("Test1", () => {
     const g = new EBNFParser(`
-      S : A B | C ;
-      A : 0 B | C  ;
-      B : 1 | A 0 ;
-      C : A C | C ;
-      D : "d" ;
+      S -> A B | C ;
+      A -> 0 B | C  ;
+      B -> 1 | A 0 ;
+      C -> A C | C ;
+      D -> "d" ;
     `).grammar;
 
     expectListsEqual(symLabels(g.nonTerminals), ["S", "A", "B", "C", "D"]);
@@ -49,7 +49,7 @@ describe("EBNF Tests", () => {
   test("Test Simple", () => {
     const g = loadGrammar(
       `
-      Y : A ? [ B C D ]  [ X | Y | Z ] * [ 1 2 3 ] + ;
+      Y -> A ? [ B C D ]  [ X | Y | Z ] * [ 1 2 3 ] + ;
     `,
     );
     expectListsEqual(symLabels(g.nonTerminals), ["Y"]);
@@ -69,10 +69,10 @@ describe("EBNF Tests", () => {
   test("Test2", () => {
     const g = loadGrammar(
       `
-      Expr : Term ( "+" | "-" ) Expr ;
-      Term : Factor ( DIV | MULT ) Term ;
-      Factor : NUM | "(" Expr ")" ;
-      X : A B C D Z 1 2 3;
+      Expr -> Term ( "+" | "-" ) Expr ;
+      Term -> Factor ( DIV | MULT ) Term ;
+      Factor -> NUM | "(" Expr ")" ;
+      X -> A B C D Z 1 2 3;
     `,
     );
 
@@ -102,8 +102,8 @@ describe("EBNF Tests", () => {
 
   test("Test3", () => {
     const g = new EBNFParser(`
-      X: A | B | ;
-      Y: B | ;
+      X -> A | B | ;
+      Y -> B | ;
     `).grammar;
 
     expectListsEqual(symLabels(g.nonTerminals), ["X", "Y"]);

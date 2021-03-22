@@ -32,10 +32,10 @@ describe("Grammar Tests", () => {
 
   test("Constructor", () => {
     const g = new EBNFParser(`
-      S : A B | C ;
-      A : 0 B | C ;
-      B : 1 | A 0 ;
-      C : A C | C;
+      S -> A B | C ;
+      A -> 0 B | C ;
+      B -> 1 | A 0 ;
+      C -> A C | C;
     `).grammar;
 
     expect(g.terminals.length).toBe(2);

@@ -20,7 +20,7 @@ enum TokenType {
   OPEN_SQ = "OPEN_SQ",
   CLOSE_SQ = "CLOSE_SQ",
   COMMENT = "COMMENT",
-  COLON = "COLON",
+  ARROW = "ARROW",
   SEMI_COLON = "SEMI_COLON",
 }
 
@@ -35,7 +35,6 @@ const SingleChTokens = {
   "+": TokenType.PLUS,
   "?": TokenType.QMARK,
   "|": TokenType.PIPE,
-  ":": TokenType.COLON,
   ";": TokenType.SEMI_COLON,
 } as StringMap<TokenType>;
 
@@ -104,6 +103,9 @@ class Tokenizer extends TokenizerBase {
         continue;
       }
 
+      if (this.tape.matches("->")) {
+        return new Token(TokenType.ARROW, { pos: pos, line: line, col: col, value: "->" });
+      }
       const ch = this.tape.nextCh();
       if (ch == "") return null;
 
@@ -203,7 +205,7 @@ class Tokenizer extends TokenizerBase {
  *
  * rules := rule | rule rules ;
  *
- * rule := IDENT ":" productions ";" ;
+ * rule := IDENT "->" productions ";" ;
  */
 export class EBNFParser {
   readonly grammar: Grammar;
@@ -232,7 +234,7 @@ export class EBNFParser {
 
   parseDecl(grammar: Grammar): void {
     const ident = this.tokenizer.expectToken(TokenType.IDENT);
-    if (this.tokenizer.consumeIf(TokenType.COLON)) {
+    if (this.tokenizer.consumeIf(TokenType.ARROW)) {
       let nt = grammar.getSym(ident.value);
       if (nt == null) {
         nt = grammar.newNT(ident.value);

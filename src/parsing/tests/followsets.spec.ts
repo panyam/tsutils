@@ -5,7 +5,7 @@ import Samples from "./samples";
 
 describe("FollowSet Tests", () => {
   test("Tests 1", () => {
-    const g = new EBNFParser(` A : a b c ; `).grammar;
+    const g = new EBNFParser(` A -> a b c ; `).grammar;
 
     const ns = new NullableSet(g);
     const fs = new FollowSets(g, new FirstSets(g, ns));
@@ -13,7 +13,7 @@ describe("FollowSet Tests", () => {
   });
 
   test("Tests 2", () => {
-    const g = new EBNFParser(` A : B a ; B : b ; `).grammar;
+    const g = new EBNFParser(` A -> B a ; B -> b ; `).grammar;
 
     const ns = new NullableSet(g);
     const firstSets = new FirstSets(g, ns);
@@ -49,10 +49,10 @@ describe("FollowSet Tests", () => {
 
   test("Tests 4", () => {
     const g = new EBNFParser(`
-      E : T X ;
-      X : PLUS E | ;
-      T : int Y | OPEN E CLOSE ;
-      Y : STAR T | ;
+      E -> T X ;
+      X -> PLUS E | ;
+      T -> int Y | OPEN E CLOSE ;
+      Y -> STAR T | ;
     `).grammar;
 
     const ns = new NullableSet(g);

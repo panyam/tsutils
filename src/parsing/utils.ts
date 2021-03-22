@@ -1,4 +1,5 @@
 import { Str, Grammar } from "./grammar";
+import { PTNode } from "./parser";
 
 export function printGrammar(g: Grammar, hideAux = true): string {
   let out = "";
@@ -36,4 +37,13 @@ export function printRules(g: Grammar, rules: Str[], hideAux = true): string {
 
 export function printRule(g: Grammar, rule: Str, hideAux = true): string {
   return rule.debugString;
+}
+
+function printTree(node: PTNode, level = 0): string {
+  let out = "";
+  let indentStr = "";
+  for (let i = 0; i < level; i++) indentStr += "  ";
+  out += indentStr + node.sym.label + " - " + node.value;
+  for (const child of node.children) out += "\n" + printTree(child, level + 1);
+  return out;
 }

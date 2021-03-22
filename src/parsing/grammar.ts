@@ -244,6 +244,10 @@ export class Grammar {
     return this._allSymbols.filter((x) => x.isAuxiliary);
   }
 
+  get allSymbols(): ReadonlyArray<Sym> {
+    return this._allSymbols;
+  }
+
   /**
    * A way to quickly iterate through all non-terminals.
    */
