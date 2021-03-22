@@ -223,19 +223,6 @@ export class Grammar {
   readonly Eof = new Sym(this, "<EOF>", true, -1);
   private _AugStart = new Sym(this, "$", false, -2);
 
-  get augStart(): Sym {
-    return this._AugStart;
-  }
-
-  setAugStart(label = "$"): Sym {
-    assert(this.getSym(label) == null);
-    this._AugStart = new Sym(this, label, false, -2);
-    if (this.startSymbol) {
-      this._AugStart.add(new Str(this.startSymbol));
-    }
-    return this._AugStart;
-  }
-
   /**
    * A way of creating Grammars with a "single expresssion".
    */
@@ -243,6 +230,19 @@ export class Grammar {
     const g = new Grammar();
     callback(g);
     return g;
+  }
+
+  get augStart(): Sym {
+    return this._AugStart;
+  }
+
+  augmentStartSymbol(label = "$"): this {
+    assert(this.getSym(label) == null);
+    this._AugStart = new Sym(this, label, false, -2);
+    if (this.startSymbol) {
+      this._AugStart.add(new Str(this.startSymbol));
+    }
+    return this;
   }
 
   addTerminals(...terminals: string[]): void {

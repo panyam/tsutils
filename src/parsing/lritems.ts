@@ -1,4 +1,5 @@
 import { Sym, Str, Grammar } from "./grammar";
+import { FirstSets } from "./sets";
 import { assert } from "../utils/misc";
 import { StringMap, NumMap, Nullable } from "../types";
 
@@ -55,7 +56,9 @@ export class LRItemSet {
   static From(g: Grammar, entries: [string, number, number][]): LRItemSet {
     const set = new LRItemSet();
     for (const [sym, index, pos] of entries) {
-      set.add(new LRItem(g.getSym(sym)!, index, pos));
+      const nt = g.getSym(sym);
+      assert(nt != null && !nt.isTerminal);
+      set.add(new LRItem(nt, index, pos));
     }
     return set;
   }
@@ -98,8 +101,8 @@ export class LRItemSet {
     return this.items.length;
   }
 
-  containsRule(sym: Sym, ruleIndex: number, position: number): boolean {
-    return this.contains(new LRItem(sym, ruleIndex, position));
+  containsRule(sym: Sym, ruleIndex: number, position: number, lookahead: Nullable<Sym> = null): boolean {
+    return this.contains(new LRItem(sym, ruleIndex, position, lookahead));
   }
 
   contains(item: LRItem): boolean {
@@ -157,15 +160,65 @@ export class LRItemSet {
   }
 }
 
+export class LR1ItemSet extends LRItemSet {
+  firstSets: FirstSets;
+
+  static From2(g: Grammar, firstSets: FirstSets, entries: [string, number, number, string][]): LRItemSet {
+    const set = new LR1ItemSet();
+    set.firstSets = firstSets;
+    for (const [sym, index, pos, la] of entries) {
+      const nt = g.getSym(sym);
+      assert(nt != null && !nt.isTerminal);
+      const laSym = g.getSym(la);
+      assert(laSym != null && laSym.isTerminal);
+      set.add(new LRItem(nt, index, pos, laSym));
+    }
+    return set;
+  }
+
+  add(item: LRItem): number {
+    assert(item.lookahead != null, "LR1 Items *must* have a lookahead");
+    return super.add(item);
+  }
+
+  /**
+   * Computes the closure of this item set and returns a new
+   * item set.
+   */
+  closure(): void {
+    for (let i = 0; i < this.items.length; i++) {
+      const item = this.items[i];
+      const rule = item.nt.rules[item.ruleIndex];
+      assert(item.lookahead != null);
+      // Evaluate the closure
+      // Cannot do anything past the end
+      if (item.position >= rule.length) continue;
+      const B = rule.syms[item.position];
+      if (B.isTerminal) continue;
+
+      const suffix = rule.copy().append(item.lookahead);
+      this.firstSets.forEachTermIn(suffix, item.position, (term) => {
+        if (term != null) {
+          // For each rule [ B -> beta, term ] add it to
+          // our list of items if it doesnt already exist
+          for (let i = 0; i < B.rules.length; i++) {
+            const newItem = new LRItem(B, i, 0, term);
+            this.add(newItem);
+          }
+        }
+      });
+    }
+  }
+}
+
 export class LRItemGraph {
   readonly grammar: Grammar;
-  itemSets: LRItemSet[];
-  gotoSets: NumMap<NumMap<LRItemSet>>;
-  protected setIndexes: StringMap<number>;
+  itemSets: LRItemSet[] = [];
+  gotoSets: NumMap<NumMap<LRItemSet>> = {};
+  protected setIndexes: StringMap<number> = {};
 
   constructor(grammar: Grammar) {
     this.grammar = grammar;
-    this.refresh();
   }
 
   get size(): number {
@@ -188,7 +241,7 @@ export class LRItemGraph {
     return this.gotoSets[itemSet.id] || {};
   }
 
-  refresh(): void {
+  refresh(): this {
     this.setIndexes = {};
     const startSet = this.createStartSet();
     const out = (this.itemSets = [startSet]);
@@ -211,12 +264,13 @@ export class LRItemGraph {
         }
       }
     }
+    return this;
   }
 
   /**
-   * Creates the set for the grammar.  This is done by creating an augmented
-   * rule of the form S' -> S (where S is the start symbol of the grammar) and
-   * creating the closure of this starting rule, ie:
+   * Creates the set for the grammar.  This is done by creating an
+   * augmented rule of the form S' -> S (where S is the start symbol of
+   * the grammar) and creating the closure of this starting rule, ie:
    *
    * StartSet = closure({S' -> . S})
    */
@@ -243,5 +297,30 @@ export class LRItemGraph {
 
   getGoto(fromSet: LRItemSet, sym: Sym): Nullable<LRItemSet> {
     return (this.gotoSets[fromSet.id] || {})[sym.id] || null;
+  }
+}
+
+export class LR1ItemGraph extends LRItemGraph {
+  firstSets: FirstSets;
+
+  constructor(grammar: Grammar, firstSets: FirstSets) {
+    super(grammar);
+    this.firstSets = firstSets;
+  }
+
+  /**
+   * Overridden to create LR1ItemSet objects with the start state
+   * also including the EOF marker as the lookahead.
+   *
+   * StartSet = closure({S' -> . S, $})
+   */
+  createStartSet(): LRItemSet {
+    const startSymbol = this.grammar.startSymbol;
+    assert(startSymbol != null, "Start symbol must be set");
+    const startSet = new LR1ItemSet();
+    startSet.firstSets = this.firstSets;
+    startSet.add(new LRItem(this.grammar.augStart, 0, 0, this.grammar.Eof));
+    startSet.closure();
+    return startSet;
   }
 }

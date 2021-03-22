@@ -6,8 +6,7 @@ const g1 = new EBNFParser(`
   E -> E PLUS T | T ;
   T -> T STAR F | F ;
   F -> OPEN E CLOSE | id ;
-`).grammar;
-g1.setAugStart("E1");
+`).grammar.augmentStartSymbol("E1");
 
 describe("LRItem", () => {
   test("Test Equality", () => {
@@ -63,7 +62,7 @@ describe("LRItemSet", () => {
 
 describe("LRItemGraph", () => {
   test("Test Basic", () => {
-    const ig = new LRItemGraph(g1);
+    const ig = new LRItemGraph(g1).refresh();
 
     expect(ig.size).toBe(12);
     expect(
@@ -175,12 +174,11 @@ const g2 = new EBNFParser(`
   L -> STAR R ;
   L -> id ;
   R -> L ;
-`).grammar;
-g2.setAugStart("S1");
+`).grammar.augmentStartSymbol("S1");
 
 describe("LRItemGraph with Conflicts", () => {
   test("Test1", () => {
-    const ig = new LRItemGraph(g2);
+    const ig = new LRItemGraph(g2).refresh();
 
     expect(ig.size).toBe(10);
     // Set 0

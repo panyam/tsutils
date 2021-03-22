@@ -10,8 +10,7 @@ const g1 = new EBNFParser(`
   E -> E PLUS T | T ;
   T -> T STAR F | F ;
   F -> OPEN E CLOSE | id ;
-`).grammar;
-g1.setAugStart("E1");
+`).grammar.augmentStartSymbol("E1");
 
 function Goto(ptab: ParseTable, newState: number): LRAction {
   return LRAction.Goto(ptab.itemGraph.itemSets[newState]);
@@ -148,8 +147,7 @@ const g2 = new EBNFParser(`
   L -> STAR R ;
   L -> id ;
   R -> L ;
-`).grammar;
-g2.setAugStart("S1");
+`).grammar.augmentStartSymbol("S1");
 
 describe("LRParseTable with Conflicts", () => {
   test("Test1", () => {
