@@ -15,7 +15,7 @@ describe("LRItem", () => {
     const set1 = new LRItemSet();
     const E1 = g.getSym("E1")!;
     const l1 = new LRItem(E1);
-    expect(l1.key()).toEqual(`${E1.id}:0:0`);
+    expect(l1.key).toEqual(`${E1.id}:0:0`);
     set1.add(l1);
     const l2 = new LRItem(g.getSym("E1")!);
     expect(l1.equals(l2)).toBe(true);
