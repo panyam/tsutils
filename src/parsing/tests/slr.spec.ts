@@ -141,3 +141,21 @@ function expectPTableActions(g: Grammar, pt: ParseTable, fromSet: number, action
     }
   }
 }
+
+const g2 = new EBNFParser(`
+  S -> L EQ R ;
+  S -> R ;
+  L -> STAR R ;
+  L -> id ;
+  R -> L ;
+`).grammar;
+g2.setAugStart("S1");
+
+describe("LRParseTable with Conflicts", () => {
+  test("Test1", () => {
+    const ptable = new ParseTable(g2);
+    const ig = ptable.itemGraph;
+    const EOF = g1.Eof.label;
+    console.log("Actions: ", ptable.debugActions);
+  });
+});

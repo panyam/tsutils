@@ -15,7 +15,7 @@ describe("LRItem", () => {
     const set1 = new LRItemSet();
     const E1 = g.getSym("E1")!;
     const l1 = new LRItem(E1);
-    expect(l1.key).toEqual(`${E1.id}:0:0`);
+    expect(l1.key()).toEqual(`${E1.id}:0:0`);
     set1.add(l1);
     const l2 = new LRItem(g.getSym("E1")!);
     expect(l1.equals(l2)).toBe(true);
@@ -166,5 +166,87 @@ describe("LRItemGraph", () => {
 
     // Set 11
     expect(ig.contains(LRItemSet.From(g1, [["F", 0, 3]])));
+  });
+});
+
+const g2 = new EBNFParser(`
+  S -> L EQ R ;
+  S -> R ;
+  L -> STAR R ;
+  L -> id ;
+  R -> L ;
+`).grammar;
+g2.setAugStart("S1");
+
+describe("LRItemGraph with Conflicts", () => {
+  test("Test1", () => {
+    const ig = new LRItemGraph(g2);
+
+    expect(ig.size).toBe(10);
+    // Set 0
+    expect(
+      ig.contains(
+        LRItemSet.From(g2, [
+          ["S1", 0, 0],
+          ["S", 0, 0],
+          ["S", 1, 0],
+          ["L", 0, 0],
+          ["L", 1, 0],
+          ["R", 0, 0],
+        ]),
+      ),
+    );
+
+    // Set 1
+    expect(ig.contains(LRItemSet.From(g2, [["S1", 0, 1]])));
+
+    // Set I2
+    expect(
+      ig.contains(
+        LRItemSet.From(g2, [
+          ["S", 0, 1],
+          ["R", 0, 1],
+        ]),
+      ),
+    );
+
+    // Set 3
+    expect(ig.contains(LRItemSet.From(g2, [["S", 1, 1]])));
+
+    // Set 4
+    expect(
+      ig.contains(
+        LRItemSet.From(g2, [
+          ["L", 0, 1],
+          ["R", 0, 0],
+          ["L", 0, 0],
+          ["L", 1, 0],
+        ]),
+      ),
+    );
+
+    // Set 5
+    expect(ig.contains(LRItemSet.From(g2, [["L", 1, 1]])));
+
+    // Set 6
+    expect(
+      ig.contains(
+        LRItemSet.From(g2, [
+          ["S", 0, 2],
+          ["R", 0, 0],
+          ["L", 0, 0],
+          ["L", 1, 0],
+        ]),
+      ),
+    );
+
+    // Set 7
+    expect(ig.contains(LRItemSet.From(g2, [["L", 0, 2]])));
+
+    // Set 8
+    expect(ig.contains(LRItemSet.From(g2, [["R", 0, 1]])));
+
+    // Set 9
+    expect(ig.contains(LRItemSet.From(g2, [["S", 0, 3]])));
   });
 });

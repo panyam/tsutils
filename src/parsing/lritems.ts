@@ -6,31 +6,40 @@ export class LRItem {
   readonly nt: Sym;
   readonly ruleIndex: number;
   readonly position: number;
-  constructor(nt: Sym, ruleIndex = 0, position = 0) {
+  readonly lookahead: Nullable<Sym>;
+  constructor(nt: Sym, ruleIndex = 0, position = 0, lookahead: Nullable<Sym> = null) {
     this.nt = nt;
     this.ruleIndex = ruleIndex;
     this.position = position;
+    this.lookahead = lookahead;
   }
 
-  get key(): string {
-    return this.nt.id + ":" + this.ruleIndex + ":" + this.position;
+  key(): string {
+    if (this.lookahead) {
+      return this.nt.id + ":" + this.ruleIndex + ":" + this.position + ":" + this.lookahead.id;
+    } else {
+      return this.nt.id + ":" + this.ruleIndex + ":" + this.position;
+    }
   }
 
-  compareTo(another: LRItem): number {
+  compareTo(another: this): number {
     let diff = this.nt.id - another.nt.id;
     if (diff == 0) diff = this.ruleIndex - another.ruleIndex;
     if (diff == 0) diff = this.position - another.position;
+    if (diff == 0) {
+      diff = (this.lookahead?.id || 0) - (another.lookahead?.id || 0);
+    }
     return diff;
   }
 
-  equals(another: LRItem): boolean {
+  equals(another: this): boolean {
     return this.compareTo(another) == 0;
   }
 
   advance(): LRItem {
     const rule = this.nt.rules[this.ruleIndex];
     assert(this.position < rule.length);
-    return new LRItem(this.nt, this.ruleIndex, this.position + 1);
+    return new LRItem(this.nt, this.ruleIndex, this.position + 1, this.lookahead);
   }
 }
 
@@ -40,7 +49,7 @@ export class LRItemSet {
   // List of all unique LRItems in this set
   items: LRItem[] = [];
 
-  // Table pointing Item.key -> indexes in the above table.
+  // Table pointing Item.key() -> indexes in the above table.
   protected itemIndexes: StringMap<number> = {};
 
   static From(g: Grammar, entries: [string, number, number][]): LRItemSet {
@@ -66,11 +75,11 @@ export class LRItemSet {
   // A way to cache the key of this item set.
   // Keys help make the comparison of two sets easy.
   protected _key: Nullable<string> = null;
-  get key(): string {
+  key(): string {
     if (this._key == null) {
       this._key = [...this.items]
         .sort((item1, item2) => item1.compareTo(item2))
-        .map((item) => item.key)
+        .map((item) => item.key())
         .join("/");
     }
     return this._key;
@@ -78,11 +87,11 @@ export class LRItemSet {
 
   add(item: LRItem): number {
     if (!this.contains(item)) {
-      this.itemIndexes[item.key] = this.items.length;
+      this.itemIndexes[item.key()] = this.items.length;
       this.items.push(item);
       this._key = null;
     }
-    return this.itemIndexes[item.key];
+    return this.itemIndexes[item.key()];
   }
 
   get size(): number {
@@ -94,14 +103,14 @@ export class LRItemSet {
   }
 
   contains(item: LRItem): boolean {
-    return item.key in this.itemIndexes;
+    return item.key() in this.itemIndexes;
   }
 
   /**
    * Tells if this set equals another set.
    */
   equals(another: LRItemSet): boolean {
-    return this.size == another.size && this.key == another.key;
+    return this.size == another.size && this.key() == another.key();
   }
 
   /**
@@ -164,7 +173,7 @@ export class LRItemGraph {
   }
 
   contains(itemset: LRItemSet): boolean {
-    return itemset.key in this.setIndexes;
+    return itemset.key() in this.setIndexes;
   }
 
   forEachGoto(itemSet: LRItemSet, visitor: (sym: Sym, nextSet: LRItemSet) => boolean | void): void {
@@ -190,13 +199,13 @@ export class LRItemGraph {
       for (const sym of this.grammar.allSymbols) {
         let gotoSet = currSet.goto(sym);
         if (gotoSet.size > 0) {
-          if (!(gotoSet.key in this.setIndexes)) {
+          if (!(gotoSet.key() in this.setIndexes)) {
             // this is a new set so add it
-            gotoSet.id = this.setIndexes[gotoSet.key] = out.length;
+            gotoSet.id = this.setIndexes[gotoSet.key()] = out.length;
             out.push(gotoSet);
           } else {
             // use the existing set if it already exists
-            gotoSet = this.itemSets[this.setIndexes[gotoSet.key]];
+            gotoSet = this.itemSets[this.setIndexes[gotoSet.key()]];
           }
           this.setGoto(currSet, sym, gotoSet);
         }

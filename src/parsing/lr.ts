@@ -4,7 +4,7 @@ import { Tokenizer, PTNode, Parser as ParserBase } from "./parser";
 import { Nullable } from "../types";
 import { UnexpectedTokenError } from "./errors";
 import { assert } from "../utils/misc";
-import { LRItemSet, LRItemGraph } from "./lritems";
+import { LRItemSet } from "./lritems";
 
 export enum LRActionType {
   ACCEPT,
