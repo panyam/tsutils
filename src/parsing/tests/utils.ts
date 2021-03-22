@@ -2,6 +2,7 @@ import { Str, Grammar } from "../grammar";
 import { assert } from "../../utils/misc";
 import { StringMap } from "../../types";
 import { FirstSets, NullableSet, FollowSets } from "../sets";
+import { LRItemSet } from "../lritems";
 
 export function listsEqual(l1: string[], l2: string[]): boolean {
   l1 = l1.sort();
@@ -44,5 +45,14 @@ export function expectRules(g: Grammar, nt: string, ...rules: (string | Str)[]):
       console.log("Expected: ", rules[i], "Found: ", nonterm?.rules[i]);
       assert(false, `Rule ${i} does not match`);
     }
+  }
+}
+
+export function expectItemSet(g: Grammar, set: LRItemSet, entries: [string, number, number][]): void {
+  expect(set.size).toBe(entries.length);
+  for (const [sym, index, pos] of entries) {
+    const nt = g.getSym(sym);
+    assert(nt != null, "Cannot find symbol: " + sym);
+    expect(set.containsRule(nt, index, pos)).toBe(true);
   }
 }

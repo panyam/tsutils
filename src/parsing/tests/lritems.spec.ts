@@ -1,35 +1,13 @@
-import { Nullable } from "../../types";
-import { Sym, Grammar } from "../grammar";
-import { FirstSets, NullableSet, FollowSets } from "../sets";
 import { EBNFParser } from "../ebnf";
-import { assert } from "../../utils/misc";
-import { PTNode, Tokenizer } from "../parser";
-import { Token } from "../tokenizer";
-import { expectFSEntries } from "./utils";
-import Samples from "./samples";
 import { LRItem, LRItemSet, LRItemGraph } from "../lritems";
+import { expectItemSet } from "./utils";
 
 const g1 = new EBNFParser(`
-  E1 -> E ;
   E -> E PLUS T | T ;
   T -> T STAR F | F ;
   F -> OPEN E CLOSE | id ;
 `).grammar;
-
-function expectItemSet(g: Grammar, set: LRItemSet, entries: [string, number, number][]) {
-  expect(set.size).toBe(entries.length);
-  for (const [sym, index, pos] of entries) {
-    expect(set.containsRule(g.getSym(sym)!, index, pos)).toBe(true);
-  }
-}
-
-function newItemSet(g: Grammar, entries: [string, number, number][]) {
-  const set = new LRItemSet();
-  for (const [sym, index, pos] of entries) {
-    set.add(new LRItem(g.getSym(sym)!, index, pos));
-  }
-  return set;
-}
+g1.setAugStart("E1");
 
 describe("LRItem", () => {
   test("Test Equality", () => {
@@ -90,7 +68,7 @@ describe("LRItemGraph", () => {
     expect(ig.size).toBe(12);
     expect(
       ig.contains(
-        newItemSet(g1, [
+        LRItemSet.From(g1, [
           ["E1", 0, 0],
           ["E", 0, 0],
           ["E", 1, 0],
@@ -103,7 +81,7 @@ describe("LRItemGraph", () => {
     );
     expect(
       ig.contains(
-        newItemSet(g1, [
+        LRItemSet.From(g1, [
           ["E1", 0, 1],
           ["E", 0, 1],
         ]),
@@ -112,19 +90,19 @@ describe("LRItemGraph", () => {
     // Set I2
     expect(
       ig.contains(
-        newItemSet(g1, [
+        LRItemSet.From(g1, [
           ["E", 1, 1],
           ["T", 0, 1],
         ]),
       ),
     );
     // Set 3
-    expect(ig.contains(newItemSet(g1, [["T", 1, 1]])));
+    expect(ig.contains(LRItemSet.From(g1, [["T", 1, 1]])));
 
     // Set 4
     expect(
       ig.contains(
-        newItemSet(g1, [
+        LRItemSet.From(g1, [
           ["F", 0, 1],
           ["E", 0, 0],
           ["E", 1, 0],
@@ -137,12 +115,12 @@ describe("LRItemGraph", () => {
     );
 
     // Set 5
-    expect(ig.contains(newItemSet(g1, [["F", 1, 1]])));
+    expect(ig.contains(LRItemSet.From(g1, [["F", 1, 1]])));
 
     // Set 6
     expect(
       ig.contains(
-        newItemSet(g1, [
+        LRItemSet.From(g1, [
           ["E", 0, 2],
           ["T", 0, 0],
           ["T", 1, 0],
@@ -155,7 +133,7 @@ describe("LRItemGraph", () => {
     // Set 7
     expect(
       ig.contains(
-        newItemSet(g1, [
+        LRItemSet.From(g1, [
           ["T", 0, 2],
           ["F", 0, 0],
           ["F", 1, 0],
@@ -166,7 +144,7 @@ describe("LRItemGraph", () => {
     // Set 8
     expect(
       ig.contains(
-        newItemSet(g1, [
+        LRItemSet.From(g1, [
           ["F", 0, 2],
           ["E", 0, 1],
         ]),
@@ -176,7 +154,7 @@ describe("LRItemGraph", () => {
     // Set 9
     expect(
       ig.contains(
-        newItemSet(g1, [
+        LRItemSet.From(g1, [
           ["E", 0, 3],
           ["T", 0, 1],
         ]),
@@ -184,10 +162,9 @@ describe("LRItemGraph", () => {
     );
 
     // Set 10
-    expect(ig.contains(newItemSet(g1, [["T", 0, 3]])));
+    expect(ig.contains(LRItemSet.From(g1, [["T", 0, 3]])));
 
     // Set 11
-    expect(ig.contains(newItemSet(g1, [["F", 0, 3]])));
-    // for (let i = 7; i < ig.itemSets.length; i++) { console.log("Set ", i, ": \n", ig.itemSets[i].printed()); }
+    expect(ig.contains(LRItemSet.From(g1, [["F", 0, 3]])));
   });
 });

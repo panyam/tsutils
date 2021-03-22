@@ -1,4 +1,4 @@
-import { Nullable, StringMap } from "../types";
+import { MAX_INT, Nullable, StringMap } from "../types";
 import { assert } from "../utils/misc";
 
 export enum IDType {
@@ -69,11 +69,16 @@ export class Sym {
   /**
    * ID unique across all expression within the grammar.
    */
-  id: number = Sym.idCounter--;
+  id: number;
 
-  constructor(grammar: Grammar, label: string, isTerminal: boolean) {
+  constructor(grammar: Grammar, label: string, isTerminal: boolean, id: Nullable<number> = null) {
     this.isTerminal = isTerminal;
     this.label = label;
+    if (id == null) {
+      this.id = Sym.idCounter--;
+    } else {
+      this.id = id;
+    }
   }
 
   equals(another: this): boolean {
@@ -215,7 +220,21 @@ export class Grammar {
   protected symbolsById: Sym[] = [];
   protected currentNonTerm: Nullable<Sym> = null;
 
-  readonly Eof = new Sym(this, "<EOF>", true);
+  readonly Eof = new Sym(this, "<EOF>", true, -1);
+  private _AugStart = new Sym(this, "$", false, -2);
+
+  get augStart(): Sym {
+    return this._AugStart;
+  }
+
+  setAugStart(label = "$"): Sym {
+    assert(this.getSym(label) == null);
+    this._AugStart = new Sym(this, label, false, -2);
+    if (this.startSymbol) {
+      this._AugStart.add(new Str(this.startSymbol));
+    }
+    return this._AugStart;
+  }
 
   /**
    * A way of creating Grammars with a "single expresssion".
@@ -312,11 +331,13 @@ export class Grammar {
    */
 
   getSymById(id: number): Nullable<Sym> {
-    if (id < 0) return this.Eof;
+    if (id == -1) return this.Eof;
+    else if (id == -2) return this._AugStart;
     return this.symbolsById[id] || null;
   }
 
   getSym(label: string): Nullable<Sym> {
+    if (label == this._AugStart.label) return this._AugStart;
     return this.symbolsByName[label] || null;
   }
 

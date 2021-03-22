@@ -38,10 +38,18 @@ export class LRItemSet {
   id = 0;
 
   // List of all unique LRItems in this set
-  protected items: LRItem[] = [];
+  items: LRItem[] = [];
 
   // Table pointing Item.key -> indexes in the above table.
   protected itemIndexes: StringMap<number> = {};
+
+  static From(g: Grammar, entries: [string, number, number][]): LRItemSet {
+    const set = new LRItemSet();
+    for (const [sym, index, pos] of entries) {
+      set.add(new LRItem(g.getSym(sym)!, index, pos));
+    }
+    return set;
+  }
 
   printed(): string {
     return this.items
@@ -159,6 +167,18 @@ export class LRItemGraph {
     return itemset.key in this.setIndexes;
   }
 
+  forEachGoto(itemSet: LRItemSet, visitor: (sym: Sym, nextSet: LRItemSet) => boolean | void): void {
+    const gotoSet = this.gotoSets[itemSet.id] || {};
+    for (const symid in gotoSet) {
+      const sym = this.grammar.getSymById(symid as any) as Sym;
+      const next = gotoSet[symid];
+      if (visitor(sym, next) == false) break;
+    }
+  }
+  gotoSetFor(itemSet: LRItemSet): NumMap<LRItemSet> {
+    return this.gotoSets[itemSet.id] || {};
+  }
+
   refresh(): void {
     this.setIndexes = {};
     const startSet = this.createStartSet();
@@ -168,11 +188,15 @@ export class LRItemGraph {
     for (let i = 0; i < out.length; i++) {
       const currSet = out[i];
       for (const sym of this.grammar.allSymbols) {
-        const gotoSet = currSet.goto(sym);
+        let gotoSet = currSet.goto(sym);
         if (gotoSet.size > 0) {
           if (!(gotoSet.key in this.setIndexes)) {
+            // this is a new set so add it
             gotoSet.id = this.setIndexes[gotoSet.key] = out.length;
             out.push(gotoSet);
+          } else {
+            // use the existing set if it already exists
+            gotoSet = this.itemSets[this.setIndexes[gotoSet.key]];
           }
           this.setGoto(currSet, sym, gotoSet);
         }
@@ -191,9 +215,7 @@ export class LRItemGraph {
     const startSymbol = this.grammar.startSymbol;
     assert(startSymbol != null, "Start symbol must be set");
     const startSet = new LRItemSet();
-    for (let i = 0; i < startSymbol.rules.length; i++) {
-      startSet.add(new LRItem(startSymbol, i, 0));
-    }
+    startSet.add(new LRItem(this.grammar.augStart));
     startSet.closure();
     return startSet;
   }
@@ -208,5 +230,9 @@ export class LRItemGraph {
   setGoto(fromSet: LRItemSet, sym: Sym, toSet: LRItemSet): void {
     const entries = this.ensureGotoSet(fromSet);
     entries[sym.id] = toSet;
+  }
+
+  getGoto(fromSet: LRItemSet, sym: Sym): Nullable<LRItemSet> {
+    return (this.gotoSets[fromSet.id] || {})[sym.id] || null;
   }
 }
