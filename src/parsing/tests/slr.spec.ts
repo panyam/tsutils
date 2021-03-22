@@ -1,8 +1,8 @@
 import { Grammar } from "../grammar";
 import { EBNFParser } from "../ebnf";
-import { LRItem, LRItemSet, LRItemGraph } from "../lritems";
-import { LRAction, ParseTable } from "../lr";
-import { expectItemSet } from "./utils";
+import { LRItemGraph } from "../lritems";
+import { LRAction } from "../lr";
+import { ParseTable } from "../slr";
 import { StringMap } from "../../types";
 import { assert } from "../../utils/misc";
 
