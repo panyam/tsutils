@@ -1,7 +1,7 @@
 import { assert } from "../utils/misc";
 import { NumMap, Nullable } from "../types";
 import { Sym, Grammar } from "./grammar";
-import { LRItemSet, LR0Item, LR0ItemGraph } from "./lritems";
+import { LRItemSet, LR0Item, LR0ItemGraph } from "./lr0";
 import { LRAction } from "./lr";
 import { FollowSets } from "./sets";
 

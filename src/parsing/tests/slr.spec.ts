@@ -1,7 +1,7 @@
 import { Grammar } from "../grammar";
 import { EBNFParser } from "../ebnf";
-import { LRItemGraph } from "../lritems";
 import { LRAction } from "../lr";
+import { LRItemGraph } from "../lr0";
 import { ParseTable } from "../slr";
 import { StringMap } from "../../types";
 import { assert } from "../../utils/misc";

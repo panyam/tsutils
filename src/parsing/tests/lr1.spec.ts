@@ -1,7 +1,8 @@
 import { EBNFParser } from "../ebnf";
 import { assert } from "../../utils/misc";
 import { Grammar } from "../grammar";
-import { LRItemSet, LR1Item, LR1ItemGraph } from "../lritems";
+import { LRItemSet } from "../lr0";
+import { LR1Item, LR1ItemGraph } from "../lr1";
 import { FirstSets } from "../sets";
 
 function From(ig: LR1ItemGraph, ...entries: [string, string, number, number][]): LRItemSet {
