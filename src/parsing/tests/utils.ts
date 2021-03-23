@@ -47,12 +47,3 @@ export function expectRules(g: Grammar, nt: string, ...rules: (string | Str)[]):
     }
   }
 }
-
-export function expectItemSet(g: Grammar, set: LRItemSet, entries: [string, number, number][]): void {
-  expect(set.size).toBe(entries.length);
-  for (const [sym, index, pos] of entries) {
-    const nt = g.getSym(sym);
-    assert(nt != null, "Cannot find symbol: " + sym);
-    expect(set.containsRule(nt, index, pos)).toBe(true);
-  }
-}

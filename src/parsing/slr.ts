@@ -1,7 +1,7 @@
 import { assert } from "../utils/misc";
 import { NumMap, Nullable } from "../types";
 import { Sym, Grammar } from "./grammar";
-import { LRItemSet, LRItemGraph } from "./lritems";
+import { LRItemSet, LR0Item, LR0ItemGraph } from "./lritems";
 import { LRAction } from "./lr";
 import { FollowSets } from "./sets";
 
@@ -10,7 +10,7 @@ import { FollowSets } from "./sets";
  */
 export class ParseTable {
   readonly grammar: Grammar;
-  readonly itemGraph: LRItemGraph;
+  readonly itemGraph: LR0ItemGraph;
   readonly followSets: FollowSets;
 
   /**
@@ -20,7 +20,7 @@ export class ParseTable {
 
   constructor(grammar: Grammar) {
     this.grammar = grammar;
-    this.itemGraph = new LRItemGraph(grammar);
+    this.itemGraph = new LR0ItemGraph(grammar);
     this.followSets = new FollowSets(grammar);
     this.refresh();
   }
@@ -77,7 +77,8 @@ export class ParseTable {
     const ig = this.itemGraph;
     for (const itemSet of ig.itemSets) {
       // Look for transitions from this set
-      for (const item of itemSet.items) {
+      for (const itemId of itemSet.values) {
+        const item = ig.items[itemId];
         const nt = item.nt;
         const rule = nt.rules[item.ruleIndex];
         if (item.position < rule.length) {
@@ -110,7 +111,7 @@ export class ParseTable {
 
       // If this state contains the augmented item, S' -> S .
       // then add accept
-      if (itemSet.containsRule(this.grammar.augStart, 0, 1)) {
+      if (itemSet.has(ig.getItem(new LR0Item(this.grammar.augStart, 0, 1)).id)) {
         this.addAction(itemSet, this.grammar.Eof, LRAction.Accept());
       }
     }
