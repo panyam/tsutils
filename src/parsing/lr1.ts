@@ -1,7 +1,8 @@
 import { Sym, Grammar } from "./grammar";
 import { FirstSets } from "./sets";
 import { assert } from "../utils/misc";
-import { LRItem, LR0Item, LRItemSet, LRItemGraph } from "./lr0";
+import { LRItem, LRItemSet, LRItemGraph } from "./lrbase";
+import { LR0Item } from "./lr0";
 
 export class LR1Item extends LR0Item {
   readonly lookahead: Sym;

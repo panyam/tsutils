@@ -1,21 +1,18 @@
 import { Grammar } from "../grammar";
 import { EBNFParser } from "../ebnf";
-import { LRItemGraph, LRAction, ParseTable } from "../lrbase";
-import { makeSLRParseTable } from "../ptables";
+import { LRAction, ParseTable } from "../lrbase";
+import { LR1ItemGraph } from "../lr1";
+import { makeLRParseTable } from "../ptables";
 import { Goto, Shift, Reduce, expectPTableActions } from "./utils";
 
-const g1 = new EBNFParser(`
-  E -> E PLUS T | T ;
-  T -> T STAR F | F ;
-  F -> OPEN E CLOSE | id ;
-`).grammar.augmentStartSymbol("E1");
+const g1 = new EBNFParser(` S -> C C ; C -> c C | d ; `).grammar.augmentStartSymbol("E1");
 
 describe("LR ParseTable", () => {
   test("Test Basic", () => {
-    const [ptable, ig] = makeSLRParseTable(g1);
+    const [ptable, ig] = makeLRParseTable(g1);
     const EOF = g1.Eof.label;
     // for (let i = 0; i < ig.itemSets.length; i++) { console.log("Set ", i, ": \n", ig.itemSets[i].printed()); }
-    // console.log("Actions: ", ptable.debugValue);
+    console.log("Actions: ", ptable.debugValue);
     expectPTableActions(g1, ptable, ig, 0, {
       id: [Shift(ig, 5)],
       PLUS: [],
@@ -112,8 +109,7 @@ const g2 = new EBNFParser(`
 
 describe("LRParseTable with Conflicts", () => {
   test("Test1", () => {
-    const [ptable, ig] = makeSLRParseTable(g2);
+    const [ptable, ig] = makeLRParseTable(g2);
     const EOF = g1.Eof.label;
-    // console.log("Actions: ", ptable.debugValue);
   });
 });

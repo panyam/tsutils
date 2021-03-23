@@ -1,7 +1,7 @@
 import { EBNFParser } from "../ebnf";
 import { assert } from "../../utils/misc";
 import { Grammar } from "../grammar";
-import { LRItemSet } from "../lr0";
+import { LRItemSet } from "../lrbase";
 import { LR1Item, LR1ItemGraph } from "../lr1";
 import { FirstSets } from "../sets";
 

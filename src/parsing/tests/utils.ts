@@ -1,9 +1,20 @@
-import { Str, Grammar } from "../grammar";
-import { LRAction } from "../lr";
-import { ParseTable } from "../slr";
 import { assert } from "../../utils/misc";
 import { StringMap } from "../../types";
+import { Str, Grammar } from "../grammar";
+import { LRAction, ParseTable, LRItemGraph } from "../lrbase";
 import { FirstSets, NullableSet, FollowSets } from "../sets";
+
+export function Goto(ig: LRItemGraph, newState: number): LRAction {
+  return LRAction.Goto(ig.itemSets[newState]);
+}
+
+export function Shift(itemGraph: LRItemGraph, newState: number): LRAction {
+  return LRAction.Shift(itemGraph.itemSets[newState]);
+}
+
+export function Reduce(g: Grammar, nt: string, rule: number): LRAction {
+  return LRAction.Reduce(g.getSym(nt)!, rule);
+}
 
 export function listsEqual(l1: string[], l2: string[]): boolean {
   l1 = l1.sort();
@@ -49,8 +60,14 @@ export function expectRules(g: Grammar, nt: string, ...rules: (string | Str)[]):
   }
 }
 
-export function expectPTableActions(g: Grammar, pt: ParseTable, fromSet: number, actions: StringMap<LRAction[]>): void {
-  const itemSet = pt.itemGraph.itemSets[fromSet];
+export function expectPTableActions(
+  g: Grammar,
+  pt: ParseTable,
+  itemGraph: LRItemGraph,
+  fromSet: number,
+  actions: StringMap<LRAction[]>,
+): void {
+  const itemSet = itemGraph.itemSets[fromSet];
   for (const label in actions) {
     const sym = label == g.Eof.label ? g.Eof : g.getSym(label);
     assert(sym != null, `Symbol '${label}' not found`);

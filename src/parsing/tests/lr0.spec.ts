@@ -1,5 +1,6 @@
 import { EBNFParser } from "../ebnf";
-import { LRItemSet, LR0Item, LR0ItemGraph } from "../lr0";
+import { LRItemSet } from "../lrbase";
+import { LR0Item, LR0ItemGraph } from "../lr0";
 import { Grammar } from "../grammar";
 import { assert } from "../../utils/misc";
 
