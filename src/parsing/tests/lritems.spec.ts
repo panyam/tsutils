@@ -70,7 +70,6 @@ describe("LR0ItemGraph", () => {
   test("Test Basic", () => {
     const ig = new LR0ItemGraph(g1).refresh();
 
-    ig.itemSets.forEach((set, index) => console.log("Set ", index, "\n", set.debugString));
     expect(ig.size).toBe(12);
     expect(
       ig.hasItemSet(

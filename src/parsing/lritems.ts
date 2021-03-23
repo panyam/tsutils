@@ -3,21 +3,6 @@ import { FirstSets } from "./sets";
 import { assert } from "../utils/misc";
 import { StringMap, NumMap, Nullable } from "../types";
 
-/*
-  static From2(g: Grammar, firstSets: FirstSets, entries: [string, number, number, string][]): LRItemSet {
-    const set = new LR1ItemSet();
-    set.firstSets = firstSets;
-    for (const [sym, index, pos, la] of entries) {
-      const nt = g.getSym(sym);
-      assert(nt != null && !nt.isTerminal);
-      const laSym = g.getSym(la);
-      assert(laSym != null && laSym.isTerminal);
-      set.add(new LRItem(nt, index, pos, laSym));
-    }
-    return set;
-  }
-  */
-
 interface LRItem {
   id: number;
   readonly nt: Sym;
@@ -150,7 +135,7 @@ export abstract class LRItemGraph {
 
   // All Item sets in this graph
   itemSets: LRItemSet[] = [];
-  protected setIndexes: StringMap<number> = {};
+  protected itemSetIndexes: StringMap<number> = {};
 
   // Goto sets for a set and a given transition out of it
   gotoSets: NumMap<NumMap<LRItemSet>> = {};
@@ -164,8 +149,10 @@ export abstract class LRItemGraph {
 
   refresh(): this {
     this.gotoSets = {};
-    this.setIndexes = {};
     this.itemSets = [];
+    this.itemSetIndexes = {};
+    this.items = [];
+    this.itemIndexes = {};
     this.startSet();
     const out = this.itemSets;
 
@@ -174,14 +161,6 @@ export abstract class LRItemGraph {
       for (const sym of this.grammar.allSymbols) {
         let gotoSet = this.goto(currSet, sym);
         if (gotoSet.size > 0) {
-          if (!(gotoSet.key in this.setIndexes)) {
-            // this is a new set so add it
-            gotoSet.id = this.setIndexes[gotoSet.key] = out.length;
-            out.push(gotoSet);
-          } else {
-            // use the existing set if it already exists
-            gotoSet = this.itemSets[this.setIndexes[gotoSet.key]];
-          }
           this.setGoto(currSet, sym, gotoSet);
         }
       }
@@ -195,7 +174,7 @@ export abstract class LRItemGraph {
    */
   goto(itemSet: LRItemSet, sym: Sym): LRItemSet {
     const out = new LRItemSet(this);
-    for (const itemId of itemSet.sortedValues) {
+    for (const itemId of itemSet.values) {
       const item = this.items[itemId];
       // see if item.position points to "sym" in its rule
       const rule = item.nt.rules[item.ruleIndex];
@@ -222,16 +201,16 @@ export abstract class LRItemGraph {
   }
 
   hasItemSet(itemSet: LRItemSet): boolean {
-    return itemSet.key in this.setIndexes;
+    return itemSet.key in this.itemSetIndexes;
   }
 
   getItemSet(itemSet: LRItemSet): LRItemSet {
     assert(itemSet.values.length > 0);
     // see if this itemset exists
     if (this.hasItemSet(itemSet)) {
-      return this.itemSets[this.setIndexes[itemSet.key]];
+      return this.itemSets[this.itemSetIndexes[itemSet.key]];
     } else {
-      itemSet.id = this.setIndexes[itemSet.key] = this.itemSets.length;
+      itemSet.id = this.itemSetIndexes[itemSet.key] = this.itemSets.length;
       this.itemSets.push(itemSet);
     }
     return itemSet;
@@ -373,6 +352,11 @@ export class LR1ItemGraph extends LRItemGraph {
     this.firstSets = firstSets;
   }
 
+  refresh(): this {
+    this.firstSets.refresh();
+    return super.refresh();
+  }
+
   /**
    * Overridden to create LR1ItemSet objects with the start state
    * also including the EOF marker as the lookahead.
@@ -380,7 +364,7 @@ export class LR1ItemGraph extends LRItemGraph {
    * StartSet = closure({S' -> . S, $})
    */
   startItem(): LRItem {
-    return new LR1Item(this.grammar.Eof, this.grammar.augStart, 0, 0);
+    return this.getItem(new LR1Item(this.grammar.Eof, this.grammar.augStart, 0, 0));
   }
 
   /**
@@ -389,7 +373,7 @@ export class LR1ItemGraph extends LRItemGraph {
    */
   closure(itemSet: LRItemSet): LRItemSet {
     const out = new LRItemSet(this, ...itemSet.values);
-    for (let i = 0; i < this.items.length; i++) {
+    for (let i = 0; i < out.values.length; i++) {
       const itemId = out.values[i];
       const item = this.items[itemId] as LR1Item;
       const rule = item.nt.rules[item.ruleIndex];
@@ -400,12 +384,12 @@ export class LR1ItemGraph extends LRItemGraph {
       if (B.isTerminal) continue;
 
       const suffix = rule.copy().append(item.lookahead);
-      this.firstSets.forEachTermIn(suffix, item.position, (term) => {
+      this.firstSets.forEachTermIn(suffix, item.position + 1, (term) => {
         if (term != null) {
           // For each rule [ B -> beta, term ] add it to
           // our list of items if it doesnt already exist
-          for (let i = 0; i < B.rules.length; i++) {
-            const newItem = new LR1Item(term, B, i, 0);
+          for (let j = 0; j < B.rules.length; j++) {
+            const newItem = this.getItem(new LR1Item(term, B, j, 0));
             out.add(newItem.id);
           }
         }

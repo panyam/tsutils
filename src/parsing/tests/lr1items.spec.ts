@@ -31,18 +31,11 @@ const g3 = new EBNFParser(`
 
 describe("LR1ItemGraph", () => {
   test("Test1", () => {
-    //
-  });
-});
-/*
-describe("LR1ItemGraph", () => {
-  test("Test1", () => {
-    const ig = new LR1ItemGraph(g3, new FirstSets(g3)).refresh();
-    for (let i = 0; i < ig.itemSets.length; i++) {
-      console.log("Set ", i, ": \n", ig.itemSets[i].debugString);
-    }
-
+    const firstSets = new FirstSets(g3);
+    const ig = new LR1ItemGraph(g3, firstSets).refresh();
+    ig.itemSets.forEach((set, index) => console.log("Set ", index, "\n", set.debugString));
     expect(ig.size).toBe(10);
+    /*
     // Set 0
     expect(ig.hasItemSet(From(ig, ["S1", 0, 0], ["S", 0, 0], ["S", 1, 0], ["L", 0, 0], ["L", 1, 0], ["R", 0, 0])));
 
@@ -72,6 +65,6 @@ describe("LR1ItemGraph", () => {
 
     // Set 9
     expect(ig.hasItemSet(From(ig, ["S", 0, 3])));
+   */
   });
 });
-*/
