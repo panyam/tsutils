@@ -1,8 +1,9 @@
 import { Str, Grammar } from "../grammar";
+import { LRAction } from "../lr";
+import { ParseTable } from "../slr";
 import { assert } from "../../utils/misc";
 import { StringMap } from "../../types";
 import { FirstSets, NullableSet, FollowSets } from "../sets";
-import { LRItemSet } from "../lritems";
 
 export function listsEqual(l1: string[], l2: string[]): boolean {
   l1 = l1.sort();
@@ -44,6 +45,30 @@ export function expectRules(g: Grammar, nt: string, ...rules: (string | Str)[]):
     if (!eq) {
       console.log("Expected: ", rules[i], "Found: ", nonterm?.rules[i]);
       assert(false, `Rule ${i} does not match`);
+    }
+  }
+}
+
+export function expectPTableActions(g: Grammar, pt: ParseTable, fromSet: number, actions: StringMap<LRAction[]>): void {
+  const itemSet = pt.itemGraph.itemSets[fromSet];
+  for (const label in actions) {
+    const sym = label == g.Eof.label ? g.Eof : g.getSym(label);
+    assert(sym != null, `Symbol '${label}' not found`);
+    const foundActions = pt.getActions(itemSet, sym);
+    const expectedActions = actions[label];
+    if (foundActions.length != expectedActions.length) {
+      console.log("Action Mismatch: ", label, sym);
+      expect(foundActions.length).toEqual(expectedActions.length);
+    }
+    for (let i = 0; i < foundActions.length; i++) {
+      if (!foundActions[i].equals(expectedActions[i])) {
+        assert(
+          false,
+          `State ${fromSet} - Action Mismatch for label ${label} at index: ${i}.  Found: ${foundActions[
+            i
+          ].toString()}, Expected: ${expectedActions[i].toString()}`,
+        );
+      }
     }
   }
 }

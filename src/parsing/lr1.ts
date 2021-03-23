@@ -55,9 +55,9 @@ export class LR1ItemGraph extends LRItemGraph {
     this.firstSets = firstSets;
   }
 
-  refresh(): this {
+  reset(): void {
     this.firstSets.refresh();
-    return super.refresh();
+    super.reset();
   }
 
   /**

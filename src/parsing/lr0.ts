@@ -147,15 +147,26 @@ export abstract class LRItemGraph {
   abstract closure(itemSet: LRItemSet): LRItemSet;
   protected abstract startItem(): LRItem;
 
-  refresh(): this {
+  reset(): void {
     this.gotoSets = {};
     this.itemSets = [];
     this.itemSetIndexes = {};
     this.items = [];
     this.itemIndexes = {};
     this.startSet();
-    const out = this.itemSets;
+  }
 
+  refresh(): this {
+    this.reset();
+    this.evalGotoSets();
+    return this;
+  }
+
+  /**
+   * Computes all the goto sets used to create the graph of items.
+   */
+  protected evalGotoSets(): void {
+    const out = this.itemSets;
     for (let i = 0; i < out.length; i++) {
       const currSet = out[i];
       for (const sym of this.grammar.allSymbols) {
@@ -165,7 +176,6 @@ export abstract class LRItemGraph {
         }
       }
     }
-    return this;
   }
 
   /**
@@ -200,10 +210,20 @@ export abstract class LRItemGraph {
     }
   }
 
+  /**
+   * Returns true if a particular item set exists in this item graph.
+   */
   hasItemSet(itemSet: LRItemSet): boolean {
     return itemSet.key in this.itemSetIndexes;
   }
 
+  /**
+   * Gets an item set if it already exists otherwise it is created
+   * and returned.
+   * This method ensures that for any given itemset there is only
+   * one copy of it (by value) in the graph and if two item sets
+   * are equal by value then they must also be the same refernece.
+   */
   getItemSet(itemSet: LRItemSet): LRItemSet {
     assert(itemSet.values.length > 0);
     // see if this itemset exists
