@@ -1,5 +1,6 @@
 import { EBNFParser } from "../ebnf";
-import { LRItem, LRItemSet, LRItemGraph } from "../lritems";
+import { LRItem, LRItemSet, LRItemGraph, LR1ItemGraph, LR1ItemSet } from "../lritems";
+import { FirstSets } from "../sets";
 import { expectItemSet } from "./utils";
 
 const g1 = new EBNFParser(`
@@ -246,5 +247,86 @@ describe("LRItemGraph with Conflicts", () => {
 
     // Set 9
     expect(ig.contains(LRItemSet.From(g2, [["S", 0, 3]])));
+  });
+});
+
+const g3 = new EBNFParser(`
+  S -> C C ;
+  C -> c C | d ;
+`).grammar.augmentStartSymbol("S1");
+
+describe("LR1ItemGraph", () => {
+  test("Test1", () => {
+    const ig = new LR1ItemGraph(g3, new FirstSets(g3)).refresh();
+    for (let i = 0; i < ig.itemSets.length; i++) {
+      console.log("Set ", i, ": \n", ig.itemSets[i].debugString);
+    }
+
+    expect(ig.size).toBe(10);
+    // Set 0
+    expect(
+      ig.contains(
+        LRItemSet.From(g3, [
+          ["S1", 0, 0],
+          ["S", 0, 0],
+          ["S", 1, 0],
+          ["L", 0, 0],
+          ["L", 1, 0],
+          ["R", 0, 0],
+        ]),
+      ),
+    );
+
+    // Set 1
+    expect(ig.contains(LRItemSet.From(g3, [["S1", 0, 1]])));
+
+    // Set I2
+    expect(
+      ig.contains(
+        LRItemSet.From(g3, [
+          ["S", 0, 1],
+          ["R", 0, 1],
+        ]),
+      ),
+    );
+
+    // Set 3
+    expect(ig.contains(LRItemSet.From(g3, [["S", 1, 1]])));
+
+    // Set 4
+    expect(
+      ig.contains(
+        LRItemSet.From(g3, [
+          ["L", 0, 1],
+          ["R", 0, 0],
+          ["L", 0, 0],
+          ["L", 1, 0],
+        ]),
+      ),
+    );
+
+    // Set 5
+    expect(ig.contains(LRItemSet.From(g3, [["L", 1, 1]])));
+
+    // Set 6
+    expect(
+      ig.contains(
+        LRItemSet.From(g3, [
+          ["S", 0, 2],
+          ["R", 0, 0],
+          ["L", 0, 0],
+          ["L", 1, 0],
+        ]),
+      ),
+    );
+
+    // Set 7
+    expect(ig.contains(LRItemSet.From(g3, [["L", 0, 2]])));
+
+    // Set 8
+    expect(ig.contains(LRItemSet.From(g3, [["R", 0, 1]])));
+
+    // Set 9
+    expect(ig.contains(LRItemSet.From(g3, [["S", 0, 3]])));
   });
 });

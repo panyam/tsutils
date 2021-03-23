@@ -4,6 +4,7 @@ import { assert } from "../utils/misc";
 import { StringMap, NumMap, Nullable } from "../types";
 
 export class LRItem {
+  id = 0;
   readonly nt: Sym;
   readonly ruleIndex: number;
   readonly position: number;
@@ -42,6 +43,19 @@ export class LRItem {
     assert(this.position < rule.length);
     return new LRItem(this.nt, this.ruleIndex, this.position + 1, this.lookahead);
   }
+
+  get debugString(): string {
+    const rule = this.nt.rules[this.ruleIndex];
+    const pos = this.position;
+    const pre = rule.syms.slice(0, pos).join(" ");
+    const post = rule.syms.slice(pos).join(" ");
+    this.key;
+    if (this.lookahead) {
+      return `(${this.ruleIndex}, ${this.position}) - (${this.nt.id}) ${this.nt} -> ${pre} . ${post}    /   ${this.lookahead.label}`;
+    } else {
+      return `(${this.ruleIndex}, ${this.position}) - (${this.nt.id}) ${this.nt} -> ${pre} . ${post}`;
+    }
+  }
 }
 
 export class LRItemSet {
@@ -63,16 +77,8 @@ export class LRItemSet {
     return set;
   }
 
-  printed(): string {
-    return this.items
-      .map((item) => {
-        const rule = item.nt.rules[item.ruleIndex];
-        const pos = item.position;
-        const pre = rule.syms.slice(0, pos).join(" ");
-        const post = rule.syms.slice(pos).join(" ");
-        return `(${item.ruleIndex}, ${item.position}) - ${item.nt} (${item.nt.id}) -> ${pre} . ${post}`;
-      })
-      .join("\n");
+  get debugString(): string {
+    return this.items.map((item) => item.debugString).join("\n");
   }
 
   // A way to cache the key of this item set.
@@ -213,12 +219,32 @@ export class LR1ItemSet extends LRItemSet {
 
 export class LRItemGraph {
   readonly grammar: Grammar;
+
+  // List of all unique LRItems that can be used in this item graph.
+  // Note that since the same Item can reside in multiple sets only
+  // one is created via the newItem method and it is referred
+  // everwhere it is needed.
+  items: LRItem[] = [];
+  // Table pointing Item.key -> indexes in the above table.
+  protected itemIndexes: StringMap<number> = {};
+
   itemSets: LRItemSet[] = [];
   gotoSets: NumMap<NumMap<LRItemSet>> = {};
   protected setIndexes: StringMap<number> = {};
 
   constructor(grammar: Grammar) {
     this.grammar = grammar;
+  }
+
+  getItem(nt: Sym, ruleIndex = 0, position = 0): LRItem {
+    const item = new LRItem(nt, ruleIndex, position);
+    if (!(item.key in this.itemIndexes)) {
+      item.id = this.itemIndexes[item.key] = this.items.length;
+      this.items.push(item);
+      return item;
+    } else {
+      return this.items[this.itemIndexes[item.key]];
+    }
   }
 
   get size(): number {
