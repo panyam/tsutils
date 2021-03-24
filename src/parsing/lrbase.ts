@@ -2,8 +2,8 @@ import { Sym, Grammar } from "./grammar";
 import { Tokenizer, PTNode, Parser as ParserBase } from "./parser";
 import { StringMap, NumMap, Nullable } from "../types";
 import { assert } from "../utils/misc";
-// import { Token } from "./tokenizer";
-// import { UnexpectedTokenError } from "./errors";
+import { Token } from "./tokenizer";
+import { UnexpectedTokenError } from "./errors";
 
 export enum LRActionType {
   ACCEPT,
@@ -318,98 +318,6 @@ export abstract class LRItemGraph {
   }
 }
 
-/*
-export class LRParseStack {
-  readonly grammar: Grammar;
-  readonly parseTable: ParseTable;
-  // A way of marking the kind of item that is on the stack
-  // true => isStateId
-  // false => isSymbolId
-  readonly stateStack: PTState[] = [];
-  readonly symStack: Sym[] = [];
-  readonly nodeStack: PTNode[] = []; // TBD
-  constructor(g: Grammar, parseTable: ParseTable) {
-    this.grammar = g;
-    this.parseTable = parseTable;
-    assert(g.startSymbol != null, "Start symbol not selected");
-  }
-
-  push(state: PTState, sym: Sym): void {
-    this.stateStack.push(state);
-    this.symStack.push(sym);
-  }
-
-  top(): [PTState, Sym] {
-    return [this.stateStack[this.stateStack.length - 1], this.symStack[this.symStack.length - 1]];
-  }
-
-  pop(): [PTState, Sym] {
-    if (this.isEmpty) {
-      assert(false, "Stack is empty.");
-    }
-    const state = this.stateStack.pop() as PTState;
-    const sym = this.symStack.pop() as Sym;
-    return [state, sym];
-  }
-
-  get isEmpty(): boolean {
-    return this.stateStack.length == 0 || this.symStack.length == 0;
-  }
-}
-*/
-
-export class LRParser extends ParserBase {
-  /*
-  parseTable: ParseTable;
-  constructor(grammar: Grammar, parseTable: ParseTable) {
-    super(grammar);
-    this.parseTable = parseTable;
-  }
-  */
-
-  /**
-   * Parses the input and returns the resulting root Parse Tree node.
-   */
-  parse(tokenizer: Tokenizer): Nullable<PTNode> {
-    /*
-    const g = this.grammar;
-    const stack = new LRParseStack(this.grammar, this.parseTable);
-    let token: Nullable<Token>;
-    let topState: PTState;
-    let topSym: Sym;
-    do {
-      token = tokenizer.peek();
-      const nextSym = token == null ? g.Eof : this.getSym(token);
-      const nextValue = token == null ? null : token.value;
-      [topState, topSym] = stack.top();
-      const action = this.parseTable.getAction(topState, nextSym);
-      if (action == null) {
-        throw new UnexpectedTokenError(token);
-      } else if (action.tag == LRActionType.ACCEPT) {
-        break;
-      } else if (action.tag == LRActionType.SHIFT) {
-        const nextState = action.nextState;
-        stack.push(nextState, nextSym);
-      } else {
-        // reduce
-        assert(action.nonterm != null, "Nonterm and ruleindex must be provided for a reduction action");
-        const rule = action.nonterm.rules[action.ruleIndex];
-        const ruleLen = rule.length;
-        // pop this many items off the stack
-        for (let i = 0; i < ruleLen; i++) stack.pop();
-        [topState, topSym] = stack.top();
-        const newAction = this.parseTable.getAction(topState, action.nonterm);
-        assert(newAction != null, "Top item does not have an action.");
-        stack.push(newAction.nextState, action.nonterm);
-        // TODO:
-        // Output the prduction A -> rule - as part of PTN building
-      }
-    } while (true); // !stack.isEmpty);
-    */
-    return null;
-  }
-}
-
 /**
  * A parsing table generator for SLR parsers.
  */
@@ -448,7 +356,7 @@ export class ParseTable {
 
   addAction(state: LRItemSet, next: Sym, action: LRAction): void {
     const actions = this.getActions(state, next, true);
-    if (actions.findIndex(action => action.equals(action)) < 0) {
+    if (actions.findIndex((action) => action.equals(action)) < 0) {
       actions.push(action);
     }
   }
@@ -466,5 +374,104 @@ export class ParseTable {
       }
     }
     return out;
+  }
+}
+
+export class ParseStack {
+  readonly grammar: Grammar;
+  readonly parseTable: ParseTable;
+  // A way of marking the kind of item that is on the stack
+  // true => isStateId
+  // false => isSymbolId
+  readonly stateStack: LRItemSet[] = [];
+  readonly symStack: Sym[] = [];
+  readonly nodeStack: PTNode[] = []; // TBD
+  constructor(g: Grammar, parseTable: ParseTable) {
+    this.grammar = g;
+    this.parseTable = parseTable;
+    assert(g.startSymbol != null, "Start symbol not selected");
+  }
+
+  push(state: LRItemSet, sym: Sym): void {
+    this.stateStack.push(state);
+    this.symStack.push(sym);
+  }
+
+  top(): [LRItemSet, Sym] {
+    return [this.stateStack[this.stateStack.length - 1], this.symStack[this.symStack.length - 1]];
+  }
+
+  pop(): [LRItemSet, Sym] {
+    if (this.isEmpty) {
+      assert(false, "Stack is empty.");
+    }
+    const state = this.stateStack.pop() as LRItemSet;
+    const sym = this.symStack.pop() as Sym;
+    return [state, sym];
+  }
+
+  get isEmpty(): boolean {
+    return this.stateStack.length == 0 || this.symStack.length == 0;
+  }
+}
+
+export class LRParser extends ParserBase {
+  parseTable: ParseTable;
+  constructor(grammar: Grammar, parseTable: ParseTable) {
+    super(grammar);
+    this.parseTable = parseTable;
+  }
+
+  /**
+   * Parses the input and returns the resulting root Parse Tree node.
+   */
+  parse(tokenizer: Tokenizer): Nullable<PTNode> {
+    const g = this.grammar;
+    const stack = new ParseStack(this.grammar, this.parseTable);
+    let token: Nullable<Token>;
+    let topState: LRItemSet;
+    let topSym: Sym;
+    do {
+      token = tokenizer.peek();
+      const nextSym = token == null ? g.Eof : this.getSym(token);
+      const nextValue = token == null ? null : token.value;
+      [topState, topSym] = stack.top();
+      const actions = this.parseTable.getActions(topState, nextSym);
+      if (actions == null || actions.length == 0) {
+        throw new UnexpectedTokenError(token);
+      }
+
+      const action = this.resolveActions(actions, stack, tokenizer);
+      if (action.tag == LRActionType.ACCEPT) {
+        break;
+      } else if (action.tag == LRActionType.SHIFT) {
+        const nextState = action.nextState!;
+        stack.push(nextState, nextSym);
+      } else {
+        // reduce
+        assert(action.nonterm != null, "Nonterm and ruleindex must be provided for a reduction action");
+        const rule = action.nonterm.rules[action.ruleIndex];
+        const ruleLen = rule.length;
+        // pop this many items off the stack
+        for (let i = 0; i < ruleLen; i++) stack.pop();
+        [topState, topSym] = stack.top();
+        const newAction = this.resolveActions(this.parseTable.getActions(topState, action.nonterm), stack, tokenizer);
+        assert(newAction != null, "Top item does not have an action.");
+        stack.push(newAction.nextState!, action.nonterm);
+        // TODO:
+        // Output the prduction A -> rule - as part of PTN building
+      }
+    } while (true); // !stack.isEmpty);
+    return null;
+  }
+
+  /**
+   * Pick an action among several actions based on several factors (eg curr parse stack, tokenizer etc).
+   */
+  resolveActions(actions: LRAction[], stack: ParseStack, tokenizer: Tokenizer): LRAction {
+    if (actions.length > 1) {
+      throw new Error("Multiple actions found.");
+    }
+    return actions[0];
   }
 }
