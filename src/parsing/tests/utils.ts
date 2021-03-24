@@ -105,6 +105,7 @@ export function verifyLLParseTable(
   return true;
 }
 
+// Verified using http://jsmachines.sourceforge.net/machines/lr1.html
 export function verifyLRParseTable(
   name: string,
   g: Grammar,

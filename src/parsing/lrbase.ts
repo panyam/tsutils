@@ -350,7 +350,7 @@ export class ParseTable {
 
   addAction(state: LRItemSet, next: Sym, action: LRAction): void {
     const actions = this.getActions(state, next, true);
-    if (actions.findIndex((action) => action.equals(action)) < 0) {
+    if (actions.findIndex((ac) => ac.equals(action)) < 0) {
       actions.push(action);
     }
   }

@@ -34,7 +34,7 @@ describe("LR1ItemGraph", () => {
   test("Test1", () => {
     const firstSets = new FirstSets(g3);
     const ig = new LR1ItemGraph(g3, firstSets).refresh();
-    ig.itemSets.forEach((set, index) => console.log("Set ", index, "\n", set.debugString));
+    // ig.itemSets.forEach((set, index) => console.log("Set ", index, "\n", set.debugString));
     expect(ig.size).toBe(10);
     /*
     // Set 0

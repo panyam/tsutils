@@ -72,7 +72,7 @@ describe("LRParseTable with Conflicts", () => {
     verifyLRParseTable("G2", g2, makeSLRParseTable, {
       "0": { S: ["1"], L: ["2"], R: ["3"], STAR: ["S4"], id: ["S5"] },
       "1": { "<EOF>": ["Acc"] },
-      "2": { EQ: ["S6"], "<EOF>": ["R <R -> L>"] },
+      "2": { EQ: ["S6", "R <R -> L>"], "<EOF>": ["R <R -> L>"] },
       "3": { "<EOF>": ["R <S -> R>"] },
       "4": { L: ["7"], R: ["8"], STAR: ["S4"], id: ["S5"] },
       "5": { EQ: ["R <L -> id>"], "<EOF>": ["R <L -> id>"] },

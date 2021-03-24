@@ -4,7 +4,7 @@ import { Grammar } from "../grammar";
 import { EBNFParser } from "../ebnf";
 import { LRAction, ParseTable, LRItemGraph } from "../lrbase";
 import { LR1ItemGraph } from "../lr1";
-import { makeLRParseTable } from "../ptables";
+import { makeSLRParseTable, makeLRParseTable } from "../ptables";
 import { verifyLRParseTable, Goto, Shift, Reduce, expectPTableActions } from "./utils";
 
 const g1 = new EBNFParser(` S -> C C ; C -> c C | d ; `).grammar.augmentStartSymbol("S1");
@@ -79,6 +79,54 @@ describe("LR ParseTable", () => {
       "10": { n: ["S12"] },
       "11": { prep: ["R <VP -> v NP>"], "<EOF>": ["R <VP -> v NP>"] },
       "12": { prep: ["R <NP -> det n>"], "<EOF>": ["R <NP -> det n>"] },
+    });
+  });
+});
+
+const g4 = new EBNFParser(`
+  S -> NP VP ;
+  S -> S PP ;
+  NP -> n ;
+  NP -> det n ;
+  NP -> NP PP ;
+  PP -> prep NP ;
+  VP -> v NP ;
+`).grammar.augmentStartSymbol("S1");
+
+describe("LR ParseTable", () => {
+  test("Test G4", () => {
+    verifyLRParseTable("4", g4, makeLRParseTable, {
+      "0": { S: ["1"], NP: ["2"], n: ["S3"], det: ["S4"] },
+      "1": { PP: ["5"], prep: ["S6"], "<EOF>": ["Acc"] },
+      "2": { VP: ["7"], PP: ["8"], prep: ["S9"], v: ["S10"] },
+      "3": { prep: ["R <NP -> n>"], v: ["R <NP -> n>"] },
+      "4": { n: ["S11"] },
+      "5": { prep: ["R <S -> S PP>"], "<EOF>": ["R <S -> S PP>"] },
+      "6": { NP: ["12"], n: ["S13"], det: ["S14"] },
+      "7": { prep: ["R <S -> NP VP>"], "<EOF>": ["R <S -> NP VP>"] },
+      "8": { prep: ["R <NP -> NP PP>"], v: ["R <NP -> NP PP>"] },
+      "9": { NP: ["15"], n: ["S3"], det: ["S4"] },
+      "10": { NP: ["16"], n: ["S13"], det: ["S14"] },
+      "11": { prep: ["R <NP -> det n>"], v: ["R <NP -> det n>"] },
+      "12": {
+        PP: ["17"],
+        prep: ["S6", "R <PP -> prep NP>"],
+        "<EOF>": ["R <PP -> prep NP>"],
+      },
+      "13": { prep: ["R <NP -> n>"], "<EOF>": ["R <NP -> n>"] },
+      "14": { n: ["S18"] },
+      "15": {
+        PP: ["8"],
+        prep: ["S9", "R <PP -> prep NP>"],
+        v: ["R <PP -> prep NP>"],
+      },
+      "16": {
+        PP: ["17"],
+        prep: ["S6", "R <VP -> v NP>"],
+        "<EOF>": ["R <VP -> v NP>"],
+      },
+      "17": { prep: ["R <NP -> NP PP>"], "<EOF>": ["R <NP -> NP PP>"] },
+      "18": { prep: ["R <NP -> det n>"], "<EOF>": ["R <NP -> det n>"] },
     });
   });
 });
