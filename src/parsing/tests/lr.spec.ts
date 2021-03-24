@@ -172,3 +172,14 @@ describe("LR ParseTable", () => {
     });
   });
 });
+
+const g6 = new EBNFParser(`
+  E -> E + E ;
+  E -> d ;
+`).grammar.augmentStartSymbol("S1");
+
+describe("LR ParseTable", () => {
+  test("Test G6", () => {
+    verifyLRParseTable("G6", g6, makeLRParseTable, {});
+  });
+});
