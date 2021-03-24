@@ -174,12 +174,21 @@ describe("LR ParseTable", () => {
 });
 
 const g6 = new EBNFParser(`
-  E -> E + E ;
+  E -> E PLUS E ;
   E -> d ;
 `).grammar.augmentStartSymbol("S1");
 
 describe("LR ParseTable", () => {
   test("Test G6", () => {
-    verifyLRParseTable("G6", g6, makeLRParseTable, {});
+    verifyLRParseTable("G6", g6, makeLRParseTable, {
+      "0": { E: ["1"], d: ["S2"] },
+      "1": { PLUS: ["S3"], "<EOF>": ["Acc"] },
+      "2": { PLUS: ["R <E -> d>"], "<EOF>": ["R <E -> d>"] },
+      "3": { E: ["4"], d: ["S2"] },
+      "4": {
+        PLUS: ["R <E -> E PLUS E>", "S3"],
+        "<EOF>": ["R <E -> E PLUS E>"],
+      },
+    });
   });
 });
