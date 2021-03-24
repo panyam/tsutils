@@ -1,7 +1,7 @@
 import { Sym, Str, Grammar } from "./grammar";
 import { Token } from "./tokenizer";
 import { Tokenizer, PTNode, Parser as ParserBase } from "./parser";
-import { Nullable } from "../types";
+import { StringMap, Nullable } from "../types";
 import { assert } from "../utils/misc";
 import { FollowSets } from "./sets";
 
@@ -82,8 +82,8 @@ export class ParseTable {
     }
   }
 
-  get debugValue(): any {
-    const out = {} as any;
+  get debugValue(): StringMap<string[]> {
+    const out: StringMap<string[]> = {};
     this.forEachEntry((nt, term, items) => {
       const key = "<" + nt.label + "," + term.label + ">";
       const entries = out[key] || [];

@@ -2,7 +2,7 @@ import { Grammar } from "../grammar";
 import { EBNFParser } from "../ebnf";
 import { LRItemGraph, LRAction, ParseTable } from "../lrbase";
 import { makeSLRParseTable } from "../ptables";
-import { Goto, Shift, Reduce, expectPTableActions } from "./utils";
+import { verifyLRParseTable, Goto, Shift, Reduce, expectPTableActions } from "./utils";
 
 const g1 = new EBNFParser(`
   E -> E PLUS T | T ;
@@ -12,92 +12,49 @@ const g1 = new EBNFParser(`
 
 describe("LR ParseTable", () => {
   test("Test Basic", () => {
-    const [ptable, ig] = makeSLRParseTable(g1);
-    const EOF = g1.Eof.label;
-    // for (let i = 0; i < ig.itemSets.length; i++) { console.log("Set ", i, ": \n", ig.itemSets[i].printed()); }
-    // console.log("Actions: ", ptable.debugValue);
-    expectPTableActions(g1, ptable, ig, 0, {
-      id: [Shift(ig, 5)],
-      PLUS: [],
-      STAR: [],
-      "<EOF>": [],
-      OPEN: [Shift(ig, 4)],
-      E: [Goto(ig, 1)],
-      T: [Goto(ig, 2)],
-      F: [Goto(ig, 3)],
-    });
-
-    expectPTableActions(g1, ptable, ig, 1, {
-      PLUS: [Shift(ig, 6)],
-      "<EOF>": [LRAction.Accept()],
-    });
-
-    expectPTableActions(g1, ptable, ig, 2, {
-      PLUS: [Reduce(g1, "E", 1)],
-      STAR: [Shift(ig, 7)],
-      CLOSE: [Reduce(g1, "E", 1)],
-      "<EOF>": [Reduce(g1, "E", 1)],
-    });
-
-    expectPTableActions(g1, ptable, ig, 3, {
-      PLUS: [Reduce(g1, "T", 1)],
-      STAR: [Reduce(g1, "T", 1)],
-      CLOSE: [Reduce(g1, "T", 1)],
-      "<EOF>": [Reduce(g1, "T", 1)],
-    });
-
-    expectPTableActions(g1, ptable, ig, 4, {
-      OPEN: [Shift(ig, 4)],
-      id: [Shift(ig, 5)],
-      E: [Goto(ig, 8)],
-      T: [Goto(ig, 2)],
-      F: [Goto(ig, 3)],
-    });
-
-    expectPTableActions(g1, ptable, ig, 5, {
-      PLUS: [Reduce(g1, "F", 1)],
-      STAR: [Reduce(g1, "F", 1)],
-      CLOSE: [Reduce(g1, "F", 1)],
-      "<EOF>": [Reduce(g1, "F", 1)],
-    });
-
-    expectPTableActions(g1, ptable, ig, 6, {
-      OPEN: [Shift(ig, 4)],
-      id: [Shift(ig, 5)],
-      T: [Goto(ig, 9)],
-      F: [Goto(ig, 3)],
-    });
-
-    expectPTableActions(g1, ptable, ig, 7, {
-      OPEN: [Shift(ig, 4)],
-      id: [Shift(ig, 5)],
-      F: [Goto(ig, 10)],
-    });
-
-    expectPTableActions(g1, ptable, ig, 8, {
-      PLUS: [Shift(ig, 6)],
-      CLOSE: [Shift(ig, 11)],
-    });
-
-    expectPTableActions(g1, ptable, ig, 9, {
-      PLUS: [Reduce(g1, "E", 0)],
-      STAR: [Shift(ig, 7)],
-      CLOSE: [Reduce(g1, "E", 0)],
-      "<EOF>": [Reduce(g1, "E", 0)],
-    });
-
-    expectPTableActions(g1, ptable, ig, 10, {
-      PLUS: [Reduce(g1, "T", 0)],
-      STAR: [Reduce(g1, "T", 0)],
-      CLOSE: [Reduce(g1, "T", 0)],
-      "<EOF>": [Reduce(g1, "T", 0)],
-    });
-
-    expectPTableActions(g1, ptable, ig, 11, {
-      PLUS: [Reduce(g1, "F", 0)],
-      STAR: [Reduce(g1, "F", 0)],
-      CLOSE: [Reduce(g1, "F", 0)],
-      "<EOF>": [Reduce(g1, "F", 0)],
+    verifyLRParseTable("G1", g1, makeSLRParseTable, {
+      "0": { E: ["1"], T: ["2"], F: ["3"], OPEN: ["S4"], id: ["S5"] },
+      "1": { PLUS: ["S6"], "<EOF>": ["Acc"] },
+      "2": {
+        PLUS: ["R <E -> T>"],
+        STAR: ["S7"],
+        CLOSE: ["R <E -> T>"],
+        "<EOF>": ["R <E -> T>"],
+      },
+      "3": {
+        PLUS: ["R <T -> F>"],
+        STAR: ["R <T -> F>"],
+        CLOSE: ["R <T -> F>"],
+        "<EOF>": ["R <T -> F>"],
+      },
+      "4": { E: ["8"], T: ["2"], F: ["3"], OPEN: ["S4"], id: ["S5"] },
+      "5": {
+        PLUS: ["R <F -> id>"],
+        STAR: ["R <F -> id>"],
+        CLOSE: ["R <F -> id>"],
+        "<EOF>": ["R <F -> id>"],
+      },
+      "6": { T: ["9"], F: ["3"], OPEN: ["S4"], id: ["S5"] },
+      "7": { F: ["10"], OPEN: ["S4"], id: ["S5"] },
+      "8": { PLUS: ["S6"], CLOSE: ["S11"] },
+      "9": {
+        PLUS: ["R <E -> E PLUS T>"],
+        STAR: ["S7"],
+        CLOSE: ["R <E -> E PLUS T>"],
+        "<EOF>": ["R <E -> E PLUS T>"],
+      },
+      "10": {
+        PLUS: ["R <T -> T STAR F>"],
+        STAR: ["R <T -> T STAR F>"],
+        CLOSE: ["R <T -> T STAR F>"],
+        "<EOF>": ["R <T -> T STAR F>"],
+      },
+      "11": {
+        PLUS: ["R <F -> OPEN E CLOSE>"],
+        STAR: ["R <F -> OPEN E CLOSE>"],
+        CLOSE: ["R <F -> OPEN E CLOSE>"],
+        "<EOF>": ["R <F -> OPEN E CLOSE>"],
+      },
     });
   });
 });
@@ -112,8 +69,17 @@ const g2 = new EBNFParser(`
 
 describe("LRParseTable with Conflicts", () => {
   test("Test1", () => {
-    const [ptable, ig] = makeSLRParseTable(g2);
-    const EOF = g1.Eof.label;
-    // console.log("Actions: ", ptable.debugValue);
+    verifyLRParseTable("G2", g2, makeSLRParseTable, {
+      "0": { S: ["1"], L: ["2"], R: ["3"], STAR: ["S4"], id: ["S5"] },
+      "1": { "<EOF>": ["Acc"] },
+      "2": { EQ: ["S6"], "<EOF>": ["R <R -> L>"] },
+      "3": { "<EOF>": ["R <S -> R>"] },
+      "4": { L: ["7"], R: ["8"], STAR: ["S4"], id: ["S5"] },
+      "5": { EQ: ["R <L -> id>"], "<EOF>": ["R <L -> id>"] },
+      "6": { L: ["7"], R: ["9"], STAR: ["S4"], id: ["S5"] },
+      "7": { EQ: ["R <R -> L>"], "<EOF>": ["R <R -> L>"] },
+      "8": { EQ: ["R <L -> STAR R>"], "<EOF>": ["R <L -> STAR R>"] },
+      "9": { "<EOF>": ["R <S -> L EQ R>"] },
+    });
   });
 });

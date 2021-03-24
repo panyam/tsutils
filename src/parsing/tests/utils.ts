@@ -1,6 +1,7 @@
 import { assert } from "../../utils/misc";
 import { StringMap } from "../../types";
 import { Str, Grammar } from "../grammar";
+import { ParseTable as LLParseTable } from "../ll";
 import { LRAction, ParseTable, LRItemGraph } from "../lrbase";
 import { FirstSets, NullableSet, FollowSets } from "../sets";
 
@@ -88,4 +89,32 @@ export function expectPTableActions(
       }
     }
   }
+}
+
+export function verifyLLParseTable(
+  name: string,
+  g: Grammar,
+  maker: (g: Grammar) => LLParseTable,
+  actions: StringMap<string[]>,
+  debug = false,
+): boolean {
+  const ptable = maker(g);
+  const ptabValue = ptable.debugValue as StringMap<string[]>;
+  if (debug) console.log(`${name} Actions: `, ptabValue);
+  expect(actions).toEqual(ptabValue);
+  return true;
+}
+
+export function verifyLRParseTable(
+  name: string,
+  g: Grammar,
+  maker: (g: Grammar) => [ParseTable, LRItemGraph],
+  actions: StringMap<StringMap<string[]>>,
+  debug = false,
+): boolean {
+  const [ptable, ig] = maker(g);
+  const ptabValue = ptable.debugValue as StringMap<StringMap<string[]>>;
+  if (debug) console.log(`${name} Actions: `, ptabValue);
+  expect(actions).toEqual(ptabValue);
+  return true;
 }

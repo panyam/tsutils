@@ -138,12 +138,6 @@ export class LRItemSet {
   get sortedValues(): number[] {
     this.values.sort();
     return this.values;
-    /*
-    const values = [] as number[];
-    for (const v of this.values()) values.push(v);
-    values.sort();
-    return values;
-   */
   }
 
   get debugString(): string {
@@ -369,7 +363,7 @@ export class ParseTable {
         const sym = this.grammar.getSymById(symId as any)!;
         const actions = this.actions[fromId][sym.id] || [];
         if (actions.length > 0) {
-          out[fromId][sym.label] = actions.map((a) => a.toString()).join(", ");
+          out[fromId][sym.label] = actions.map((a) => a.toString());
         }
       }
     }
@@ -384,7 +378,6 @@ export class ParseStack {
   // true => isStateId
   // false => isSymbolId
   readonly stateStack: LRItemSet[] = [];
-  readonly symStack: Sym[] = [];
   readonly nodeStack: PTNode[] = []; // TBD
   constructor(g: Grammar, parseTable: ParseTable) {
     this.grammar = g;
@@ -392,26 +385,26 @@ export class ParseStack {
     assert(g.startSymbol != null, "Start symbol not selected");
   }
 
-  push(state: LRItemSet, sym: Sym): void {
+  push(state: LRItemSet, node: PTNode): void {
     this.stateStack.push(state);
-    this.symStack.push(sym);
+    this.nodeStack.push(node);
   }
 
-  top(): [LRItemSet, Sym] {
-    return [this.stateStack[this.stateStack.length - 1], this.symStack[this.symStack.length - 1]];
+  top(): [LRItemSet, PTNode] {
+    return [this.stateStack[this.stateStack.length - 1], this.nodeStack[this.nodeStack.length - 1]];
   }
 
-  pop(): [LRItemSet, Sym] {
+  pop(): [LRItemSet, PTNode] {
     if (this.isEmpty) {
       assert(false, "Stack is empty.");
     }
     const state = this.stateStack.pop() as LRItemSet;
-    const sym = this.symStack.pop() as Sym;
-    return [state, sym];
+    const node = this.nodeStack.pop() as PTNode;
+    return [state, node];
   }
 
   get isEmpty(): boolean {
-    return this.stateStack.length == 0 || this.symStack.length == 0;
+    return this.stateStack.length == 0 || this.nodeStack.length == 0;
   }
 }
 
@@ -428,14 +421,11 @@ export class LRParser extends ParserBase {
   parse(tokenizer: Tokenizer): Nullable<PTNode> {
     const g = this.grammar;
     const stack = new ParseStack(this.grammar, this.parseTable);
-    let token: Nullable<Token>;
-    let topState: LRItemSet;
-    let topSym: Sym;
-    do {
-      token = tokenizer.peek();
+    while (tokenizer.peek() != null || !stack.isEmpty) {
+      const token = tokenizer.peek();
       const nextSym = token == null ? g.Eof : this.getSym(token);
       const nextValue = token == null ? null : token.value;
-      [topState, topSym] = stack.top();
+      let [topState, topNode] = stack.top();
       const actions = this.parseTable.getActions(topState, nextSym);
       if (actions == null || actions.length == 0) {
         throw new UnexpectedTokenError(token);
@@ -445,24 +435,41 @@ export class LRParser extends ParserBase {
       if (action.tag == LRActionType.ACCEPT) {
         break;
       } else if (action.tag == LRActionType.SHIFT) {
-        const nextState = action.nextState!;
-        stack.push(nextState, nextSym);
+        const newNode = new PTNode(nextSym, nextValue);
+        stack.push(action.nextState!, newNode);
       } else {
         // reduce
         assert(action.nonterm != null, "Nonterm and ruleindex must be provided for a reduction action");
         const rule = action.nonterm.rules[action.ruleIndex];
         const ruleLen = rule.length;
-        // pop this many items off the stack
-        for (let i = 0; i < ruleLen; i++) stack.pop();
-        [topState, topSym] = stack.top();
+        // pop this many items off the stack and create a node
+        // from this
+        const newNode = new PTNode(action.nonterm);
+        for (let i = 0; i < ruleLen; i++) {
+          const [_, node] = stack.pop();
+          newNode.children.splice(0, 0, node);
+        }
+        [topState, topNode] = stack.top();
         const newAction = this.resolveActions(this.parseTable.getActions(topState, action.nonterm), stack, tokenizer);
         assert(newAction != null, "Top item does not have an action.");
-        stack.push(newAction.nextState!, action.nonterm);
-        // TODO:
-        // Output the prduction A -> rule - as part of PTN building
+        stack.push(newAction.nextState!, newNode);
+        this.notifyReduction(newNode, action.ruleIndex);
       }
-    } while (true); // !stack.isEmpty);
+    }
+    while (true); // !stack.isEmpty);
     return null;
+  }
+
+  /**
+   * called when a reduction has been performed.  At this time
+   * all the children have already been reduced (and called with
+   * this method).  Now is the opportunity for the parent node
+   * reduction to perform custom actions.  Note that this method
+   * cannot modify the stack.  It can only be used to perform
+   * things like AST building or logging etc.
+   */
+  notifyReduction(node: PTNode, ruleIndex: number): void {
+    //
   }
 
   /**
