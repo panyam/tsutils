@@ -4,6 +4,7 @@ import { StringMap, NumMap, Nullable } from "../types";
 import { assert } from "../utils/misc";
 import { Token } from "./tokenizer";
 import { UnexpectedTokenError } from "./errors";
+import { IDSet } from "./sets";
 
 export enum LRActionType {
   ACCEPT,
@@ -141,7 +142,7 @@ export class LRItemSet {
   }
 
   get debugString(): string {
-    return this.sortedValues.map((v: number) => this.itemGraph.items[v].debugString).join("\n");
+    return this.sortedValues.map((v: number) => this.itemGraph.items.get(v).debugString).join("\n");
   }
 }
 
@@ -152,19 +153,22 @@ export abstract class LRItemGraph {
   // Note that since the same Item can reside in multiple sets only
   // one is created via the newItem method and it is referred
   // everwhere it is needed.
-  items: LRItem[] = [];
-  // Table pointing Item.key -> indexes in the above table.
-  protected itemIndexes: StringMap<number> = {};
 
-  // All Item sets in this graph
-  itemSets: LRItemSet[] = [];
-  protected itemSetIndexes: StringMap<number> = {};
+  /**
+   * Using IDed sets of Items and ItemSets.
+   * This ensures that only one copy of an item exists
+   * "by value".
+   */
+  items: IDSet<LRItem>;
+  itemSets: IDSet<LRItemSet>;
 
   // Goto sets for a set and a given transition out of it
   gotoSets: NumMap<NumMap<LRItemSet>> = {};
 
   constructor(grammar: Grammar) {
     this.grammar = grammar;
+    this.items = new IDSet();
+    this.itemSets = new IDSet();
   }
 
   abstract closure(itemSet: LRItemSet): LRItemSet;
@@ -172,10 +176,8 @@ export abstract class LRItemGraph {
 
   reset(): void {
     this.gotoSets = {};
-    this.itemSets = [];
-    this.itemSetIndexes = {};
-    this.items = [];
-    this.itemIndexes = {};
+    this.items.clear();
+    this.itemSets.clear();
     this.startSet();
   }
 
@@ -190,8 +192,8 @@ export abstract class LRItemGraph {
    */
   protected evalGotoSets(): void {
     const out = this.itemSets;
-    for (let i = 0; i < out.length; i++) {
-      const currSet = out[i];
+    for (let i = 0; i < out.size; i++) {
+      const currSet = out.get(i);
       for (const sym of this.grammar.allSymbols) {
         const gotoSet = this.goto(currSet, sym);
         if (gotoSet.size > 0) {
@@ -208,13 +210,13 @@ export abstract class LRItemGraph {
   goto(itemSet: LRItemSet, sym: Sym): LRItemSet {
     const out = new LRItemSet(this);
     for (const itemId of itemSet.values) {
-      const item = this.items[itemId];
+      const item = this.items.get(itemId);
       // see if item.position points to "sym" in its rule
       const rule = item.nt.rules[item.ruleIndex];
       if (item.position < rule.length) {
         if (rule.syms[item.position] == sym) {
           // advance the item and add it
-          out.add(this.getItem(item.advance()).id);
+          out.add(this.items.ensure(item.advance()).id);
         }
       }
     }
@@ -222,49 +224,12 @@ export abstract class LRItemGraph {
     return this.closure(out);
   }
 
-  getItem(item: LRItem): LRItem {
-    if (!(item.key in this.itemIndexes)) {
-      item = item.copy();
-      item.id = this.itemIndexes[item.key] = this.items.length;
-      this.items.push(item);
-      return item;
-    } else {
-      return this.items[this.itemIndexes[item.key]];
-    }
-  }
-
-  /**
-   * Returns true if a particular item set exists in this item graph.
-   */
-  hasItemSet(itemSet: LRItemSet): boolean {
-    return itemSet.key in this.itemSetIndexes;
-  }
-
-  /**
-   * Gets an item set if it already exists otherwise it is created
-   * and returned.
-   * This method ensures that for any given itemset there is only
-   * one copy of it (by value) in the graph and if two item sets
-   * are equal by value then they must also be the same refernece.
-   */
-  getItemSet(itemSet: LRItemSet): LRItemSet {
-    assert(itemSet.values.length > 0);
-    // see if this itemset exists
-    if (this.hasItemSet(itemSet)) {
-      return this.itemSets[this.itemSetIndexes[itemSet.key]];
-    } else {
-      itemSet.id = this.itemSetIndexes[itemSet.key] = this.itemSets.length;
-      this.itemSets.push(itemSet);
-    }
-    return itemSet;
-  }
-
   protected newItemSet(...items: LRItem[]): LRItemSet {
     return new LRItemSet(this, ...items.map((item) => item.id));
   }
 
   get size(): number {
-    return this.itemSets.length;
+    return this.itemSets.size;
   }
 
   /**

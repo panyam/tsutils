@@ -68,7 +68,7 @@ export class LR1ItemGraph extends LRItemGraph {
    * StartSet = closure({S' -> . S, $})
    */
   startItem(): LRItem {
-    return this.getItem(new LR1Item(this.grammar.Eof, this.grammar.augStart, 0, 0));
+    return this.items.ensure(new LR1Item(this.grammar.Eof, this.grammar.augStart, 0, 0));
   }
 
   /**
@@ -79,7 +79,7 @@ export class LR1ItemGraph extends LRItemGraph {
     const out = new LRItemSet(this, ...itemSet.values);
     for (let i = 0; i < out.values.length; i++) {
       const itemId = out.values[i];
-      const item = this.items[itemId] as LR1Item;
+      const item = this.items.get(itemId) as LR1Item;
       const rule = item.nt.rules[item.ruleIndex];
       // Evaluate the closure
       // Cannot do anything past the end
@@ -93,12 +93,12 @@ export class LR1ItemGraph extends LRItemGraph {
           // For each rule [ B -> beta, term ] add it to
           // our list of items if it doesnt already exist
           for (let j = 0; j < B.rules.length; j++) {
-            const newItem = this.getItem(new LR1Item(term, B, j, 0));
+            const newItem = this.items.ensure(new LR1Item(term, B, j, 0));
             out.add(newItem.id);
           }
         }
       });
     }
-    return out.size == 0 ? out : this.getItemSet(out);
+    return out.size == 0 ? out : this.itemSets.ensure(out);
   }
 }

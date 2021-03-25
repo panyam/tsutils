@@ -1,6 +1,51 @@
-import { NumMap, Nullable } from "../types";
+import { StringMap, NumMap, Nullable } from "../types";
 import { Grammar, Sym, IDType, Str } from "./grammar";
 import { assert } from "../utils/misc";
+
+const defaultKeyFunc = (x: any) => x.key;
+
+export class IDSet<T extends { id: number }> {
+  protected _entries: T[] = [];
+  protected _entriesByKey: StringMap<T> = {};
+  protected keyFunc: (t: T) => string;
+
+  constructor(keyFunc: (t: T) => string = defaultKeyFunc) {
+    this.keyFunc = keyFunc;
+  }
+
+  clear(): void {
+    this._entries = [];
+    this._entriesByKey = {};
+  }
+
+  get entries(): ReadonlyArray<T> {
+    return this._entries;
+  }
+
+  get(id: number): T {
+    return this._entries[id];
+  }
+
+  ensure(entry: T): T {
+    // see if this itemset exists
+    if (this.has(entry)) {
+      return this._entriesByKey[this.keyFunc(entry)];
+    } else {
+      this._entriesByKey[this.keyFunc(entry)] = entry;
+      entry.id = this._entries.length;
+      this._entries.push(entry);
+    }
+    return entry;
+  }
+
+  has(entry: T): boolean {
+    return this.keyFunc(entry) in this._entriesByKey;
+  }
+
+  get size(): number {
+    return this._entries.length;
+  }
+}
 
 export class TermSet {
   readonly grammar: Grammar;

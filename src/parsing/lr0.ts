@@ -49,7 +49,7 @@ export class LR0Item implements LRItem {
 
 export class LR0ItemGraph extends LRItemGraph {
   protected startItem(): LRItem {
-    return this.getItem(new LR0Item(this.grammar.augStart));
+    return this.items.ensure(new LR0Item(this.grammar.augStart));
   }
 
   /**
@@ -60,7 +60,7 @@ export class LR0ItemGraph extends LRItemGraph {
     const out = new LRItemSet(this, ...itemSet.values);
     for (let i = 0; i < out.values.length; i++) {
       const itemId = out.values[i];
-      const item = this.items[itemId];
+      const item = this.items.get(itemId);
       const rule = item.nt.rules[item.ruleIndex];
       // Evaluate the closure
       // Cannot do anything past the end
@@ -68,12 +68,12 @@ export class LR0ItemGraph extends LRItemGraph {
         const sym = rule.syms[item.position];
         if (!sym.isTerminal) {
           for (let i = 0; i < sym.rules.length; i++) {
-            const newItem = this.getItem(new LR0Item(sym, i, 0));
+            const newItem = this.items.ensure(new LR0Item(sym, i, 0));
             out.add(newItem.id);
           }
         }
       }
     }
-    return out.size == 0 ? out : this.getItemSet(out);
+    return out.size == 0 ? out : this.itemSets.ensure(out);
   }
 }

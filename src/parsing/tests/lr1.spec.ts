@@ -8,10 +8,10 @@ import { FirstSets } from "../sets";
 function From(ig: LR1ItemGraph, ...entries: [string, string, number, number][]): LRItemSet {
   const items = entries.map(([term, label, ri, pos]) => {
     const item = new LR1Item(ig.grammar.getSym(term)!, ig.grammar.getSym(label)!, ri, pos);
-    return ig.getItem(item).id;
+    return ig.items.ensure(item).id;
   });
   const set = new LRItemSet(ig, ...items);
-  return ig.getItemSet(set);
+  return ig.itemSets.ensure(set);
 }
 
 export function expectItemSet(g: Grammar, set: LRItemSet, entries: [string, string, number, number][]): void {
@@ -21,7 +21,7 @@ export function expectItemSet(g: Grammar, set: LRItemSet, entries: [string, stri
     const nt = g.getSym(sym);
     const la = g.getSym(term)!;
     assert(nt != null, "Cannot find symbol: " + sym);
-    expect(set.has(ig.getItem(new LR1Item(la, nt, index, pos)).id)).toBe(true);
+    expect(set.has(ig.items.ensure(new LR1Item(la, nt, index, pos)).id)).toBe(true);
   }
 }
 

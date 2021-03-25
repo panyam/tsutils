@@ -6,11 +6,11 @@ import { LRAction, ParseTable, LRItemGraph } from "../lrbase";
 import { FirstSets, NullableSet, FollowSets } from "../sets";
 
 export function Goto(ig: LRItemGraph, newState: number): LRAction {
-  return LRAction.Goto(ig.itemSets[newState]);
+  return LRAction.Goto(ig.itemSets.get(newState));
 }
 
 export function Shift(itemGraph: LRItemGraph, newState: number): LRAction {
-  return LRAction.Shift(itemGraph.itemSets[newState]);
+  return LRAction.Shift(itemGraph.itemSets.get(newState));
 }
 
 export function Reduce(g: Grammar, nt: string, rule: number): LRAction {
@@ -68,7 +68,7 @@ export function expectPTableActions(
   fromSet: number,
   actions: StringMap<LRAction[]>,
 ): void {
-  const itemSet = itemGraph.itemSets[fromSet];
+  const itemSet = itemGraph.itemSets.get(fromSet);
   for (const label in actions) {
     const sym = label == g.Eof.label ? g.Eof : g.getSym(label);
     assert(sym != null, `Symbol '${label}' not found`);

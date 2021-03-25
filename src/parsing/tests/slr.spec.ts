@@ -1,8 +1,6 @@
-import { Grammar } from "../grammar";
 import { EBNFParser } from "../ebnf";
-import { LRItemGraph, LRAction, ParseTable } from "../lrbase";
 import { makeSLRParseTable } from "../ptables";
-import { verifyLRParseTable, Goto, Shift, Reduce, expectPTableActions } from "./utils";
+import { verifyLRParseTable } from "./utils";
 
 const g1 = new EBNFParser(`
   E -> E PLUS T | T ;
