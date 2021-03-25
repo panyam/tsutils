@@ -7,7 +7,7 @@ import { LR1ItemGraph } from "../lr1";
 import { makeSLRParseTable, makeLRParseTable } from "../ptables";
 import { verifyLRParseTable, Goto, Shift, Reduce, expectPTableActions } from "./utils";
 
-const g1 = new EBNFParser(` S -> C C ; C -> c C | d ; `).grammar.augmentStartSymbol("S1");
+const g1 = new EBNFParser(` `).grammar.augmentStartSymbol("S1");
 
 describe("LR ParseTable", () => {
   test("Test Basic", () => {
@@ -26,16 +26,15 @@ describe("LR ParseTable", () => {
   });
 });
 
-const g2 = new EBNFParser(`
-  S -> L EQ R ;
-  S -> R ;
-  L -> STAR R ;
-  L -> id ;
-  R -> L ;
-`).grammar.augmentStartSymbol("S1");
-
 describe("LRParseTable with Conflicts", () => {
-  test("Test1", () => {
+  const g2 = new EBNFParser(`
+    S -> L EQ R ;
+    S -> R ;
+    L -> STAR R ;
+    L -> id ;
+    R -> L ;
+  `).grammar.augmentStartSymbol("S1");
+  test("Test LR Parse Table", () => {
     verifyLRParseTable("G2", g2, makeLRParseTable, {
       "0": { S: ["1"], L: ["2"], R: ["3"], STAR: ["S4"], id: ["S5"] },
       "1": { "<EOF>": ["Acc"] },
@@ -51,6 +50,20 @@ describe("LRParseTable with Conflicts", () => {
       "11": { L: ["9"], R: ["13"], STAR: ["S11"], id: ["S12"] },
       "12": { "<EOF>": ["R <L -> id>"] },
       "13": { "<EOF>": ["R <L -> STAR R>"] },
+    });
+  });
+  test("Test LR Parse Table", () => {
+    verifyLRParseTable("G2", g2, makeSLRParseTable, {
+      "0": { S: ["1"], L: ["2"], R: ["3"], STAR: ["S4"], id: ["S5"] },
+      "1": { "<EOF>": ["Acc"] },
+      "2": { EQ: ["S6", "R <R -> L>"], "<EOF>": ["R <R -> L>"] },
+      "3": { "<EOF>": ["R <S -> R>"] },
+      "4": { L: ["7"], R: ["8"], STAR: ["S4"], id: ["S5"] },
+      "5": { EQ: ["R <L -> id>"], "<EOF>": ["R <L -> id>"] },
+      "6": { L: ["7"], R: ["9"], STAR: ["S4"], id: ["S5"] },
+      "7": { EQ: ["R <R -> L>"], "<EOF>": ["R <R -> L>"] },
+      "8": { EQ: ["R <L -> STAR R>"], "<EOF>": ["R <L -> STAR R>"] },
+      "9": { "<EOF>": ["R <S -> L EQ R>"] },
     });
   });
 });
@@ -190,5 +203,98 @@ describe("LR ParseTable", () => {
         "<EOF>": ["R <E -> E PLUS E>"],
       },
     });
+  });
+});
+
+describe("Jison tests", () => {
+  const basic = new EBNFParser(`
+    E -> E PLUS T | T ;
+    T -> ZERO ;
+    `).grammar.augmentStartSymbol("S1");
+
+  test("Basic LR1", () => {
+    verifyLRParseTable("Jison Basic", basic, makeLRParseTable, {
+      "0": { E: ["1"], T: ["2"], ZERO: ["S3"] },
+      "1": { PLUS: ["S4"], "<EOF>": ["Acc"] },
+      "2": { PLUS: ["R <E -> T>"], "<EOF>": ["R <E -> T>"] },
+      "3": { PLUS: ["R <T -> ZERO>"], "<EOF>": ["R <T -> ZERO>"] },
+      "4": { T: ["5"], ZERO: ["S3"] },
+      "5": { PLUS: ["R <E -> E PLUS T>"], "<EOF>": ["R <E -> E PLUS T>"] },
+    });
+  });
+  test("Basic SLR", () => {
+    verifyLRParseTable("Jison Basic", basic, makeSLRParseTable, {
+      "0": { E: ["1"], T: ["2"], ZERO: ["S3"] },
+      "1": { PLUS: ["S4"], "<EOF>": ["Acc"] },
+      "2": { PLUS: ["R <E -> T>"], "<EOF>": ["R <E -> T>"] },
+      "3": { PLUS: ["R <T -> ZERO>"], "<EOF>": ["R <T -> ZERO>"] },
+      "4": { T: ["5"], ZERO: ["S3"] },
+      "5": { PLUS: ["R <E -> E PLUS T>"], "<EOF>": ["R <E -> E PLUS T>"] },
+    });
+  });
+
+  const dism = new EBNFParser(`
+    pgm
+        -> instlist
+        ;
+
+    instlist
+        -> label COLON inst instlist
+        | inst instlist
+        |
+        ;
+
+    inst
+        -> ADD intt intt intt
+        | SUB intt intt intt
+        | MUL intt intt intt
+        | MOV intt intt
+        | LOD intt intt intt
+        | STR intt intt intt
+        | JMP intt intt intt
+        | BEQ intt intt intt
+        | BLT intt intt intt
+        | RDN intt
+        | PTN intt
+        | HLT intt
+        ;
+
+    label
+        -> LABEL
+        ;
+
+    intt
+        -> INT
+        | label
+        ;
+    `).grammar.augmentStartSymbol("pgm1");
+
+  test("DISM LR1", () => {
+    verifyLRParseTable(
+      "Jison DISM",
+      dism,
+      makeLRParseTable,
+      {
+        "0": { E: ["1"], T: ["2"], ZERO: ["S3"] },
+        "1": { PLUS: ["S4"], "<EOF>": ["Acc"] },
+        "2": { PLUS: ["R <E -> T>"], "<EOF>": ["R <E -> T>"] },
+        "3": { PLUS: ["R <T -> ZERO>"], "<EOF>": ["R <T -> ZERO>"] },
+        "4": { T: ["5"], ZERO: ["S3"] },
+        "5": { PLUS: ["R <E -> E PLUS T>"], "<EOF>": ["R <E -> E PLUS T>"] },
+      },
+      true,
+    );
+  });
+  test("DISM SLR", () => {
+    /*
+    verifyLRParseTable("Jison DISM", dism, makeSLRParseTable, {
+      "0": { E: ["1"], T: ["2"], ZERO: ["S3"] },
+      "1": { PLUS: ["S4"], "<EOF>": ["Acc"] },
+      "2": { PLUS: ["R <E -> T>"], "<EOF>": ["R <E -> T>"] },
+      "3": { PLUS: ["R <T -> ZERO>"], "<EOF>": ["R <T -> ZERO>"] },
+      "4": { T: ["5"], ZERO: ["S3"] },
+      "5": { PLUS: ["R <E -> E PLUS T>"], "<EOF>": ["R <E -> E PLUS T>"] },
+    });
+   */
   });
 });

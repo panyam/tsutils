@@ -56,28 +56,3 @@ describe("LR ParseTable", () => {
     });
   });
 });
-
-const g2 = new EBNFParser(`
-  S -> L EQ R ;
-  S -> R ;
-  L -> STAR R ;
-  L -> id ;
-  R -> L ;
-`).grammar.augmentStartSymbol("S1");
-
-describe("LRParseTable with Conflicts", () => {
-  test("Test1", () => {
-    verifyLRParseTable("G2", g2, makeSLRParseTable, {
-      "0": { S: ["1"], L: ["2"], R: ["3"], STAR: ["S4"], id: ["S5"] },
-      "1": { "<EOF>": ["Acc"] },
-      "2": { EQ: ["S6", "R <R -> L>"], "<EOF>": ["R <R -> L>"] },
-      "3": { "<EOF>": ["R <S -> R>"] },
-      "4": { L: ["7"], R: ["8"], STAR: ["S4"], id: ["S5"] },
-      "5": { EQ: ["R <L -> id>"], "<EOF>": ["R <L -> id>"] },
-      "6": { L: ["7"], R: ["9"], STAR: ["S4"], id: ["S5"] },
-      "7": { EQ: ["R <R -> L>"], "<EOF>": ["R <R -> L>"] },
-      "8": { EQ: ["R <L -> STAR R>"], "<EOF>": ["R <L -> STAR R>"] },
-      "9": { "<EOF>": ["R <S -> L EQ R>"] },
-    });
-  });
-});
