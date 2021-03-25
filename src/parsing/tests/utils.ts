@@ -4,6 +4,7 @@ import { Str, Grammar } from "../grammar";
 import { ParseTable as LLParseTable } from "../ll";
 import { LRAction, ParseTable, LRItemGraph } from "../lrbase";
 import { FirstSets, NullableSet, FollowSets } from "../sets";
+import { makeSLRParseTable, makeLRParseTable } from "../ptables";
 
 export function Goto(ig: LRItemGraph, newState: number): LRAction {
   return LRAction.Goto(ig.itemSets.get(newState));
@@ -118,4 +119,23 @@ export function verifyLRParseTable(
   if (debug) console.log(`${name} Actions: `, ptabValue);
   expect(actions).toEqual(ptabValue);
   return true;
+}
+
+import fs from "fs";
+import { EBNFParser } from "../ebnf";
+const JSON5 = require("json5");
+export function testParseTable(grammarFile: string, ptablesFile: string, ptabType: "lr1" | "slr", debug = false): void {
+  if (!grammarFile.startsWith("/")) {
+    grammarFile = __dirname + "/" + grammarFile;
+  }
+  if (!ptablesFile.startsWith("/")) {
+    ptablesFile = __dirname + "/" + ptablesFile;
+  }
+  const g = new EBNFParser(fs.readFileSync(grammarFile, "utf8")).grammar.augmentStartSymbol("S1");
+  const ptMaker = ptabType == "lr1" ? makeLRParseTable : makeSLRParseTable;
+  const [ptable, ig] = ptMaker(g);
+  const ptabValue = ptable.debugValue as StringMap<StringMap<string[]>>;
+  const expectedPTables = JSON5.parse(fs.readFileSync(ptablesFile, "utf8"));
+  if (debug || !(ptabType in expectedPTables)) console.log(`${grammarFile} ${ptabType} Actions: `, ptabValue);
+  expect(expectedPTables[ptabType]).toEqual(ptabValue);
 }

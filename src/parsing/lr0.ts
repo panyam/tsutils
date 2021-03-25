@@ -23,6 +23,17 @@ export class LR0Item implements LRItem {
     return new LR0Item(this.nt, this.ruleIndex, this.position);
   }
 
+  /**
+   * TODO - Instead of using strings as keys, can we use a unique ID?
+   * If we assume a max limit on number of non terminals in our grammar
+   * and a max limit on the number of rules per non terminal and a
+   * max limit on the size of each rule then we can uniquely identify
+   * a rule and position for a non-terminal by a single (64 bit) number
+   *
+   * We can use the following bitpacking to nominate this:
+   *
+   * <padding 16 bits><nt id 16 bits><ruleIndex 16 bits><position 16 bits>
+   */
   get key(): string {
     return this.nt.id + ":" + this.ruleIndex + ":" + this.position;
   }
