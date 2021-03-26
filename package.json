@@ -42,7 +42,7 @@
     "http-errors": "~1.8.0",
     "js-yaml": "^3.14.0",
     "markdown-it": "^12.0.4",
-    "morgan": "~1.9.1",
+    "morgan": "~1.10.0",
     "parse-duration": "^0.4.4",
     "passport": "^0.4.1",
     "passport-facebook": "^3.0.0",
