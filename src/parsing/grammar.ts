@@ -5,7 +5,6 @@ export enum IDType {
   TERM,
   NON_TERM,
   STR,
-  // SYM,
   MAX_TYPES,
 }
 
@@ -18,30 +17,6 @@ abstract class GObj {
   }
 
   abstract toString(): string;
-}
-
-export enum Cardinality {
-  ATMOST_1 = -2,
-  ATLEAST_0 = -1,
-  EXACTLY_1 = 1,
-  ATLEAST_1 = 2,
-}
-
-export function multiplyCardinalities(c1: Cardinality, c2: Cardinality): Cardinality {
-  // * . X = *
-  // X. * = *
-  if (c1 == Cardinality.ATLEAST_0 || c2 == Cardinality.ATLEAST_0) return Cardinality.ATLEAST_0;
-
-  // 1. X = X
-  if (c1 == Cardinality.EXACTLY_1) return c2;
-
-  // X . 1 = X
-  if (c2 == Cardinality.EXACTLY_1) return c1;
-
-  // X . X = X
-  if (c1 == c2) return c1;
-
-  return Cardinality.ATLEAST_0;
 }
 
 /**
@@ -129,7 +104,6 @@ export class Sym {
 export class Str extends GObj {
   readonly tag: IDType = IDType.STR;
   syms: Sym[];
-  // cardinalities: Cardinality[];
 
   constructor(...syms: Sym[]) {
     super();
@@ -151,9 +125,8 @@ export class Str extends GObj {
     return new Str(...this.syms);
   }
 
-  add(lit: Sym, cardinality: Cardinality = Cardinality.EXACTLY_1): void {
+  add(lit: Sym): void {
     this.syms.push(lit);
-    // this.cardinalities.push(cardinality);
   }
 
   isTerminal(index: number): boolean {
@@ -192,29 +165,13 @@ export class Str extends GObj {
   }
 
   get debugString(): string {
-    return this.syms
-      .map((lit, i) => {
-        return lit.label;
-        /*
-        let out = lit.label;
-        if (this.cardinalities[i] == Cardinality.ATLEAST_0) out += "*";
-        else if (this.cardinalities[i] == Cardinality.ATLEAST_1) out += "+";
-        else if (this.cardinalities[i] == Cardinality.ATMOST_1) out += "?";
-        return out;
-       */
-      })
-      .join(" ");
+    return this.syms.map((lit) => lit.label).join(" ");
   }
 }
 
 export class Grammar {
   public startSymbol: Nullable<Sym> = null;
   private _modified = true;
-  /*
-  protected _terminals: Sym[] = [];
-  protected _nonTerminals: Sym[] = [];
-  protected _auxNonTerminals: Sym[] = [];
-  */
   protected _allSymbols: Sym[] = [];
   protected symbolsByName: StringMap<Sym> = {};
   protected symbolsById: Sym[] = [];
@@ -435,11 +392,9 @@ export class Grammar {
   opt(exp: Str | string): Str {
     // convert to aux rule
     return this.anyof(exp, new Str());
-    // return this.cardinal(exp, Cardinality.ATMOST_1);
   }
 
   atleast0(exp: Str | string, leftRec = false): Str {
-    // return this.cardinal(exp, Cardinality.ATLEAST_0);
     const s = this.normalizeRule(exp);
     // We want to find another auxiliary NT that has the following rules:
     //    X -> exp X | ;    # if leftRec = true
@@ -479,7 +434,6 @@ export class Grammar {
   }
 
   atleast1(exp: Str | string, leftRec = false): Str {
-    // return this.cardinal(exp, Cardinality.ATLEAST_1);
     const s = this.normalizeRule(exp);
     // We want to find another auxiliary NT that has the following rules:
     //    X -> exp X | exp ;    # if leftRec = true
@@ -525,18 +479,6 @@ export class Grammar {
     this.symbolsById.push(sym);
     this.symbolsByName[sym.label] = sym;
     this._allSymbols.push(sym);
-    /*
-    if (sym.isTerminal) {
-      sym.index = this._terminals.length;
-      this._terminals.push(sym);
-    } else if (sym.isAuxiliary) {
-      sym.index = this._auxNonTerminals.length;
-      this._auxNonTerminals.push(sym);
-    } else {
-      sym.index = this._nonTerminals.length;
-      this._nonTerminals.push(sym);
-    }
-    */
     return sym;
   }
 
@@ -589,5 +531,16 @@ export class Grammar {
 
   findAuxNTByRules(...rules: Str[]): Nullable<Sym> {
     return this.findAuxNT((auxNT) => auxNT.rulesEqual(rules));
+  }
+
+  /**
+   * Returns a flat list of all productions in a single list.
+   */
+  debugValue(hideAux = false): string[] {
+    const out: string[] = [];
+    this.forEachRule((nt: Sym, rule: Str, index: number) => {
+      out.push(`${nt.label} -> ${rule.debugString}`);
+    });
+    return out;
   }
 }
