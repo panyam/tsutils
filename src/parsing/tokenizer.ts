@@ -51,7 +51,8 @@ export class CharTape {
           if (this.input[i] == "\\") numSlashes++;
           else break;
         }
-        if (numSlashes % 2 == 0) {  // even number of slashes mean we are fine
+        if (numSlashes % 2 == 0) {
+          // even number of slashes mean we are fine
           // found a match
           this.index = endIndex;
           return endIndex;
@@ -202,7 +203,11 @@ export class Tokenizer {
     // const col = this.tape.currCol;
     for (const [kwd, toktype] of this.literals) {
       if (this.tape.matches(kwd)) {
-        return new Token(toktype, { offset: pos, length: this.tape.index - pos, value: kwd });
+        return new Token(toktype, {
+          offset: pos,
+          length: this.tape.index - pos,
+          value: kwd,
+        });
       }
     }
     for (const [matcher, skip] of this.matchers) {
@@ -210,8 +215,7 @@ export class Tokenizer {
       if (token != null) {
         if (skip) {
           return this.extractNext();
-        }
-        else {
+        } else {
           token.offset = pos;
           token.length = this.tape.index - pos;
           return token;
@@ -220,7 +224,10 @@ export class Tokenizer {
     }
     // Fall through - error char found
     // throw new Error(`Line ${this.tape.currLine}, Col ${this.tape.currCol} - Invalid character: ${this.tape.currCh}`);
-    throw new ParseError(this.tape.index, `Invalid character: ${this.tape.currCh}`);
+    throw new ParseError(
+      this.tape.index,
+      `Invalid character: ${this.tape.currCh}`
+    );
   }
 
   peek(): Nullable<Token> {
@@ -244,7 +251,7 @@ export class Tokenizer {
     matchFunc: (token: Token) => boolean,
     ensure = false,
     consume = true,
-    nextAction?: (token: Token) => boolean | undefined,
+    nextAction?: (token: Token) => boolean | undefined
   ): Nullable<Token> {
     const token = this.peek();
     if (token != null) {

@@ -9,7 +9,11 @@ declare const ResizeObserver: any;
 export class EntityView<EntityType = any> extends View {
   protected _entity: Nullable<EntityType>;
 
-  constructor(rootElement: Element, entity: Nullable<EntityType> = null, config?: ViewParams) {
+  constructor(
+    rootElement: Element,
+    entity: Nullable<EntityType> = null,
+    config?: ViewParams
+  ) {
     super(rootElement, config);
     this._entity = entity;
   }
@@ -50,7 +54,9 @@ export class EntityView<EntityType = any> extends View {
    * entity is already set in this View.  This will help the View
    * reconcile any diffs.
    */
-  protected updateViewsFromEntity(_previous: Nullable<EntityType> = null): void {
+  protected updateViewsFromEntity(
+    _previous: Nullable<EntityType> = null
+  ): void {
     // Do nothing - implement this to update view state from entity
   }
 

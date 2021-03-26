@@ -7,12 +7,15 @@ import { assert } from "../utils/misc";
  */
 export abstract class Actor {
   processMessage(msg: Message): void {
-    assert(msg.target == this, "Cannot handle messages whose target is not this.");
+    assert(
+      msg.target == this,
+      "Cannot handle messages whose target is not this."
+    );
     if (msg.isReply) {
       const reply = msg as Reply;
       assert(
         reply.responseTo.spawnedFrom != null,
-        "Cannot spawn a reply for a send that itself was not spawned from another send",
+        "Cannot spawn a reply for a send that itself was not spawned from another send"
       );
       this.processReply(reply);
     } else {

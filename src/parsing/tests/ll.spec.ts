@@ -13,7 +13,7 @@ import { MockTokenizer } from "./mocks";
 function expectPTabEntries(
   g: Grammar,
   ptab: ParseTable,
-  entries: [string, string, [string, number, number][]][],
+  entries: [string, string, [string, number, number][]][]
 ): void {
   for (let e = 0; e < entries.length; e++) {
     const [ntL, termL, ents] = entries[e];
@@ -26,14 +26,22 @@ function expectPTabEntries(
     for (let i = 0; i < ents.length; i++) {
       const [expNT, expRI, expPos] = ents[i];
       const foundPTI = ptEntry[i];
-      if (expNT != foundPTI.nt.label || expRI != foundPTI.ruleIndex || expPos != foundPTI.position) {
+      if (
+        expNT != foundPTI.nt.label ||
+        expRI != foundPTI.ruleIndex ||
+        expPos != foundPTI.position
+      ) {
         assert(
           false,
-          `Entry: ${e}, Rule: ${i}, Expected: ${[expNT, expRI, expPos]}, Found: ${[
+          `Entry: ${e}, Rule: ${i}, Expected: ${[
+            expNT,
+            expRI,
+            expPos,
+          ]}, Found: ${[
             foundPTI.nt.label,
             foundPTI.ruleIndex,
             foundPTI.position,
-          ]}`,
+          ]}`
         );
       }
       expect(expNT).toEqual(foundPTI.nt.label);
@@ -129,7 +137,7 @@ describe("LLParser Tests", () => {
       tok("PLUS", "+"),
       tok("id", "B"),
       tok("STAR", "*"),
-      tok("id", "C"),
+      tok("id", "C")
     );
     const parser = new LLParser(g).setTokenizer(tokenizer);
     const root = parser.parse();

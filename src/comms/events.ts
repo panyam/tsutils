@@ -138,7 +138,11 @@ export class EventHub {
     });
   }
 
-  _addHandler<T>(names: Array<string> | string, handlerlist: { [key: string]: Array<T> }, handler: T): this {
+  _addHandler<T>(
+    names: Array<string> | string,
+    handlerlist: { [key: string]: Array<T> },
+    handler: T
+  ): this {
     this._ensurestrings(names).forEach(function (name) {
       handlerlist[name] = handlerlist[name] || [];
       handlerlist[name].push(handler);
@@ -146,7 +150,11 @@ export class EventHub {
     return this;
   }
 
-  _removeHandler<T>(names: Array<string> | string, handlerlist: { [key: string]: Array<T> }, handler: T): this {
+  _removeHandler<T>(
+    names: Array<string> | string,
+    handlerlist: { [key: string]: Array<T> },
+    handler: T
+  ): this {
     this._ensurestrings(names).forEach(function (name) {
       const evHandlers = handlerlist[name] || [];
       for (let i = 0; i < evHandlers.length; i++) {

@@ -36,7 +36,11 @@ export function expectNullables(nullables: NullableSet, terms: string[]): void {
   }
 }
 
-export function expectFSEntries(g: Grammar, fs: FirstSets | FollowSets, entries: StringMap<string[]>): void {
+export function expectFSEntries(
+  g: Grammar,
+  fs: FirstSets | FollowSets,
+  entries: StringMap<string[]>
+): void {
   for (const nt in entries) {
     const exp = g.getSym(nt);
     assert(exp != null, `Symbol {nt} does not exist`);
@@ -49,7 +53,11 @@ export function expectFSEntries(g: Grammar, fs: FirstSets | FollowSets, entries:
   }
 }
 
-export function expectRules(g: Grammar, nt: string, ...rules: (string | Str)[]): void {
+export function expectRules(
+  g: Grammar,
+  nt: string,
+  ...rules: (string | Str)[]
+): void {
   const nonterm = g.getSym(nt);
   assert(nonterm != null, `Nonterminal {nt} does not exist`);
   expect(nonterm?.rules.length).toBe(rules.length);
@@ -67,7 +75,7 @@ export function expectPTableActions(
   pt: ParseTable,
   itemGraph: LRItemGraph,
   fromSet: number,
-  actions: StringMap<LRAction[]>,
+  actions: StringMap<LRAction[]>
 ): void {
   const itemSet = itemGraph.itemSets.get(fromSet);
   for (const label in actions) {
@@ -85,7 +93,7 @@ export function expectPTableActions(
           false,
           `State ${fromSet} - Action Mismatch for label ${label} at index: ${i}.  Found: ${foundActions[
             i
-          ].toString()}, Expected: ${expectedActions[i].toString()}`,
+          ].toString()}, Expected: ${expectedActions[i].toString()}`
         );
       }
     }
@@ -97,7 +105,7 @@ export function verifyLLParseTable(
   g: Grammar,
   maker: (g: Grammar) => LLParseTable,
   actions: StringMap<string[]>,
-  debug = false,
+  debug = false
 ): boolean {
   const ptable = maker(g);
   const ptabValue = ptable.debugValue as StringMap<string[]>;
@@ -112,7 +120,7 @@ export function verifyLRParseTable(
   g: Grammar,
   maker: (g: Grammar) => [ParseTable, LRItemGraph],
   actions: StringMap<StringMap<string[]>>,
-  debug = false,
+  debug = false
 ): boolean {
   const [ptable, ig] = maker(g);
   const ptabValue = ptable.debugValue as StringMap<StringMap<string[]>>;
@@ -124,18 +132,26 @@ export function verifyLRParseTable(
 import fs from "fs";
 import { EBNFParser } from "../ebnf";
 const JSON5 = require("json5");
-export function testParseTable(grammarFile: string, ptablesFile: string, ptabType: "lr1" | "slr", debug = false): void {
+export function testParseTable(
+  grammarFile: string,
+  ptablesFile: string,
+  ptabType: "lr1" | "slr",
+  debug = false
+): void {
   if (!grammarFile.startsWith("/")) {
     grammarFile = __dirname + "/" + grammarFile;
   }
   if (!ptablesFile.startsWith("/")) {
     ptablesFile = __dirname + "/" + ptablesFile;
   }
-  const g = new EBNFParser(fs.readFileSync(grammarFile, "utf8")).grammar.augmentStartSymbol("S1");
+  const g = new EBNFParser(
+    fs.readFileSync(grammarFile, "utf8")
+  ).grammar.augmentStartSymbol("S1");
   const ptMaker = ptabType == "lr1" ? makeLRParseTable : makeSLRParseTable;
   const [ptable, ig] = ptMaker(g);
   const ptabValue = ptable.debugValue as StringMap<StringMap<string[]>>;
   const expectedPTables = JSON5.parse(fs.readFileSync(ptablesFile, "utf8"));
-  if (debug || !(ptabType in expectedPTables)) console.log(`${grammarFile} ${ptabType} Actions: `, ptabValue);
+  if (debug || !(ptabType in expectedPTables))
+    console.log(`${grammarFile} ${ptabType} Actions: `, ptabValue);
   expect(expectedPTables[ptabType]).toEqual(ptabValue);
 }

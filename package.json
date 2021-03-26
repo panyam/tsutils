@@ -68,8 +68,8 @@
     "test": "jest --coverage --runInBand",
     "start": "webpack-dev-server --mode=development",
     "build": "tsc",
-    "lint": "eslint . --quiet --ext .ts",
-    "lintfix": "eslint '*/**/*.ts' --quiet --fix",
+    "lint": "eslint './src' --quiet --ext .ts",
+    "lintfix": "eslint 'src/**/*.ts' --quiet --fix",
     "precommit-msg": "echo 'Pre-commit checks...' && exit 0"
   },
   "devDependencies": {

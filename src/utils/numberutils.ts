@@ -1,6 +1,10 @@
 import { Nullable } from "../types";
 
-export function range(start: number, end: Nullable<number> = null, incr: Nullable<number> = 1): number[] {
+export function range(
+  start: number,
+  end: Nullable<number> = null,
+  incr: Nullable<number> = 1
+): number[] {
   if (end == null) {
     const absStart = Math.abs(start);
     const arr = Array.from({ length: absStart });
@@ -92,7 +96,10 @@ export class Fraction {
   }
 
   plus(another: Fraction): Fraction {
-    return new Fraction(this.num * another.den + this.den * another.num, this.den * another.den);
+    return new Fraction(
+      this.num * another.den + this.den * another.num,
+      this.den * another.den
+    );
   }
 
   plusNum(another: number): Fraction {
@@ -100,7 +107,10 @@ export class Fraction {
   }
 
   minus(another: Fraction): Fraction {
-    return new Fraction(this.num * another.den - this.den * another.num, this.den * another.den);
+    return new Fraction(
+      this.num * another.den - this.den * another.num,
+      this.den * another.den
+    );
   }
 
   minusNum(another: number): Fraction {

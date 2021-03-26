@@ -34,7 +34,13 @@ export class MenuItem {
   children: MenuItem[] = [];
   childrenElem: Nullable<HTMLElement> = null;
 
-  constructor(type: MenuItemType, id: string, elem: HTMLElement, menubar: Menubar, parent: Nullable<MenuItem> = null) {
+  constructor(
+    type: MenuItemType,
+    id: string,
+    elem: HTMLElement,
+    menubar: Menubar,
+    parent: Nullable<MenuItem> = null
+  ) {
     this.id = id;
     this.type = type;
     this.elem = elem;
@@ -70,14 +76,18 @@ export class Menubar extends EventHub {
     this.idCounter = 0;
     this.rootMenus = [];
     this.menuItems = {};
-    const nodes = rootDiv.querySelectorAll("div.menuparent, hr.separator, span.menuitem");
+    const nodes = rootDiv.querySelectorAll(
+      "div.menuparent, hr.separator, span.menuitem"
+    );
     nodes.forEach((node) => {
       const elem = node as HTMLElement;
       this.assignMenuId(elem);
       this.toMenuItem(elem);
     });
     // now time to lay this all out
-    this.rootMenus.forEach((mi) => this.ensureMenuItemView(mi, this.rootElement));
+    this.rootMenus.forEach((mi) =>
+      this.ensureMenuItemView(mi, this.rootElement)
+    );
     document.addEventListener("click", (evt) => {
       this.onDocumentClicked(evt);
     });
@@ -118,7 +128,8 @@ export class Menubar extends EventHub {
       } else if (tag == "div") {
         out = new MenuItem(MenuItemType.PARENT, id, elem, this);
         out.label = elem.getAttribute("title") || "Menu";
-        out.key = elem.getAttribute("menuKey") || elem.getAttribute("title") || id;
+        out.key =
+          elem.getAttribute("menuKey") || elem.getAttribute("title") || id;
         out.hidden = elem.style.display == "none";
       } else {
         throw new Error("Unsupported menu item type");
@@ -148,13 +159,20 @@ export class Menubar extends EventHub {
           menuId: menuItem.id,
         },
       }) as HTMLElement;
-      menuItem.labelElem.addEventListener("click", (evt) => this.onMenuItemClicked(evt));
-      menuItem.labelElem.addEventListener("mouseenter", (evt) => this.onMenuItemEntered(evt));
-      menuItem.labelElem.addEventListener("mouseleave", (evt) => this.onMenuItemExited(evt));
+      menuItem.labelElem.addEventListener("click", (evt) =>
+        this.onMenuItemClicked(evt)
+      );
+      menuItem.labelElem.addEventListener("mouseenter", (evt) =>
+        this.onMenuItemEntered(evt)
+      );
+      menuItem.labelElem.addEventListener("mouseleave", (evt) =>
+        this.onMenuItemExited(evt)
+      );
       if (menuItem.hidden) menuItem.labelElem.style.display = "none";
       parent.appendChild(menuItem.labelElem);
     } else {
-      const miClass = menuItem.parent == null ? "menuRootItemLabel" : "menuItemLabel";
+      const miClass =
+        menuItem.parent == null ? "menuRootItemLabel" : "menuItemLabel";
       menuItem.labelElem = createNode("div", {
         attrs: {
           class: miClass,
@@ -162,9 +180,15 @@ export class Menubar extends EventHub {
         },
         text: menuItem.label,
       }) as HTMLSpanElement;
-      menuItem.labelElem.addEventListener("click", (evt) => this.onMenuItemClicked(evt));
-      menuItem.labelElem.addEventListener("mouseenter", (evt) => this.onMenuItemEntered(evt));
-      menuItem.labelElem.addEventListener("mouseleave", (evt) => this.onMenuItemExited(evt));
+      menuItem.labelElem.addEventListener("click", (evt) =>
+        this.onMenuItemClicked(evt)
+      );
+      menuItem.labelElem.addEventListener("mouseenter", (evt) =>
+        this.onMenuItemEntered(evt)
+      );
+      menuItem.labelElem.addEventListener("mouseleave", (evt) =>
+        this.onMenuItemExited(evt)
+      );
       if (menuItem.hidden) menuItem.labelElem.style.display = "none";
       parent.appendChild(menuItem.labelElem);
 
@@ -212,7 +236,11 @@ export class Menubar extends EventHub {
     if (mi.type == MenuItemType.PARENT && mi.childrenElem) {
       // toggle child
       const show = !this.isMenuItemShowing(mi);
-      const evt = new TEvent(show ? EventTypes.MENU_WILL_OPEN : EventTypes.MENU_WILL_CLOSE, this, mi);
+      const evt = new TEvent(
+        show ? EventTypes.MENU_WILL_OPEN : EventTypes.MENU_WILL_CLOSE,
+        this,
+        mi
+      );
       this.dispatchEvent(evt);
       if (evt.cancelled) {
         return;
@@ -226,7 +254,13 @@ export class Menubar extends EventHub {
         this.currentShowingMenuParent = this.currentShowingMenuParent.parent;
       }
       this.showMenuItem(mi, show);
-      this.dispatchEvent(new TEvent(show ? EventTypes.MENU_OPENED : EventTypes.MENU_CLOSED, this, mi));
+      this.dispatchEvent(
+        new TEvent(
+          show ? EventTypes.MENU_OPENED : EventTypes.MENU_CLOSED,
+          this,
+          mi
+        )
+      );
     } else if (mi.type == MenuItemType.SEPARATOR) {
       // Do nothing - for now
     } else {

@@ -118,7 +118,10 @@ class Tokenizer extends TokenizerBase {
         while (this.tape.hasMore && isDigit(this.tape.currCh)) {
           out += this.tape.nextCh();
         }
-        return new Token(TokenType.NUMBER, { offset: offset, value: parseInt(out) });
+        return new Token(TokenType.NUMBER, {
+          offset: offset,
+          value: parseInt(out),
+        });
       } else if (isIdentChar(ch)) {
         // Combination of everything else
         let lit = ch;
@@ -192,7 +195,10 @@ class Tokenizer extends TokenizerBase {
         out += currCh;
       }
     }
-    throw new ParseError(offset, "Unexpected end of input while reading string");
+    throw new ParseError(
+      offset,
+      "Unexpected end of input while reading string"
+    );
   }
 }
 
@@ -241,7 +247,10 @@ export class EBNFParser {
         // know there is a declaration for it.
         nt.isTerminal = false;
       } else {
-        assert(!nt.isAuxiliary, "NT is already auxiliary and cannot be reused.");
+        assert(
+          !nt.isAuxiliary,
+          "NT is already auxiliary and cannot be reused."
+        );
       }
       for (const rule of this.parseProductions(grammar, nt)) {
         nt.add(rule);
@@ -265,7 +274,13 @@ export class EBNFParser {
       if (rule) out.push(rule);
       if (this.tokenizer.consumeIf(TokenType.PIPE)) {
         continue;
-      } else if (this.tokenizer.nextMatches(TokenType.CLOSE_SQ, TokenType.CLOSE_PAREN, TokenType.SEMI_COLON)) {
+      } else if (
+        this.tokenizer.nextMatches(
+          TokenType.CLOSE_SQ,
+          TokenType.CLOSE_PAREN,
+          TokenType.SEMI_COLON
+        )
+      ) {
         break;
       }
     }
@@ -277,7 +292,14 @@ export class EBNFParser {
     while (true) {
       // if we are starting with a FOLLOW symbol then return as it marks
       // the end of this production
-      if (this.tokenizer.nextMatches(TokenType.CLOSE_PAREN, TokenType.CLOSE_SQ, TokenType.SEMI_COLON, TokenType.PIPE)) {
+      if (
+        this.tokenizer.nextMatches(
+          TokenType.CLOSE_PAREN,
+          TokenType.CLOSE_SQ,
+          TokenType.SEMI_COLON,
+          TokenType.PIPE
+        )
+      ) {
         return out;
       }
       let curr: Nullable<Str> = null;
@@ -305,7 +327,9 @@ export class EBNFParser {
         this.tokenizer.expectToken(TokenType.CLOSE_SQ);
       } else if (this.tokenizer.nextMatches(TokenType.IDENT)) {
         const token = this.tokenizer.next() as Token;
-        curr = new Str(grammar.getSym(token.value) || grammar.newTerm(token.value));
+        curr = new Str(
+          grammar.getSym(token.value) || grammar.newTerm(token.value)
+        );
       } else if (this.tokenizer.nextMatches(TokenType.STRING)) {
         const token = this.tokenizer.next() as Token;
         const label = '"' + token.value + '"';

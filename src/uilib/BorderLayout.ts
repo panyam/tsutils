@@ -128,7 +128,10 @@ export class BorderLayoutParams {
  * Applies border layout on a div where children are marked with borderlayout constraints.
  * It is expected that a child's preferred layout is known before this method is called.
  */
-export function applyBorderLayout(parent: HTMLDivElement, params: BorderLayoutParams): void {
+export function applyBorderLayout(
+  parent: HTMLDivElement,
+  params: BorderLayoutParams
+): void {
   const children = parent.querySelectorAll("[borderLayoutConstraint]");
   const northHTMLElement: Nullable<HTMLElement> = null;
   const eastHTMLElement: Nullable<HTMLElement> = null;
@@ -209,7 +212,10 @@ export class BorderLayout extends DefaultLayoutManager {
     return 0.5;
   }
 
-  addView(view: View, name: BorderLayoutConstraint = BorderLayoutConstraint.CENTER): void {
+  addView(
+    view: View,
+    name: BorderLayoutConstraint = BorderLayoutConstraint.CENTER
+  ): void {
     if (BorderLayoutConstraint.CENTER == name) {
       this.centerView = view;
     } else if (BorderLayoutConstraint.NORTH == name) {

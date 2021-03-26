@@ -22,8 +22,8 @@ export function githubAuthRouter(config: any, vbParams: any): any {
             return profile.id;
           }
         },
-      }),
-    ),
+      })
+    )
   );
 
   return createProviderRouter("github", { scope: ["email"] });

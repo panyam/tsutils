@@ -36,7 +36,12 @@ export class BoxLayout extends DefaultLayoutManager {
    * Creates a new box layout manager with the indicated alignment
    * and the indicated horizontal and vertical gaps.
    */
-  constructor(target: View, axis = BoxLayoutAxis.X_AXIS, leftToRight = true, isHorizontal = true) {
+  constructor(
+    target: View,
+    axis = BoxLayoutAxis.X_AXIS,
+    leftToRight = true,
+    isHorizontal = true
+  ) {
     super();
     this.target = target;
     this.axis = axis;
@@ -125,11 +130,37 @@ export class BoxLayout extends DefaultLayoutManager {
     this.validateRequests();
 
     if (absoluteAxis == BoxLayoutAxis.X_AXIS) {
-      SizeRequirements.calculateTiledPositions(alloc.width, this.xTotal, this.xChildren, xOffsets, xSpans, ltr);
-      SizeRequirements.calculateAlignedPositions(alloc.height, this.yTotal, this.yChildren, yOffsets, ySpans);
+      SizeRequirements.calculateTiledPositions(
+        alloc.width,
+        this.xTotal,
+        this.xChildren,
+        xOffsets,
+        xSpans,
+        ltr
+      );
+      SizeRequirements.calculateAlignedPositions(
+        alloc.height,
+        this.yTotal,
+        this.yChildren,
+        yOffsets,
+        ySpans
+      );
     } else {
-      SizeRequirements.calculateAlignedPositions(alloc.width, this.xTotal, this.xChildren, xOffsets, xSpans, ltr);
-      SizeRequirements.calculateTiledPositions(alloc.height, this.yTotal, this.yChildren, yOffsets, ySpans);
+      SizeRequirements.calculateAlignedPositions(
+        alloc.width,
+        this.xTotal,
+        this.xChildren,
+        xOffsets,
+        xSpans,
+        ltr
+      );
+      SizeRequirements.calculateTiledPositions(
+        alloc.height,
+        this.yTotal,
+        this.yChildren,
+        yOffsets,
+        ySpans
+      );
     }
 
     // flush changes to the container
@@ -139,7 +170,7 @@ export class BoxLayout extends DefaultLayoutManager {
         Math.min(insets.left + xOffsets[i], MAX_INT),
         Math.min(insets.top + yOffsets[i], MAX_INT),
         xSpans[i],
-        ySpans[i],
+        ySpans[i]
       );
     }
   }
@@ -167,8 +198,18 @@ export class BoxLayout extends DefaultLayoutManager {
         const min = c.minSize;
         const typ = c.prefSize;
         const max = c.maxSize;
-        this.xChildren[i] = new SizeRequirements(min.width, typ.width, max.width, c.alignmentX);
-        this.yChildren[i] = new SizeRequirements(min.height, typ.height, max.height, c.alignmentY);
+        this.xChildren[i] = new SizeRequirements(
+          min.width,
+          typ.width,
+          max.width,
+          c.alignmentX
+        );
+        this.yChildren[i] = new SizeRequirements(
+          min.height,
+          typ.height,
+          max.height,
+          c.alignmentY
+        );
       }
 
       // Resolve axis to an absolute value (either X_AXIS or Y_AXIS)
@@ -176,9 +217,13 @@ export class BoxLayout extends DefaultLayoutManager {
 
       if (absoluteAxis == BoxLayoutAxis.X_AXIS) {
         this.xTotal = SizeRequirements.getTiledSizeRequirements(this.xChildren);
-        this.yTotal = SizeRequirements.getAlignedSizeRequirements(this.yChildren);
+        this.yTotal = SizeRequirements.getAlignedSizeRequirements(
+          this.yChildren
+        );
       } else {
-        this.xTotal = SizeRequirements.getAlignedSizeRequirements(this.xChildren);
+        this.xTotal = SizeRequirements.getAlignedSizeRequirements(
+          this.xChildren
+        );
         this.yTotal = SizeRequirements.getTiledSizeRequirements(this.yChildren);
       }
     }
@@ -193,9 +238,13 @@ export class BoxLayout extends DefaultLayoutManager {
   private resolveAxis(axis: BoxLayoutAxis): BoxLayoutAxis {
     let absoluteAxis: BoxLayoutAxis;
     if (axis == BoxLayoutAxis.LINE_AXIS) {
-      absoluteAxis = this.isHorizontal ? BoxLayoutAxis.X_AXIS : BoxLayoutAxis.Y_AXIS;
+      absoluteAxis = this.isHorizontal
+        ? BoxLayoutAxis.X_AXIS
+        : BoxLayoutAxis.Y_AXIS;
     } else if (axis == BoxLayoutAxis.PAGE_AXIS) {
-      absoluteAxis = this.isHorizontal ? BoxLayoutAxis.Y_AXIS : BoxLayoutAxis.X_AXIS;
+      absoluteAxis = this.isHorizontal
+        ? BoxLayoutAxis.Y_AXIS
+        : BoxLayoutAxis.X_AXIS;
     } else {
       absoluteAxis = axis;
     }
