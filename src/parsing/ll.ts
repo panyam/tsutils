@@ -4,7 +4,6 @@ import { PTNode, Parser as ParserBase } from "./parser";
 import { StringMap, Nullable } from "../types";
 import { assert } from "../utils/misc";
 import { FollowSets } from "./sets";
-import { terminalWidth } from "yargs";
 
 export class ParseTableItem {
   readonly nt: Sym;
@@ -15,7 +14,11 @@ export class ParseTableItem {
   }
 
   get debugString(): string {
-    return `${this.nt.label} -> ${this.nt.rules[this.ruleIndex].debugString}`
+    return `${this.nt.label} -> ${this.nt.rules[this.ruleIndex].debugString}`;
+  }
+
+  equals(another: ParseTableItem): boolean {
+    return this.nt == another.nt && this.ruleIndex == another.ruleIndex;
   }
 }
 
@@ -26,8 +29,8 @@ export class ParseTable {
 
   constructor(grammar: Grammar, followSets?: FollowSets) {
     this.grammar = grammar;
-    this.entries = new Map();
     this.followSets = followSets || new FollowSets(grammar);
+    this.refresh();
   }
 
   refresh(): this {
@@ -66,7 +69,9 @@ export class ParseTable {
 
   add(nt: Sym, term: Sym, entry: ParseTableItem): boolean {
     const entries = this.ensureEntry(nt, term);
-    entries.push(entry);
+    if (entries.findIndex((e) => e.equals(entry)) < 0) {
+      entries.push(entry);
+    }
     return entries.length == 1;
   }
 

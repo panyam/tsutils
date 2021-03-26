@@ -96,11 +96,11 @@ export function verifyLLParseTable(
   name: string,
   g: Grammar,
   maker: (g: Grammar) => LLParseTable,
-  actions: StringMap<string[]>,
+  actions: StringMap<StringMap<string[]>>,
   debug = false,
 ): boolean {
   const ptable = maker(g);
-  const ptabValue = ptable.debugValue as StringMap<string[]>;
+  const ptabValue = ptable.debugValue;
   if (debug) console.log(`${name} Actions: `, ptabValue);
   expect(actions).toEqual(ptabValue);
   return true;

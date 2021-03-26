@@ -1,20 +1,15 @@
-import { Nullable } from "../../types";
-import { Sym, Grammar } from "../grammar";
+import { Grammar } from "../grammar";
 import { FirstSets, NullableSet, FollowSets } from "../sets";
 import { EBNFParser } from "../ebnf";
 import { assert } from "../../utils/misc";
 import { ParseTable, Parser } from "../ll";
-import { PTNode, Tokenizer } from "../parser";
+import { PTNode } from "../parser";
 import { Token } from "../tokenizer";
 import { expectFSEntries } from "./utils";
 import Samples from "./samples";
 import { MockTokenizer } from "./mocks";
 
-function expectPTabEntries(
-  g: Grammar,
-  ptab: ParseTable,
-  entries: [string, string, [string, number, number][]][],
-): void {
+function expectPTabEntries(g: Grammar, ptab: ParseTable, entries: [string, string, [string, number][]][]): void {
   for (let e = 0; e < entries.length; e++) {
     const [ntL, termL, ents] = entries[e];
     ents.sort();
@@ -24,21 +19,16 @@ function expectPTabEntries(
     ptEntry.sort();
     expect(ptEntry.length).toEqual(ents.length);
     for (let i = 0; i < ents.length; i++) {
-      const [expNT, expRI, expPos] = ents[i];
+      const [expNT, expRI] = ents[i];
       const foundPTI = ptEntry[i];
-      if (expNT != foundPTI.nt.label || expRI != foundPTI.ruleIndex || expPos != foundPTI.position) {
+      if (expNT != foundPTI.nt.label || expRI != foundPTI.ruleIndex) {
         assert(
           false,
-          `Entry: ${e}, Rule: ${i}, Expected: ${[expNT, expRI, expPos]}, Found: ${[
-            foundPTI.nt.label,
-            foundPTI.ruleIndex,
-            foundPTI.position,
-          ]}`,
+          `Entry: ${e}, Rule: ${i}, Expected: ${[expNT, expRI]}, Found: ${[foundPTI.nt.label, foundPTI.ruleIndex]}`,
         );
       }
       expect(expNT).toEqual(foundPTI.nt.label);
       expect(expRI).toEqual(foundPTI.ruleIndex);
-      expect(expPos).toEqual(foundPTI.position);
     }
   }
 }
@@ -67,18 +57,18 @@ describe("ParseTable Tests", () => {
     const ptab = new ParseTable(g, fls);
     expect(ptab.count).toBe(6);
     expectPTabEntries(g, ptab, [
-      ["S", "a", [["S", 1, 0]]],
-      ["S", "i", [["S", 0, 0]]],
+      ["S", "a", [["S", 1]]],
+      ["S", "i", [["S", 0]]],
       [
         "S1",
         "e",
         [
-          ["S1", 0, 0],
-          ["S1", 1, 0],
+          ["S1", 0],
+          ["S1", 1],
         ],
       ],
-      ["S1", g.Eof.label, [["S1", 1, 0]]],
-      ["E", "b", [["E", 0, 0]]],
+      ["S1", g.Eof.label, [["S1", 1]]],
+      ["E", "b", [["E", 0]]],
     ]);
   });
 
@@ -91,22 +81,22 @@ describe("ParseTable Tests", () => {
     const ptab = new ParseTable(g, fls);
     expect(ptab.count).toBe(13);
     expectPTabEntries(g, ptab, [
-      ["E", "id", [["E", 0, 0]]],
-      ["E", "OPEN", [["E", 0, 0]]],
-      ["E1", "PLUS", [["E1", 0, 0]]],
-      ["E1", "CLOSE", [["E1", 1, 0]]],
-      ["E1", g.Eof.label, [["E1", 1, 0]]],
+      ["E", "id", [["E", 0]]],
+      ["E", "OPEN", [["E", 0]]],
+      ["E1", "PLUS", [["E1", 0]]],
+      ["E1", "CLOSE", [["E1", 1]]],
+      ["E1", g.Eof.label, [["E1", 1]]],
 
-      ["T", "id", [["T", 0, 0]]],
-      ["T", "OPEN", [["T", 0, 0]]],
+      ["T", "id", [["T", 0]]],
+      ["T", "OPEN", [["T", 0]]],
 
-      ["T1", "PLUS", [["T1", 1, 0]]],
-      ["T1", "STAR", [["T1", 0, 0]]],
-      ["T1", "CLOSE", [["T1", 1, 0]]],
-      ["T1", g.Eof.label, [["T1", 1, 0]]],
+      ["T1", "PLUS", [["T1", 1]]],
+      ["T1", "STAR", [["T1", 0]]],
+      ["T1", "CLOSE", [["T1", 1]]],
+      ["T1", g.Eof.label, [["T1", 1]]],
 
-      ["F", "id", [["F", 1, 0]]],
-      ["F", "OPEN", [["F", 0, 0]]],
+      ["F", "id", [["F", 1]]],
+      ["F", "OPEN", [["F", 0]]],
     ]);
   });
 });
