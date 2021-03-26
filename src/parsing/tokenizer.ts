@@ -45,8 +45,18 @@ export class CharTape {
       const endIndex = this.input.indexOf(pattern, lastIndex);
       if (endIndex < 0) {
         throw new Error(`Unexpected end of input before (${pattern})`);
-      } else if (ensureNoPrefixSlash && this.input[endIndex - 1] == "\\") {
-        lastIndex = endIndex;
+      } else if (ensureNoPrefixSlash) {
+        let numSlashes = 0;
+        for (let i = endIndex - 1; i >= 0; i--) {
+          if (this.input[i] == "\\") numSlashes++;
+          else break;
+        }
+        if (numSlashes % 2 == 0) {  // even number of slashes mean we are fine
+          // found a match
+          this.index = endIndex;
+          return endIndex;
+        }
+        lastIndex = endIndex + 1;
       } else {
         // found a match
         this.index = endIndex;
@@ -79,7 +89,7 @@ export class CharTape {
     return this.index < this.input.length;
   }
 
-  peekCh(): string {
+  get currCh(): string {
     if (!this.hasMore) return "";
     return this.input[this.index];
   }
@@ -151,7 +161,7 @@ export class Tokenizer {
   tape: CharTape;
   // TODO  - convert literals into a trie
   literals: [string, TokenType][] = [];
-  matchers: TokenMatcher[] = [];
+  matchers: [TokenMatcher, boolean][] = [];
 
   constructor(tape: string | CharTape) {
     if (typeof tape === "string") {
@@ -160,8 +170,8 @@ export class Tokenizer {
     this.tape = tape;
   }
 
-  addMatcher(matcher: TokenMatcher): void {
-    this.matchers.push(matcher);
+  addMatcher(matcher: TokenMatcher, skip = false): void {
+    this.matchers.push([matcher, skip]);
   }
 
   addLiteral(lit: string, tokType: TokenType): number {
@@ -185,21 +195,31 @@ export class Tokenizer {
    */
   protected extractNext(): Nullable<Token> {
     // go through all literals first
+    if (!this.tape.hasMore) return null;
     const pos = this.tape.index;
     // const line = this.tape.currLine;
     // const col = this.tape.currCol;
     for (const [kwd, toktype] of this.literals) {
       if (this.tape.matches(kwd)) {
-        return new Token(toktype, { offset: pos, length: kwd.length, value: kwd });
+        return new Token(toktype, { offset: pos, length: this.tape.index - pos, value: kwd });
       }
     }
-    for (const matcher of this.matchers) {
+    for (const [matcher, skip] of this.matchers) {
       const token = matcher(this.tape, pos);
-      if (token != null) return token;
+      if (token != null) {
+        if (skip) {
+          return this.extractNext();
+        }
+        else {
+          token.offset = pos;
+          token.length = this.tape.index - pos;
+          return token;
+        }
+      }
     }
     // Fall through - error char found
-    // throw new Error(`Line ${this.tape.currLine}, Col ${this.tape.currCol} - Invalid character: ${this.tape.peekCh()}`);
-    throw new ParseError(this.tape.index, `Invalid character: ${this.tape.peekCh()}`);
+    // throw new Error(`Line ${this.tape.currLine}, Col ${this.tape.currCol} - Invalid character: ${this.tape.currCh}`);
+    throw new ParseError(this.tape.index, `Invalid character: ${this.tape.currCh}`);
   }
 
   peek(): Nullable<Token> {

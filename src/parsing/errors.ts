@@ -6,7 +6,7 @@ export class ParseError extends Error {
   readonly name: string = "ParseError";
 
   constructor(index: number, message: string) {
-    super(message);
+    super(`Parse Erorr at (${index}): ${message}`);
     this.index = index;
   }
 }
@@ -18,7 +18,7 @@ export class UnexpectedTokenError extends ParseError {
 
   constructor(foundToken: Nullable<Token>, ...expectedTokens: Token[]) {
     super(
-      foundToken?.startOffset || 0,
+      foundToken?.offset || 0,
       `Found Token: ${foundToken?.tag || "EOF"} (${foundToken?.value || ""}), Expected: ${expectedTokens
         .map((t) => t.tag)
         .join(", ")}`,

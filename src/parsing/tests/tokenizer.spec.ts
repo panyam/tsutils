@@ -3,7 +3,7 @@ import { CharTape, Tokenizer } from "../tokenizer";
 describe("Tape Tests", () => {
   test("Basic", () => {
     const t1 = new CharTape("Hello World");
-    expect(t1.peekCh()).toBe("H");
+    expect(t1.currCh).toBe("H");
     expect(t1.index).toBe(0);
     expect(t1.nextCh()).toBe("H");
     expect(t1.index).toBe(1);

@@ -91,9 +91,7 @@ class Tokenizer extends TokenizerBase {
   extractNext(): Nullable<Token> {
     while (true) {
       // Extract comments first
-      const pos = this.tape.index;
-      const line = this.tape.currLine;
-      const col = this.tape.currCol;
+      const offset = this.tape.index;
 
       // Comments are also valid tokens
       const comment = this.extractComment();
@@ -104,7 +102,7 @@ class Tokenizer extends TokenizerBase {
       }
 
       if (this.tape.matches("->")) {
-        return new Token(TokenType.ARROW, { pos: pos, line: line, col: col, value: "->" });
+        return new Token(TokenType.ARROW, { offset: offset, value: "->" });
       }
       const ch = this.tape.nextCh();
       if (ch == "") return null;
@@ -112,30 +110,30 @@ class Tokenizer extends TokenizerBase {
       if (isSpace(ch)) {
         continue;
       } else if (ch == '"' || ch == "'") {
-        return this.extractTillEndOfString(pos, line, col, ch);
+        return this.extractTillEndOfString(offset, ch);
       } else if (ch in SingleChTokens) {
-        return new Token(SingleChTokens[ch], { pos: pos, line: line, col: col, value: ch });
+        return new Token(SingleChTokens[ch], { offset: offset, value: ch });
       } else if (isDigit(ch)) {
         let out = ch;
-        while (this.tape.hasMore && isDigit(this.tape.peekCh())) {
+        while (this.tape.hasMore && isDigit(this.tape.currCh)) {
           out += this.tape.nextCh();
         }
-        return new Token(TokenType.NUMBER, { pos: pos, line: line, col: col, value: parseInt(out) });
+        return new Token(TokenType.NUMBER, { offset: offset, value: parseInt(out) });
       } else if (isIdentChar(ch)) {
         // Combination of everything else
         let lit = ch;
         while (this.tape.hasMore) {
-          const currCh = this.tape.peekCh();
+          const currCh = this.tape.currCh;
           if (!isIdentChar(currCh) && !isDigit(currCh)) {
             break;
           }
           lit += this.tape.nextCh();
         }
-        return new Token(TokenType.IDENT, { pos: pos, line: line, col: col, value: lit });
+        return new Token(TokenType.IDENT, { offset: offset, value: lit });
       }
 
       // Fall through - error char found
-      throw new Error(`Line ${this.tape.currLine}, Col ${this.tape.currCol} - Invalid character: ${ch}`);
+      throw new Error(`Invalid character at (${offset}): ${ch}`);
     }
     return null;
   }
@@ -171,13 +169,13 @@ class Tokenizer extends TokenizerBase {
     return comment;
   }
 
-  extractTillEndOfString(pos: number, line: number, col: number, ender = "'"): Token {
+  extractTillEndOfString(offset: number, ender = "'"): Token {
     let out = "";
     while (this.tape.hasMore) {
       const currCh = this.tape.nextCh();
       if (currCh == ender) {
         // good
-        return new Token(TokenType.STRING, { pos: pos, line: line, col: col, value: out });
+        return new Token(TokenType.STRING, { offset: offset, value: out });
       } else if (currCh == "\\") {
         if (!this.tape.hasMore) {
           break;
@@ -194,7 +192,7 @@ class Tokenizer extends TokenizerBase {
         out += currCh;
       }
     }
-    throw new ParseError(line, col, "Unexpected end of input while reading string");
+    throw new ParseError(offset, "Unexpected end of input while reading string");
   }
 }
 
