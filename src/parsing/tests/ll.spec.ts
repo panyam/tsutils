@@ -131,8 +131,8 @@ describe("LLParser Tests", () => {
       tok("STAR", "*"),
       tok("id", "C"),
     );
-    const parser = new LLParser(g);
-    const root = parser.parse(tokenizer);
+    const parser = new LLParser(g).setTokenizer(tokenizer);
+    const root = parser.parse();
     console.log("Tree: \n", printTree(root!));
     expect(root?.sym.label).toBe("E");
   });

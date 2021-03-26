@@ -170,8 +170,9 @@ export class Tokenizer {
     this.tape = tape;
   }
 
-  addMatcher(matcher: TokenMatcher, skip = false): void {
+  addMatcher(matcher: TokenMatcher, skip = false): this {
     this.matchers.push([matcher, skip]);
+    return this;
   }
 
   addLiteral(lit: string, tokType: TokenType): number {

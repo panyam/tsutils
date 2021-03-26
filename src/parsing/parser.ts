@@ -36,8 +36,14 @@ export class PTNode {
 
 export abstract class Parser {
   grammar: Grammar;
+  tokenizer: Tokenizer;
   constructor(grammar: Grammar) {
     this.grammar = grammar;
+  }
+
+  setTokenizer(tokenizer: Tokenizer): this {
+    this.tokenizer = tokenizer;
+    return this;
   }
 
   /**
@@ -54,5 +60,5 @@ export abstract class Parser {
   /**
    * Parses the input and returns the resulting root Parse Tree node.
    */
-  abstract parse(tokenizer: Tokenizer): Nullable<PTNode>;
+  abstract parse(): Nullable<PTNode>;
 }

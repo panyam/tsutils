@@ -174,17 +174,20 @@ export class ParseStack {
 
 export class LLParser extends ParserBase {
   parseTable: ParseTable;
+  stack: ParseStack;
   constructor(grammar: Grammar, parseTable?: ParseTable) {
     super(grammar);
     this.parseTable = parseTable || new LL1ParseTable(grammar);
+    this.stack = new ParseStack(this.grammar, this.parseTable);
   }
 
   /**
    * Parses the input and returns the resulting root Parse Tree node.
    */
-  parse(tokenizer: Tokenizer): Nullable<PTNode> {
+  parse(): Nullable<PTNode> {
+    const tokenizer = this.tokenizer;
+    const stack = this.stack;
     const g = this.grammar;
-    const stack = new ParseStack(this.grammar, this.parseTable);
     let token: Nullable<Token>;
     let topItem: Sym;
     let topNode: PTNode;
@@ -197,56 +200,50 @@ export class LLParser extends ParserBase {
         if (topItem == nextSym) {
           // Something must happen here to stack symbol to build
           // the parse tree
-          this.consumeTokenAndPop(tokenizer, stack, nextSym, nextValue);
+          this.consumeTokenAndPop(nextSym, nextValue);
         } else {
-          this.processInvalidToken(tokenizer, stack, nextSym, nextValue);
+          this.processInvalidToken(nextSym, nextValue);
         }
       } else {
         const entries = this.parseTable.get(topItem, nextSym);
         if (entries.length != 1) {
-          this.processInvalidReductions(tokenizer, stack, nextSym, nextValue, entries);
+          this.processInvalidReductions(nextSym, nextValue, entries);
         } else {
-          this.popSymAndPushRule(stack, entries[0]);
+          this.popSymAndPushRule(entries[0]);
         }
       }
-      [topItem, topNode] = stack.top();  // Update top pointer
+      [topItem, topNode] = stack.top(); // Update top pointer
     } while (topItem != g.Eof); // !stack.isEmpty);
     return stack.rootNode;
   }
 
-  popSymAndPushRule(stack: ParseStack, entry: ParseTableItem): void {
-    const [sym, ptnode] = stack.pop();
+  popSymAndPushRule(entry: ParseTableItem): void {
+    const [sym, ptnode] = this.stack.pop();
     // This needs to match so we can push its children
     assert(sym == entry.nt);
     assert(ptnode.sym == entry.nt);
     const rule = entry.nt.rules[entry.ruleIndex];
     for (let i = rule.syms.length - 1; i >= 0; i--) {
       const sym = rule.syms[i];
-      const node = stack.push(sym);
+      const node = this.stack.push(sym);
       ptnode.children.splice(0, 0, node);
     }
   }
-  consumeTokenAndPop(tokenizer: Tokenizer, stack: ParseStack, nextSym: Sym, nextToken: Token): void {
-    const [sym, ptnode] = stack.top();
+  consumeTokenAndPop(nextSym: Sym, nextToken: Token): void {
+    const [sym, ptnode] = this.stack.top();
     assert(sym == nextSym);
     assert(ptnode.sym == nextSym);
     ptnode.value = nextToken;
-    tokenizer.next();
-    stack.pop();
+    this.tokenizer.next();
+    this.stack.pop();
   }
 
-  processInvalidToken(tokenizer: Tokenizer, stack: ParseStack, nextSym: Sym, nextValue: any): boolean {
+  processInvalidToken(nextSym: Sym, nextValue: any): boolean {
     throw new Error("Invalid token: " + nextSym.label);
     return true;
   }
 
-  processInvalidReductions(
-    tokenizer: Tokenizer,
-    stack: ParseStack,
-    nextSym: Sym,
-    nextValue: any,
-    entries: ParseTableItem[],
-  ): boolean {
+  processInvalidReductions(nextSym: Sym, nextValue: any, entries: ParseTableItem[]): boolean {
     throw new Error("Invalid # reductions found: " + entries.length);
     return true;
   }
