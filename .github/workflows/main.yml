@@ -9,15 +9,18 @@ jobs:
   build:
     name: GAE Deploy
     runs-on: ubuntu-latest
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-      - uses: actions/checkout@v2
-      - name: Install Node.js dependencies
-        run: npm install
+    # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+    - uses: actions/checkout@v2
+    - name: Install Node.js dependencies
+      run: npm install
 
-      # Runs lint
-      - name: Run lint
-        run: npm run lint
+    # Runs lint
+    - name: Run lint
+      run: npm run lint
 
-      # Runs test
-      - name: Run test
-        run: npm test
+    # Runs test
+    - name: Run test
+      run: npm test
