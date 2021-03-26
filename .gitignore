@@ -1,9 +1,9 @@
 yarn.lock
 *.d.ts
 app.js
-*.js
 *.js.map
-*.d.ts
+src/**/*.js
+tests/*.js
 coverage
 .DS_Store
 node_modules
