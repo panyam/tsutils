@@ -3,39 +3,6 @@ import { ParseError, UnexpectedTokenError } from "./errors";
 
 type TokenType = number | string;
 
-export class Token {
-  readonly tag: TokenType;
-  value?: any;
-  // Location info
-  pos: number;
-  line: number;
-  col: number;
-  index: number;
-
-  constructor(type: TokenType, options: any = null) {
-    options = options || {};
-    this.tag = type;
-    this.value = options.value != null ? options.value : null;
-    this.pos = options.pos || -1;
-    this.line = options.line || -1;
-    this.col = options.col || -1;
-    this.index = options.index || -1;
-  }
-
-  isOneOf(...expected: any[]): boolean {
-    for (const tok of expected) {
-      if (this.tag == tok) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  immediatelyFollows(another: Token): boolean {
-    return this.line == another.line && this.col == another.col + another.value.length;
-  }
-}
-
 /**
  * A Tape of characters we would read with some extra helpers like rewinding
  * forwarding and prefix checking that is fed into the different tokenizers
@@ -44,8 +11,6 @@ export class Token {
 export class CharTape {
   lineLengths: number[] = [];
   index = 0;
-  currLine = 0;
-  currCol = 0;
   input: string;
 
   constructor(input: string) {
@@ -56,13 +21,45 @@ export class CharTape {
     this.input += content;
   }
 
+  substring(startIndex: number, endIndex: number): string {
+    return this.input.substring(startIndex, endIndex);
+  }
+
+  /**
+   * Advances the tape to the end of the first occurence of the given pattern.
+   */
+  advanceAfter(pattern: string, ensureNoPrefixSlash = true): number {
+    const newPos = this.advanceTill(pattern, ensureNoPrefixSlash);
+    if (newPos >= 0) {
+      this.index += pattern.length;
+    }
+    return this.index;
+  }
+
+  /**
+   * Advances the tape till the start of a given pattern.
+   */
+  advanceTill(pattern: string, ensureNoPrefixSlash = true): number {
+    let lastIndex = this.index;
+    while (true) {
+      const endIndex = this.input.indexOf(pattern, lastIndex);
+      if (endIndex < 0) {
+        throw new Error(`Unexpected end of input before (${pattern})`);
+      } else if (ensureNoPrefixSlash && this.input[endIndex - 1] == "\\") {
+        lastIndex = endIndex;
+      } else {
+        // found a match
+        this.index = endIndex;
+        return endIndex;
+      }
+    }
+  }
+
   /**
    * Tells if the given prefix is matche at the current position of the tokenizer.
    */
   matches(prefix: string, advance = true): boolean {
     const lastIndex = this.index;
-    const lastLine = this.currLine;
-    const lastCol = this.currCol;
     let i = 0;
     let success = true;
     for (; i < prefix.length; i++) {
@@ -74,8 +71,6 @@ export class CharTape {
     // Reset pointers if we are only peeking or match failed
     if (!advance || !success) {
       this.index = lastIndex;
-      this.currLine = lastLine;
-      this.currCol = lastCol;
     }
     return success;
   }
@@ -92,33 +87,71 @@ export class CharTape {
   nextCh(): string {
     if (!this.hasMore) return "";
     const ch = this.input[this.index++];
+    /*
     this.currCol++;
     if (ch == "\n" || ch == "\r") {
       this.lineLengths[this.currLine] = this.currCol + 1;
       this.currCol = 0;
       this.currLine++;
     }
+    */
     return ch;
   }
 
   rewind(): boolean {
     //
     this.index--;
+    /*
     if (this.currCol > 0) this.currCol--;
     else {
       this.currLine--;
       this.currCol = this.lineLengths[this.currLine] - 1;
     }
+    */
     return true;
   }
 }
 
+export class Token {
+  readonly tag: TokenType;
+  value?: any;
+  // Location info
+  offset: number;
+  length: number;
+
+  constructor(type: TokenType, options: any = null) {
+    options = options || {};
+    this.tag = type;
+    this.value = options.value || 0;
+    this.offset = options.offset || 0;
+    this.length = options.length || 0;
+  }
+
+  isOneOf(...expected: any[]): boolean {
+    for (const tok of expected) {
+      if (this.tag == tok) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  immediatelyFollows(another: Token): boolean {
+    return this.offset == another.offset + another.length;
+  }
+}
+
+export type TokenMatcher = (_: CharTape, pos: number) => Nullable<Token>;
+
 /**
  * Tokenize our string into multiple Tokens.
  */
-export abstract class Tokenizer {
-  tape: CharTape;
+export class Tokenizer {
   private peekedToken: Nullable<Token> = null;
+  tape: CharTape;
+  // TODO  - convert literals into a trie
+  literals: [string, TokenType][] = [];
+  matchers: TokenMatcher[] = [];
 
   constructor(tape: string | CharTape) {
     if (typeof tape === "string") {
@@ -127,13 +160,47 @@ export abstract class Tokenizer {
     this.tape = tape;
   }
 
+  addMatcher(matcher: TokenMatcher): void {
+    this.matchers.push(matcher);
+  }
+
+  addLiteral(lit: string, tokType: TokenType): number {
+    const index = this.literals.findIndex((k) => k[0] == lit);
+    if (index < 0) {
+      this.literals.push([lit, tokType]);
+      return this.literals.length - 1;
+    } else {
+      if (this.literals[index][1] != tokType) {
+        throw new Error(`Literal '${lit}' already registered as ${tokType}`);
+      }
+      return index;
+    }
+  }
+
   /**
    * Performs the real work of extracting the next token from
    * the tape based on the current state of the tokenizer.
-   *
+   * This can be overridden to do any other matchings to be prioritized first.
    * Returns NULL if end of input reached.
    */
-  protected abstract extractNext(): Nullable<Token>;
+  protected extractNext(): Nullable<Token> {
+    // go through all literals first
+    const pos = this.tape.index;
+    // const line = this.tape.currLine;
+    // const col = this.tape.currCol;
+    for (const [kwd, toktype] of this.literals) {
+      if (this.tape.matches(kwd)) {
+        return new Token(toktype, { offset: pos, length: kwd.length, value: kwd });
+      }
+    }
+    for (const matcher of this.matchers) {
+      const token = matcher(this.tape, pos);
+      if (token != null) return token;
+    }
+    // Fall through - error char found
+    // throw new Error(`Line ${this.tape.currLine}, Col ${this.tape.currCol} - Invalid character: ${this.tape.peekCh()}`);
+    throw new ParseError(this.tape.index, `Invalid character: ${this.tape.peekCh()}`);
+  }
 
   peek(): Nullable<Token> {
     return this.next(false);
@@ -174,7 +241,7 @@ export abstract class Tokenizer {
         return null;
       }
     } else if (ensure) {
-      throw new ParseError(-1, -1, "Unexpected end of input.");
+      throw new ParseError(-1, "Unexpected end of input.");
     }
     return token;
   }

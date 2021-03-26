@@ -2,14 +2,12 @@ import { Token } from "./tokenizer";
 import { Nullable } from "../types";
 
 export class ParseError extends Error {
-  line: number;
-  col: number;
+  index: number;
   readonly name: string = "ParseError";
 
-  constructor(line: number, col: number, message: string) {
+  constructor(index: number, message: string) {
     super(message);
-    this.line = line;
-    this.col = col;
+    this.index = index;
   }
 }
 
@@ -20,8 +18,7 @@ export class UnexpectedTokenError extends ParseError {
 
   constructor(foundToken: Nullable<Token>, ...expectedTokens: Token[]) {
     super(
-      foundToken?.line || -1,
-      foundToken?.col || -1,
+      foundToken?.startOffset || 0,
       `Found Token: ${foundToken?.tag || "EOF"} (${foundToken?.value || ""}), Expected: ${expectedTokens
         .map((t) => t.tag)
         .join(", ")}`,
