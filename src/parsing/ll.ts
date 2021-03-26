@@ -4,15 +4,18 @@ import { PTNode, Parser as ParserBase } from "./parser";
 import { StringMap, Nullable } from "../types";
 import { assert } from "../utils/misc";
 import { FollowSets } from "./sets";
+import { terminalWidth } from "yargs";
 
 export class ParseTableItem {
   readonly nt: Sym;
   readonly ruleIndex: number;
-  readonly position: number;
-  constructor(nt: Sym, ruleIndex = 0, position = 0) {
+  constructor(nt: Sym, ruleIndex = 0) {
     this.nt = nt;
     this.ruleIndex = ruleIndex;
-    this.position = position;
+  }
+
+  get debugString(): string {
+    return `${this.nt.label} -> ${this.nt.rules[this.ruleIndex].debugString}`
   }
 }
 
@@ -23,16 +26,17 @@ export class ParseTable {
 
   constructor(grammar: Grammar, followSets?: FollowSets) {
     this.grammar = grammar;
+    this.entries = new Map();
     this.followSets = followSets || new FollowSets(grammar);
-    this.refresh();
   }
 
-  refresh(): void {
+  refresh(): this {
     this.entries = new Map();
     this.followSets.refresh();
     this.grammar.forEachRule((nt, rule, index) => {
       this.processRule(nt, rule, index);
     });
+    return this;
   }
 
   get count(): number {
@@ -85,13 +89,14 @@ export class ParseTable {
     }
   }
 
-  get debugValue(): StringMap<string[]> {
-    const out: StringMap<string[]> = {};
+  get debugValue(): StringMap<StringMap<string[]>> {
+    const out: StringMap<StringMap<string[]>> = {};
     this.forEachEntry((nt, term, items) => {
-      const key = "<" + nt.label + "," + term.label + ">";
-      const entries = out[key] || [];
+      out[nt.label] = out[nt.label] || {};
+      out[nt.label][term.label] = out[nt.label][term.label] || [];
+      const entries = out[nt.label][term.label];
       for (const item of items) {
-        entries.push(`${item.nt.label} -> ${item.nt.rules[item.ruleIndex].debugString}`);
+        entries.push(item.debugString);
       }
     });
     return out;
