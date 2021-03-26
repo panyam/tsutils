@@ -3,7 +3,7 @@ import { Sym, Grammar } from "../grammar";
 import { FirstSets, NullableSet, FollowSets } from "../sets";
 import { EBNFParser } from "../ebnf";
 import { assert } from "../../utils/misc";
-import { LL1ParseTable, LLParser, ParseTable } from "../ll";
+import { ParseTable, Parser } from "../ll";
 import { PTNode, Tokenizer } from "../parser";
 import { Token } from "../tokenizer";
 import { expectFSEntries } from "./utils";
@@ -43,7 +43,7 @@ function expectPTabEntries(
   }
 }
 
-describe("LLParseTable Tests", () => {
+describe("ParseTable Tests", () => {
   test("Tests 1", () => {
     const g = new EBNFParser(`
       S -> i E t S S1 | a;
@@ -64,7 +64,7 @@ describe("LLParseTable Tests", () => {
       S1: ["e", g.Eof.label],
       E: ["t"],
     });
-    const ptab = new LL1ParseTable(g, fls);
+    const ptab = new ParseTable(g, fls);
     expect(ptab.count).toBe(6);
     expectPTabEntries(g, ptab, [
       ["S", "a", [["S", 1, 0]]],
@@ -88,7 +88,7 @@ describe("LLParseTable Tests", () => {
     const ns = new NullableSet(g);
     const fs = new FirstSets(g, ns);
     const fls = new FollowSets(g, fs);
-    const ptab = new LL1ParseTable(g, fls);
+    const ptab = new ParseTable(g, fls);
     expect(ptab.count).toBe(13);
     expectPTabEntries(g, ptab, [
       ["E", "id", [["E", 0, 0]]],
@@ -115,14 +115,14 @@ function tok(tag: any, value: any): Token {
   return new Token(tag, { value: value });
 }
 
-describe("LLParser Tests", () => {
+describe("Parser Tests", () => {
   test("Tests 1", () => {
     const g = new EBNFParser(Samples.expr2).grammar;
 
     const ns = new NullableSet(g);
     const fs = new FirstSets(g, ns);
     const fls = new FollowSets(g, fs);
-    const ptab = new LL1ParseTable(g, fls);
+    const ptab = new ParseTable(g, fls);
 
     const tokenizer = new MockTokenizer(
       tok("id", "A"),
@@ -131,7 +131,7 @@ describe("LLParser Tests", () => {
       tok("STAR", "*"),
       tok("id", "C"),
     );
-    const parser = new LLParser(g).setTokenizer(tokenizer);
+    const parser = new Parser(g).setTokenizer(tokenizer);
     const root = parser.parse();
     console.log("Tree: \n", printTree(root!));
     expect(root?.sym.label).toBe("E");

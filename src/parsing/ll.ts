@@ -1,6 +1,6 @@
 import { Sym, Str, Grammar } from "./grammar";
 import { Token } from "./tokenizer";
-import { Tokenizer, PTNode, Parser as ParserBase } from "./parser";
+import { PTNode, Parser as ParserBase } from "./parser";
 import { StringMap, Nullable } from "../types";
 import { assert } from "../utils/misc";
 import { FollowSets } from "./sets";
@@ -30,6 +30,9 @@ export class ParseTable {
   refresh(): void {
     this.entries = new Map();
     this.followSets.refresh();
+    this.grammar.forEachRule((nt, rule, index) => {
+      this.processRule(nt, rule, index);
+    });
   }
 
   get count(): number {
@@ -92,15 +95,6 @@ export class ParseTable {
       }
     });
     return out;
-  }
-}
-
-export class LL1ParseTable extends ParseTable {
-  refresh(): void {
-    super.refresh();
-    this.grammar.forEachRule((nt, rule, index) => {
-      this.processRule(nt, rule, index);
-    });
   }
 
   processRule(nt: Sym, rule: Str, index: number): void {
@@ -172,12 +166,12 @@ export class ParseStack {
   }
 }
 
-export class LLParser extends ParserBase {
+export class Parser extends ParserBase {
   parseTable: ParseTable;
   stack: ParseStack;
   constructor(grammar: Grammar, parseTable?: ParseTable) {
     super(grammar);
-    this.parseTable = parseTable || new LL1ParseTable(grammar);
+    this.parseTable = parseTable || new ParseTable(grammar);
     this.stack = new ParseStack(this.grammar, this.parseTable);
   }
 
