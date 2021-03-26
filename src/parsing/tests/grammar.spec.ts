@@ -1,11 +1,6 @@
 import { NullableSet } from "../sets";
 import { EBNFParser } from "../ebnf";
-import {
-  Str,
-  Grammar,
-  Cardinality,
-  multiplyCardinalities as MC,
-} from "../grammar";
+import { Str, Grammar, Cardinality, multiplyCardinalities as MC } from "../grammar";
 import { printGrammar } from "../utils";
 
 describe("Grammar Tests", () => {

@@ -27,14 +27,10 @@ export enum Cardinality {
   ATLEAST_1 = 2,
 }
 
-export function multiplyCardinalities(
-  c1: Cardinality,
-  c2: Cardinality
-): Cardinality {
+export function multiplyCardinalities(c1: Cardinality, c2: Cardinality): Cardinality {
   // * . X = *
   // X. * = *
-  if (c1 == Cardinality.ATLEAST_0 || c2 == Cardinality.ATLEAST_0)
-    return Cardinality.ATLEAST_0;
+  if (c1 == Cardinality.ATLEAST_0 || c2 == Cardinality.ATLEAST_0) return Cardinality.ATLEAST_0;
 
   // 1. X = X
   if (c1 == Cardinality.EXACTLY_1) return c2;
@@ -75,12 +71,7 @@ export class Sym {
    */
   id: number;
 
-  constructor(
-    grammar: Grammar,
-    label: string,
-    isTerminal: boolean,
-    id: Nullable<number> = null
-  ) {
+  constructor(grammar: Grammar, label: string, isTerminal: boolean, id: Nullable<number> = null) {
     this.isTerminal = isTerminal;
     this.label = label;
     if (id == null) {
@@ -299,13 +290,7 @@ export class Grammar {
    *
    * @param visitor
    */
-  forEachRule(
-    visitor: (
-      nt: Sym,
-      rule: Str,
-      index: number
-    ) => void | boolean | undefined | null
-  ): void {
+  forEachRule(visitor: (nt: Sym, rule: Str, index: number) => void | boolean | undefined | null): void {
     this.forEachNT((nt: Sym) => {
       for (let i = 0; i < nt.rules.length; i++) {
         if (visitor(nt, nt.rules[i], i) == false) return false;
@@ -443,9 +428,7 @@ export class Grammar {
       // see if there is already NT with the exact set of rules
       // reuse if it exists.  That would make this method
       // Idempotent (which it needs to be).
-      return new Str(
-        this.ensureAuxNT(...rules.map((r) => this.normalizeRule(r)))
-      );
+      return new Str(this.ensureAuxNT(...rules.map((r) => this.normalizeRule(r))));
     }
   }
 
@@ -565,10 +548,7 @@ export class Grammar {
     } else {
       // We have an expression that needs to be fronted by an
       // auxiliarry non-terminal
-      assert(
-        exp.tag == IDType.STR /* || exp.tag == IDType.SYM */,
-        "Found tag: " + exp.tag
-      );
+      assert(exp.tag == IDType.STR /* || exp.tag == IDType.SYM */, "Found tag: " + exp.tag);
       return exp;
     }
   }

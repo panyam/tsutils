@@ -57,9 +57,7 @@ export class Property {
       if (this.beforeSetterFunc == null) {
         const beforeSetterFunc = instance[this.schema.beforeSetterName];
         if (beforeSetterFunc == null) {
-          throw new Error(
-            "Cannot find beforeSetter function: " + this.schema.beforeSetterName
-          );
+          throw new Error("Cannot find beforeSetter function: " + this.schema.beforeSetterName);
         }
         this.beforeSetterFunc = beforeSetterFunc.bind(instance);
       }
@@ -144,12 +142,10 @@ function ensureProperty<T>(
   schema: PropertySchema,
   instance: any,
   propertyKey: string,
-  propertiesName = "__properties__"
+  propertiesName = "__properties__",
 ): Property {
   if (!instance[propertiesName]) {
-    throw new Error(
-      `Property store (${propertiesName}) does not exist in target.`
-    );
+    throw new Error(`Property store (${propertiesName}) does not exist in target.`);
   }
   const propertiesMap = instance[propertiesName];
   if (propertyKey in propertiesMap) {
@@ -195,21 +191,11 @@ export function property<T>({
 
     Object.defineProperty(target, propertyKey, {
       get() {
-        const property = ensureProperty(
-          newSchema,
-          this,
-          propertyKey,
-          propertiesName
-        );
+        const property = ensureProperty(newSchema, this, propertyKey, propertiesName);
         return property.value;
       },
       set(newValue: any) {
-        const property = ensureProperty(
-          newSchema,
-          this,
-          propertyKey,
-          propertiesName
-        );
+        const property = ensureProperty(newSchema, this, propertyKey, propertiesName);
         property.setValue(this, newValue);
       },
       enumerable: true,
@@ -218,15 +204,8 @@ export function property<T>({
   };
 }
 
-export function propertyValidator<T>(
-  propertyName: string,
-  propertiesName = "__properties__"
-) {
-  return function (
-    target: any,
-    propertyKey: string,
-    descriptor: PropertyDescriptor
-  ) {
+export function propertyValidator<T>(propertyName: string, propertiesName = "__properties__") {
+  return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
     // const property = ensureProperty(this, propertyKey, null, propertiesName);
     // property.setValue(
   };

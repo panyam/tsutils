@@ -26,9 +26,7 @@ export class PTNode {
 
   add(node: PTNode): this {
     if (this.isTerminal) {
-      throw new Error(
-        `Cannot add children (${node.sym.label}) to a terminal node: ${this.sym.label}`
-      );
+      throw new Error(`Cannot add children (${node.sym.label}) to a terminal node: ${this.sym.label}`);
     }
     node.parent = this;
     this.children.push(node);

@@ -67,13 +67,7 @@ export class ParseTable {
     return this.ensureEntry(nt, term);
   }
 
-  forEachEntry(
-    visitor: (
-      nonterm: Sym,
-      term: Sym,
-      items: ParseTableItem[]
-    ) => boolean | void
-  ): void {
+  forEachEntry(visitor: (nonterm: Sym, term: Sym, items: ParseTableItem[]) => boolean | void): void {
     for (const ntId of this.entries.keys()) {
       const ntMap = this.entries.get(ntId) || null;
       assert(ntMap != null);
@@ -94,9 +88,7 @@ export class ParseTable {
       const key = "<" + nt.label + "," + term.label + ">";
       const entries = out[key] || [];
       for (const item of items) {
-        entries.push(
-          `${item.nt.label} -> ${item.nt.rules[item.ruleIndex].debugString}`
-        );
+        entries.push(`${item.nt.label} -> ${item.nt.rules[item.ruleIndex].debugString}`);
       }
     });
     return out;
@@ -251,11 +243,7 @@ export class LLParser extends ParserBase {
     return true;
   }
 
-  processInvalidReductions(
-    nextSym: Sym,
-    nextValue: any,
-    entries: ParseTableItem[]
-  ): boolean {
+  processInvalidReductions(nextSym: Sym, nextValue: any, entries: ParseTableItem[]): boolean {
     throw new Error("Invalid # reductions found: " + entries.length);
     return true;
   }

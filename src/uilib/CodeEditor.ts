@@ -69,23 +69,16 @@ export class CodeEditor extends View {
       "white-space": "nowrap",
     };
 
-    const toProp = (key: string, value: unknown): string =>
-      key + ": " + value + ";";
+    const toProp = (key: string, value: unknown): string => key + ": " + value + ";";
     const lineNumStylesStr = collectStream(
-      mapStream(
-        streamDict<string, string>(lineNumberStyles),
-        (x: [string, string]) => toProp(x[0], x[1])
-      ),
+      mapStream(streamDict<string, string>(lineNumberStyles), (x: [string, string]) => toProp(x[0], x[1])),
       (prop, out) => prop + out,
-      ""
+      "",
     );
     const textAreaStylesStr = collectStream(
-      mapStream(
-        streamDict<string, string>(textAreaStyles),
-        (x: [string, string]) => toProp(x[0], x[1])
-      ),
+      mapStream(streamDict<string, string>(textAreaStyles), (x: [string, string]) => toProp(x[0], x[1])),
       (prop, out) => prop + out,
-      ""
+      "",
     );
     return `
       <style>
@@ -150,10 +143,7 @@ export class CodeEditor extends View {
     const end = textarea.selectionEnd;
 
     // set textarea value to: text before caret + tab + text after caret
-    textarea.value =
-      textarea.value.substring(0, start) +
-      contents +
-      textarea.value.substring(end);
+    textarea.value = textarea.value.substring(0, start) + contents + textarea.value.substring(end);
 
     // put caret at right position again
     textarea.selectionStart = textarea.selectionEnd = start + 1;

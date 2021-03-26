@@ -200,10 +200,7 @@ class SymTermSets {
 
   get debugString(): any {
     const out = {} as any;
-    for (const x in this.entries)
-      out[this.grammar.getSymById(x as any)!.label] = this.entries[
-        x
-      ].debugString;
+    for (const x in this.entries) out[this.grammar.getSymById(x as any)!.label] = this.entries[x].debugString;
     return out;
   }
 
@@ -281,11 +278,7 @@ export class FirstSets extends SymTermSets {
    * For a given string return the first(str) starting at a given index.
    * Including eps if it exists.
    */
-  forEachTermIn(
-    str: Str,
-    fromIndex = 0,
-    visitor: (term: Nullable<Sym>) => void
-  ): void {
+  forEachTermIn(str: Str, fromIndex = 0, visitor: (term: Nullable<Sym>) => void): void {
     // This needs to be memoized by exp.id + index
     const syms = str.syms;
     const visited = {} as any;

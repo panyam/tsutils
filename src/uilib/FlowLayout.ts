@@ -73,13 +73,7 @@ export class FlowLayout extends DefaultLayoutManager {
    * Creates a new flow layout manager with the indicated alignment
    * and the indicated horizontal and vertical gaps.
    */
-  constructor(
-    align = FlowAlignType.CENTER,
-    hgap = 0,
-    vgap = 0,
-    alignOnBaseline = false,
-    leftToRight = true
-  ) {
+  constructor(align = FlowAlignType.CENTER, hgap = 0, vgap = 0, alignOnBaseline = false, leftToRight = true) {
     super();
     this.hgap = hgap;
     this.vgap = vgap;
@@ -175,8 +169,7 @@ export class FlowLayout extends DefaultLayoutManager {
    */
   layoutChildViews(parentView: View): void {
     const insets = parentView.insets;
-    const maxwidth =
-      parentView.width - (insets.left + insets.right + this.hgap * 2);
+    const maxwidth = parentView.width - (insets.left + insets.right + this.hgap * 2);
     const nmembers = parentView.childViewCount;
     let x = 0,
       y = insets.top + this.vgap;
@@ -221,7 +214,7 @@ export class FlowLayout extends DefaultLayoutManager {
             this.leftToRight,
             useBaseline,
             ascent,
-            descent
+            descent,
           );
           x = d.width;
           y += this.vgap + rowh;
@@ -241,7 +234,7 @@ export class FlowLayout extends DefaultLayoutManager {
       this.leftToRight,
       useBaseline,
       ascent,
-      descent
+      descent,
     );
   }
 
@@ -272,7 +265,7 @@ export class FlowLayout extends DefaultLayoutManager {
     ltr: boolean,
     useBaseline: boolean,
     ascent: number[],
-    descent: number[]
+    descent: number[],
   ): number {
     switch (this.alignment) {
       case FlowAlignType.LEFT:

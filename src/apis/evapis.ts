@@ -50,18 +50,10 @@ export abstract class ResourceApi<ResType> extends EventHub {
     axios
       .post(url, this.processCreateParams(params))
       .then((response: Response) => {
-        this.dispatchEvent(
-          new TEvent(
-            ResourceApiEvent.CREATE_FINISHED,
-            this,
-            this.processListResponse(response)
-          )
-        );
+        this.dispatchEvent(new TEvent(ResourceApiEvent.CREATE_FINISHED, this, this.processListResponse(response)));
       })
       .error((err: Error) => {
-        this.dispatchEvent(
-          new TEvent(ResourceApiEvent.CREATE_FAILED, this, err)
-        );
+        this.dispatchEvent(new TEvent(ResourceApiEvent.CREATE_FAILED, this, err));
       });
   }
 
@@ -71,18 +63,10 @@ export abstract class ResourceApi<ResType> extends EventHub {
     axios
       .get(url)
       .then((response: Response) => {
-        this.dispatchEvent(
-          new TEvent(
-            ResourceApiEvent.BATCH_GET_FINISHED,
-            this,
-            this.processGetResponse(response)
-          )
-        );
+        this.dispatchEvent(new TEvent(ResourceApiEvent.BATCH_GET_FINISHED, this, this.processGetResponse(response)));
       })
       .error((err: Error) => {
-        this.dispatchEvent(
-          new TEvent(ResourceApiEvent.BATCH_GET_FAILED, this, err)
-        );
+        this.dispatchEvent(new TEvent(ResourceApiEvent.BATCH_GET_FAILED, this, err));
       });
   }
 
@@ -92,13 +76,7 @@ export abstract class ResourceApi<ResType> extends EventHub {
     axios
       .get(url)
       .then((response: Response) => {
-        this.dispatchEvent(
-          new TEvent(
-            ResourceApiEvent.GET_FINISHED,
-            this,
-            this.processGetResponse(response)
-          )
-        );
+        this.dispatchEvent(new TEvent(ResourceApiEvent.GET_FINISHED, this, this.processGetResponse(response)));
       })
       .error((err: Error) => {
         this.dispatchEvent(new TEvent(ResourceApiEvent.GET_FAILED, this, err));
@@ -111,13 +89,7 @@ export abstract class ResourceApi<ResType> extends EventHub {
     axios
       .get(url)
       .then((response: Response) => {
-        this.dispatchEvent(
-          new TEvent(
-            ResourceApiEvent.LIST_FINISHED,
-            this,
-            this.processListResponse(response)
-          )
-        );
+        this.dispatchEvent(new TEvent(ResourceApiEvent.LIST_FINISHED, this, this.processListResponse(response)));
       })
       .error((err: Error) => {
         this.dispatchEvent(new TEvent(ResourceApiEvent.LIST_FAILED, this, err));
@@ -130,18 +102,10 @@ export abstract class ResourceApi<ResType> extends EventHub {
     axios
       .post(url, this.processUpdateParams(params))
       .then((response: Response) => {
-        this.dispatchEvent(
-          new TEvent(
-            ResourceApiEvent.UPDATE_FINISHED,
-            this,
-            this.processListResponse(response)
-          )
-        );
+        this.dispatchEvent(new TEvent(ResourceApiEvent.UPDATE_FINISHED, this, this.processListResponse(response)));
       })
       .error((err: Error) => {
-        this.dispatchEvent(
-          new TEvent(ResourceApiEvent.UPDATE_FAILED, this, err)
-        );
+        this.dispatchEvent(new TEvent(ResourceApiEvent.UPDATE_FAILED, this, err));
       });
   }
 
@@ -153,18 +117,10 @@ export abstract class ResourceApi<ResType> extends EventHub {
       url: url,
     })
       .then((response: Response) => {
-        this.dispatchEvent(
-          new TEvent(
-            ResourceApiEvent.DELETE_FINISHED,
-            this,
-            this.processListResponse(response)
-          )
-        );
+        this.dispatchEvent(new TEvent(ResourceApiEvent.DELETE_FINISHED, this, this.processListResponse(response)));
       })
       .error((err: Error) => {
-        this.dispatchEvent(
-          new TEvent(ResourceApiEvent.DELETE_FAILED, this, err)
-        );
+        this.dispatchEvent(new TEvent(ResourceApiEvent.DELETE_FAILED, this, err));
       });
   }
 }

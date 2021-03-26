@@ -22,11 +22,7 @@ export class CallbackRequest {
     if (config.url && config.url.length > 0) {
       // parse hostnamea and path from url
       if (config.url.indexOf("://") < 0) {
-        throw new Error(
-          "Invalid URL: " +
-            config.url +
-            ".  Please use hostname and path instead."
-        );
+        throw new Error("Invalid URL: " + config.url + ".  Please use hostname and path instead.");
       }
       const u = new URL(config.url);
       console.log("Parsed URL: ", u);
@@ -45,12 +41,7 @@ export class CallbackRequest {
   }
 }
 
-export type AuthFlowCallback = (
-  authFlow: AuthFlow,
-  req: any,
-  res: any,
-  next: any
-) => void;
+export type AuthFlowCallback = (authFlow: AuthFlow, req: any, res: any, next: any) => void;
 
 export class AuthFlow extends BaseEntity {
   // A unique Auth Session ID

@@ -59,15 +59,11 @@ export class TabView extends View {
     console.log("Selecting Tab: ", index);
     if (this.selectedIndex != index) {
       if (this.selectedIndex >= 0) {
-        this.tabButtonElems[this.selectedIndex].classList.remove(
-          this.selectedTabClassName
-        );
+        this.tabButtonElems[this.selectedIndex].classList.remove(this.selectedTabClassName);
         this.tabContentElems[this.selectedIndex].style.display = "none";
       }
       this.selectedIndex = index;
-      this.tabButtonElems[this.selectedIndex].classList.add(
-        this.selectedTabClassName
-      );
+      this.tabButtonElems[this.selectedIndex].classList.add(this.selectedTabClassName);
       this.tabContentElems[this.selectedIndex].style.display = "inline";
       this.dispatchEvent(new TEvent(TabSelectedEvent, this, index));
     }

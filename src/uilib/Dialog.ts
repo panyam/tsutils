@@ -88,8 +88,7 @@ export class Dialog extends View {
   }
 
   close(index = -1, title = ""): boolean {
-    if (this.shouldClose != null && !this.shouldClose(index, title))
-      return false;
+    if (this.shouldClose != null && !this.shouldClose(index, title)) return false;
     if (this.resolveFunc != null) {
       this.resolveFunc([index, title]);
     }
@@ -106,8 +105,7 @@ export class Dialog extends View {
   }
 
   addButton(title: string): this {
-    const index = this.buttonContainer.querySelectorAll(".modalDialogButton")
-      .length;
+    const index = this.buttonContainer.querySelectorAll(".modalDialogButton").length;
     const btn = createNode("button", {
       attrs: { index: index, title: title, class: "modalDialogButton" },
       text: title,

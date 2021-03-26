@@ -50,20 +50,10 @@ describe("EBNF Tests", () => {
     const g = loadGrammar(
       `
       Y -> A ? [ B C D ]  [ X | Y | Z ] * [ 1 2 3 ] + ;
-    `
+    `,
     );
     expectListsEqual(symLabels(g.nonTerminals), ["Y"]);
-    expectListsEqual(symLabels(g.terminals), [
-      "1",
-      "2",
-      "3",
-      "X",
-      "Z",
-      "A",
-      "B",
-      "C",
-      "D",
-    ]);
+    expectListsEqual(symLabels(g.terminals), ["1", "2", "3", "X", "Z", "A", "B", "C", "D"]);
     expectRules(
       g,
       "Y",
@@ -71,8 +61,8 @@ describe("EBNF Tests", () => {
         g.opt("A"),
         g.opt(g.seq("B", "C", "D")),
         g.atleast0(g.opt(g.anyof("X", "Y", "Z"))),
-        g.atleast1(g.opt(g.seq("1", "2", "3")))
-      )
+        g.atleast1(g.opt(g.seq("1", "2", "3"))),
+      ),
     );
   });
 
@@ -83,15 +73,10 @@ describe("EBNF Tests", () => {
       Term -> Factor ( DIV | MULT ) Term ;
       Factor -> NUM | "(" Expr ")" ;
       X -> A B C D Z 1 2 3;
-    `
+    `,
     );
 
-    expectListsEqual(symLabels(g.nonTerminals), [
-      "Expr",
-      "Term",
-      "Factor",
-      "X",
-    ]);
+    expectListsEqual(symLabels(g.nonTerminals), ["Expr", "Term", "Factor", "X"]);
     expectListsEqual(symLabels(g.terminals), [
       "1",
       "2",

@@ -62,15 +62,10 @@ export class View extends EventHub {
       throw new Error("Root element already assigned to a view");
     }
     this.viewId = "" + View.idCounter++;
-    setAttr(
-      this.rootElement,
-      "viewId",
-      `${this.rootElement.tagName}${this.viewId}`
-    );
+    setAttr(this.rootElement, "viewId", `${this.rootElement.tagName}${this.viewId}`);
     this.childViews = [];
     this.config = this.processConfigs((config = config || {}));
-    this.childViewLoader =
-      config.childViewLoader || View.defaultChildViewLoader;
+    this.childViewLoader = config.childViewLoader || View.defaultChildViewLoader;
 
     // This will ensure children are loaded correctly and we can even intercept them as necessary
     // via config hooks - childViewLoader
@@ -234,8 +229,7 @@ export class View extends EventHub {
     if (another == this) return true;
     let parent: Nullable<View> = this.parentView;
     while (parent != null) {
-      if (parent == another || parent.rootElement == another.rootElement)
-        return true;
+      if (parent == another || parent.rootElement == another.rootElement) return true;
       parent = parent.parentView;
     }
     return false;
@@ -378,8 +372,7 @@ export class View extends EventHub {
       return (this.rootElement as SVGGraphicsElement).getBBox().width;
     } else {
       const stylemap = window.getComputedStyle(this.rootElement);
-      const insWidth =
-        parseInt(stylemap.marginLeft) | parseInt(stylemap.marginRight);
+      const insWidth = parseInt(stylemap.marginLeft) | parseInt(stylemap.marginRight);
       return (this.rootElement as HTMLElement).offsetWidth + insWidth;
     }
   }
@@ -389,8 +382,7 @@ export class View extends EventHub {
       return (this.rootElement as SVGGraphicsElement).getBBox().height;
     } else {
       const stylemap = window.getComputedStyle(this.rootElement);
-      const insHeight =
-        parseInt(stylemap.marginTop) | parseInt(stylemap.marginBottom);
+      const insHeight = parseInt(stylemap.marginTop) | parseInt(stylemap.marginBottom);
       return (this.rootElement as HTMLElement).offsetHeight + insHeight;
     }
   }
@@ -423,12 +415,7 @@ export class View extends EventHub {
     return this;
   }
 
-  protected setBoundsImpl(
-    x: number,
-    y: number,
-    width: number,
-    height: number
-  ): void {
+  protected setBoundsImpl(x: number, y: number, width: number, height: number): void {
     if (this.isSVG) {
       this.rootElement.setAttribute("x", "" + x);
       this.rootElement.setAttribute("y", "" + y);

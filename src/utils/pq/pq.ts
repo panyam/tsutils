@@ -12,10 +12,7 @@ export class PQ<T> {
   storage: Storage<T>;
   handlesByValue = new Map<KeyType, [Handle<T>, number]>();
 
-  constructor(
-    comparatorOrStorage: Comparator<T> | Storage<T>,
-    keyFunc: KeyFunc<T> = idKeyFunc
-  ) {
+  constructor(comparatorOrStorage: Comparator<T> | Storage<T>, keyFunc: KeyFunc<T> = idKeyFunc) {
     this.keyFunc = keyFunc;
     if ("heapify" in comparatorOrStorage) {
       this.storage = comparatorOrStorage as Storage<T>;

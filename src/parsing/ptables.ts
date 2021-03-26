@@ -5,9 +5,7 @@ import { LRAction, ParseTable } from "./lrbase";
 import { LR0Item, LR0ItemGraph } from "./lr0";
 import { LR1Item, LR1ItemGraph } from "./lr1";
 
-export function makeSLRParseTable(
-  grammar: Grammar
-): [ParseTable, LR0ItemGraph] {
+export function makeSLRParseTable(grammar: Grammar): [ParseTable, LR0ItemGraph] {
   const ig = new LR0ItemGraph(grammar).refresh();
   const followSets = new FollowSets(grammar);
   const parseTable = new ParseTable(grammar);
@@ -32,11 +30,7 @@ export function makeSLRParseTable(
         followSets.forEachTerm(nt, (term) => {
           if (term != null) {
             assert(term.isTerminal);
-            parseTable.addAction(
-              itemSet,
-              term,
-              LRAction.Reduce(nt, item.ruleIndex)
-            );
+            parseTable.addAction(itemSet, term, LRAction.Reduce(nt, item.ruleIndex));
           }
         });
       }
@@ -84,11 +78,7 @@ export function makeLRParseTable(grammar: Grammar): [ParseTable, LR1ItemGraph] {
         // ensure nt != S'
         // if we have nt -> rule DOT / t
         // Reduce nt -> rule for t
-        parseTable.addAction(
-          itemSet,
-          item.lookahead,
-          LRAction.Reduce(nt, item.ruleIndex)
-        );
+        parseTable.addAction(itemSet, item.lookahead, LRAction.Reduce(nt, item.ruleIndex));
       }
     }
 
@@ -101,11 +91,7 @@ export function makeLRParseTable(grammar: Grammar): [ParseTable, LR1ItemGraph] {
 
     // If this state contains the augmented item, S' -> S . / $
     // then add accept
-    if (
-      itemSet.has(
-        ig.items.ensure(new LR1Item(grammar.Eof, grammar.augStart, 0, 1)).id
-      )
-    ) {
+    if (itemSet.has(ig.items.ensure(new LR1Item(grammar.Eof, grammar.augStart, 0, 1)).id)) {
       parseTable.addAction(itemSet, grammar.Eof, LRAction.Accept());
     }
   }

@@ -33,13 +33,7 @@ export class LRAction {
     else if (this.tag == LRActionType.SHIFT) {
       return "S" + this.nextState!.id;
     } else if (this.tag == LRActionType.REDUCE) {
-      return (
-        "R <" +
-        this.nonterm!.label +
-        " -> " +
-        this.nonterm!.rules[this.ruleIndex] +
-        ">"
-      );
+      return "R <" + this.nonterm!.label + " -> " + this.nonterm!.rules[this.ruleIndex] + ">";
     } else {
       return "" + this.nextState!.id;
     }
@@ -148,9 +142,7 @@ export class LRItemSet {
   }
 
   get debugString(): string {
-    return this.sortedValues
-      .map((v: number) => this.itemGraph.items.get(v).debugString)
-      .join("\n");
+    return this.sortedValues.map((v: number) => this.itemGraph.items.get(v).debugString).join("\n");
   }
 }
 
@@ -271,10 +263,7 @@ export abstract class LRItemGraph {
     return (this.gotoSets[fromSet.id] || {})[sym.id] || null;
   }
 
-  forEachGoto(
-    itemSet: LRItemSet,
-    visitor: (sym: Sym, nextSet: LRItemSet) => boolean | void
-  ): void {
+  forEachGoto(itemSet: LRItemSet, visitor: (sym: Sym, nextSet: LRItemSet) => boolean | void): void {
     const gotoSet = this.gotoSets[itemSet.id] || {};
     for (const symid in gotoSet) {
       const sym = this.grammar.getSymById(symid as any) as Sym;
@@ -367,10 +356,7 @@ export class ParseStack {
   }
 
   top(): [LRItemSet, PTNode] {
-    return [
-      this.stateStack[this.stateStack.length - 1],
-      this.nodeStack[this.nodeStack.length - 1],
-    ];
+    return [this.stateStack[this.stateStack.length - 1], this.nodeStack[this.nodeStack.length - 1]];
   }
 
   pop(): [LRItemSet, PTNode] {
@@ -421,10 +407,7 @@ export class LRParser extends ParserBase {
         stack.push(action.nextState!, newNode);
       } else {
         // reduce
-        assert(
-          action.nonterm != null,
-          "Nonterm and ruleindex must be provided for a reduction action"
-        );
+        assert(action.nonterm != null, "Nonterm and ruleindex must be provided for a reduction action");
         const rule = action.nonterm.rules[action.ruleIndex];
         const ruleLen = rule.length;
         // pop this many items off the stack and create a node
@@ -435,11 +418,7 @@ export class LRParser extends ParserBase {
           newNode.children.splice(0, 0, node);
         }
         [topState, topNode] = stack.top();
-        const newAction = this.resolveActions(
-          this.parseTable.getActions(topState, action.nonterm),
-          stack,
-          tokenizer
-        );
+        const newAction = this.resolveActions(this.parseTable.getActions(topState, action.nonterm), stack, tokenizer);
         assert(newAction != null, "Top item does not have an action.");
         stack.push(newAction.nextState!, newNode);
         this.notifyReduction(newNode, action.ruleIndex);
@@ -464,11 +443,7 @@ export class LRParser extends ParserBase {
   /**
    * Pick an action among several actions based on several factors (eg curr parse stack, tokenizer etc).
    */
-  resolveActions(
-    actions: LRAction[],
-    stack: ParseStack,
-    tokenizer: Tokenizer
-  ): LRAction {
+  resolveActions(actions: LRAction[], stack: ParseStack, tokenizer: Tokenizer): LRAction {
     if (actions.length > 1) {
       throw new Error("Multiple actions found.");
     }

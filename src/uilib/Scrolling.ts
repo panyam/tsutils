@@ -38,9 +38,7 @@ export class HTMLElementScrollable implements Scrollable {
   private _scrollGroup: ScrollGroup | null = null;
   readonly element: HTMLElement;
   private vertical = true;
-  private onScrollEventListener = this.onScrollEvent.bind(
-    this
-  ) as EventListener;
+  private onScrollEventListener = this.onScrollEvent.bind(this) as EventListener;
   private onMouseEventListener = this.onMouseEvent.bind(this) as EventListener;
   private onTouchEventListener = this.onTouchEvent.bind(this) as EventListener;
 
@@ -214,10 +212,7 @@ export class ScrollGroup {
 
       // set the scroll position of all others
       // TODO - should this happen in this handler itself?
-      const remScroll = Math.max(
-        1,
-        scrollable.scrollSize - scrollable.pageSize
-      );
+      const remScroll = Math.max(1, scrollable.scrollSize - scrollable.pageSize);
       for (let i = this.scrollables.length - 1; i >= 0; i--) {
         const other = this.scrollables[i];
         const remOther = Math.max(1, other.scrollSize - other.pageSize);
@@ -251,10 +246,7 @@ export class ScrollGroup {
       // update followers
       const offsetDelta = Math.abs(leader.scrollOffset - this.lastScrollOffset);
       const timeDelta = Math.abs(timestamp - this.lastScrolledAt);
-      if (
-        offsetDelta > this.offsetDeltaThreshold ||
-        timeDelta > this.eventDeltaThreshold
-      ) {
+      if (offsetDelta > this.offsetDeltaThreshold || timeDelta > this.eventDeltaThreshold) {
         this.lastScrolledAt = timestamp;
         this.syncFollowersToLeader();
       }
@@ -280,13 +272,8 @@ export class ScrollGroup {
 
   onTimer(ts: number): void {
     // Called with our timer
-    if (
-      this.leadScrollable != null &&
-      ts - this.lastScrolledAt > this.idleThreshold
-    ) {
-      const offsetDelta = Math.abs(
-        this.leadScrollable.scrollOffset - this.lastScrollOffset
-      );
+    if (this.leadScrollable != null && ts - this.lastScrolledAt > this.idleThreshold) {
+      const offsetDelta = Math.abs(this.leadScrollable.scrollOffset - this.lastScrollOffset);
       if (offsetDelta == 0) {
         // No change in delta within a time window
         this.scrollingFinished(ts);

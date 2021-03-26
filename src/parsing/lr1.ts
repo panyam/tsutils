@@ -18,24 +18,11 @@ export class LR1Item extends LR0Item {
   advance(): LRItem {
     const rule = this.nt.rules[this.ruleIndex];
     assert(this.position < rule.length);
-    return new LR1Item(
-      this.lookahead,
-      this.nt,
-      this.ruleIndex,
-      this.position + 1
-    );
+    return new LR1Item(this.lookahead, this.nt, this.ruleIndex, this.position + 1);
   }
 
   get key(): string {
-    return (
-      this.nt.id +
-      ":" +
-      this.ruleIndex +
-      ":" +
-      this.position +
-      ":" +
-      this.lookahead.id
-    );
+    return this.nt.id + ":" + this.ruleIndex + ":" + this.position + ":" + this.lookahead.id;
   }
 
   compareTo(another: this): number {
@@ -81,9 +68,7 @@ export class LR1ItemGraph extends LRItemGraph {
    * StartSet = closure({S' -> . S, $})
    */
   startItem(): LRItem {
-    return this.items.ensure(
-      new LR1Item(this.grammar.Eof, this.grammar.augStart, 0, 0)
-    );
+    return this.items.ensure(new LR1Item(this.grammar.Eof, this.grammar.augStart, 0, 0));
   }
 
   /**
