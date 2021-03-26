@@ -224,10 +224,7 @@ export class Tokenizer {
     }
     // Fall through - error char found
     // throw new Error(`Line ${this.tape.currLine}, Col ${this.tape.currCol} - Invalid character: ${this.tape.currCh}`);
-    throw new ParseError(
-      this.tape.index,
-      `Invalid character: ${this.tape.currCh}`
-    );
+    throw new ParseError(this.tape.index, `Invalid character: [${this.tape.currCh}]`);
   }
 
   peek(): Nullable<Token> {
@@ -251,7 +248,7 @@ export class Tokenizer {
     matchFunc: (token: Token) => boolean,
     ensure = false,
     consume = true,
-    nextAction?: (token: Token) => boolean | undefined
+    nextAction?: (token: Token) => boolean | undefined,
   ): Nullable<Token> {
     const token = this.peek();
     if (token != null) {
