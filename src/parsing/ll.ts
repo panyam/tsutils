@@ -211,7 +211,7 @@ export class Parser extends ParserBase {
       } else {
         const entries = this.parseTable.get(topItem, nextSym);
         if (entries.length != 1) {
-          this.processInvalidReductions(nextSym, nextValue, entries);
+          this.processInvalidReductions(topItem, nextSym, nextValue, entries);
         } else {
           this.popSymAndPushRule(entries[0]);
         }
@@ -247,8 +247,8 @@ export class Parser extends ParserBase {
     return true;
   }
 
-  processInvalidReductions(nextSym: Sym, nextValue: any, entries: ParseTableItem[]): boolean {
-    throw new Error("Invalid # reductions found: " + entries.length);
+  processInvalidReductions(currSym: Sym, nextSym: Sym, nextValue: any, entries: ParseTableItem[]): boolean {
+    throw new Error(`Invalid # reductions ${entries.length} found ${currSym.label} -> ${nextSym.label}`);
     return true;
   }
 }

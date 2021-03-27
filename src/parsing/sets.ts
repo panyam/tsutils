@@ -155,8 +155,11 @@ export class NullableSet {
     return !nt.isTerminal && this.entries.has(nt.id);
   }
 
-  isStrNullable(str: Str, fromIndex = 0): boolean {
-    for (let i = fromIndex; i < str.length; i++) {
+  isStrNullable(str: Str, fromIndex = 0, toIndex: Nullable<number> = null): boolean {
+    if (toIndex == null) {
+      toIndex = str.length - 1;
+    }
+    for (let i = fromIndex; i <= toIndex; i++) {
       if (!this.isNullable(str.syms[i])) {
         return false;
       }
