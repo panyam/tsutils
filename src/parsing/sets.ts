@@ -1,5 +1,5 @@
 import { StringMap, NumMap, Nullable } from "../types";
-import { Grammar, Sym, IDType, Str } from "./grammar";
+import { Grammar, Sym, Str } from "./grammar";
 import { assert } from "../utils/misc";
 
 const defaultKeyFunc = (x: any) => x.key;
@@ -22,13 +22,18 @@ export class IDSet<T extends { id: number }> {
     return this._entries;
   }
 
-  get(id: number): T {
-    return this._entries[id];
+  get(id: number): Nullable<T> {
+    return this._entries[id] || null;
   }
 
-  ensure(entry: T): T {
+  getByKey(key: string): Nullable<T> {
+    return this._entriesByKey[key] || null;
+  }
+
+  ensure(entry: T, throwIfExists = false): T {
     // see if this itemset exists
     if (this.has(entry)) {
+      if (throwIfExists) throw new Error(`Entry ${this.keyFunc(entry)} already exists`);
       return this._entriesByKey[this.keyFunc(entry)];
     } else {
       this._entriesByKey[this.keyFunc(entry)] = entry;

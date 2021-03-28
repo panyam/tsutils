@@ -1,7 +1,7 @@
 import { MAX_INT, Nullable, NumMap, StringMap } from "../types";
 import { assert } from "../utils/misc";
 import { allMinimalCycles } from "./graph";
-import { TermSet, FirstSets, FollowSets, NullableSet } from "./sets";
+import { IDSet, TermSet, FirstSets, FollowSets, NullableSet } from "./sets";
 
 /**
  * Symbols represent both terminals and non-terminals in our system.
@@ -153,9 +153,7 @@ export class Str {
 export class Grammar {
   public startSymbol: Nullable<Sym> = null;
   private _modified = true;
-  protected _allSymbols: Sym[] = [];
-  protected symbolsByName: StringMap<Sym> = {};
-  protected symbolsById: Sym[] = [];
+  protected symbolSet = new IDSet<Sym>((s) => s.label);
   protected currentNonTerm: Nullable<Sym> = null;
 
   readonly Eof = new Sym(this, "<EOF>", true, -1);
@@ -211,26 +209,26 @@ export class Grammar {
   }
 
   get terminals(): ReadonlyArray<Sym> {
-    return this._allSymbols.filter((x) => x.isTerminal);
+    return this.symbolSet.entries.filter((x) => x.isTerminal);
   }
 
   get nonTerminals(): ReadonlyArray<Sym> {
-    return this._allSymbols.filter((x) => !x.isTerminal && !x.isAuxiliary);
+    return this.symbolSet.entries.filter((x) => !x.isTerminal && !x.isAuxiliary);
   }
 
   get auxNonTerminals(): ReadonlyArray<Sym> {
-    return this._allSymbols.filter((x) => x.isAuxiliary);
+    return this.symbolSet.entries.filter((x) => x.isAuxiliary);
   }
 
   get allSymbols(): ReadonlyArray<Sym> {
-    return this._allSymbols;
+    return this.symbolSet.entries;
   }
 
   /**
    * A way to quickly iterate through all non-terminals.
    */
   forEachNT(visitor: (nt: Sym) => void | boolean | undefined | null): void {
-    for (const sym of this._allSymbols) {
+    for (const sym of this.symbolSet.entries) {
       if (sym.isTerminal) continue;
       if (visitor(sym) == false) return;
     }
@@ -284,19 +282,19 @@ export class Grammar {
   getSymById(id: number): Nullable<Sym> {
     if (id == -1) return this.Eof;
     else if (id == -2) return this._AugStart;
-    return this.symbolsById[id] || null;
+    return this.symbolSet.get(id);
   }
 
   getSym(label: string): Nullable<Sym> {
     if (label == this._AugStart.label) return this._AugStart;
-    return this.symbolsByName[label] || null;
+    return this.symbolSet.getByKey(label);
   }
 
   newTerm(label: string): Sym {
     if (this.getSym(label) != null) {
       throw new Error(`${label} is already exists`);
     }
-    return this.wrapSym(new Sym(this, label, true));
+    return this.symbolSet.ensure(new Sym(this, label, true), true);
   }
 
   /**
@@ -314,7 +312,7 @@ export class Grammar {
     }
     let nt = new Sym(this, label, false);
     nt.isAuxiliary = isAuxiliary;
-    nt = this.wrapSym(nt);
+    nt = this.symbolSet.ensure(nt, true);
     if (!isAuxiliary) {
       if (this.startSymbol == null) {
         this.startSymbol = nt;
@@ -327,7 +325,7 @@ export class Grammar {
    * Checks if a given label is a terminal.
    */
   isTerminal(label: string): boolean {
-    const t = this.symbolsByName[label] || null;
+    const t = this.getSym(label);
     return t != null && t.isTerminal;
   }
 
@@ -335,7 +333,7 @@ export class Grammar {
    * Checks if a given label is a non-terminal.
    */
   isNT(label: string): boolean {
-    const t = this.symbolsByName[label] || null;
+    const t = this.getSym(label);
     return t != null && !t.isTerminal && !t.isAuxiliary;
   }
 
@@ -343,7 +341,7 @@ export class Grammar {
    * Checks if a given label is an auxiliary non-terminal.
    */
   isAuxNT(label: string): boolean {
-    const t = this.symbolsByName[label] || null;
+    const t = this.getSym(label);
     return t != null && !t.isTerminal && t.isAuxiliary;
   }
 
@@ -466,16 +464,6 @@ export class Grammar {
     return new Str(auxNT);
   }
 
-  protected wrapSym(sym: Sym): Sym {
-    assert(sym.id < 0, "Symbol already wrapped: " + sym.id);
-    // assert(sym.index < 0, "Symbol already wrapped: " + sym.index);
-    sym.id = this.symbolsById.length;
-    this.symbolsById.push(sym);
-    this.symbolsByName[sym.label] = sym;
-    this._allSymbols.push(sym);
-    return sym;
-  }
-
   normalizeRule(exp: Str | string): Str {
     if (typeof exp === "string") {
       const lit = this.getSym(exp);
@@ -514,8 +502,7 @@ export class Grammar {
    * union expressions.
    */
   findAuxNT(filter: (nt: Sym) => boolean): Nullable<Sym> {
-    // for (const auxNT of this._auxNonTerminals) {
-    for (const auxNT of this._allSymbols) {
+    for (const auxNT of this.symbolSet.entries) {
       if (!auxNT.isAuxiliary) continue;
       if (filter(auxNT)) return auxNT;
     }
