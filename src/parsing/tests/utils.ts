@@ -1,9 +1,8 @@
 import { assert } from "../../utils/misc";
 import { StringMap } from "../../types";
-import { Str, Grammar } from "../grammar";
+import { Str, FirstSets, NullableSet, FollowSets, Grammar } from "../grammar";
 import { ParseTable as LLParseTable } from "../ll";
 import { LRAction, ParseTable, LRItemGraph } from "../lrbase";
-import { FirstSets, NullableSet, FollowSets } from "../sets";
 import { makeSLRParseTable, makeLRParseTable } from "../ptables";
 
 export function Goto(ig: LRItemGraph, newState: number): LRAction {

@@ -3,7 +3,6 @@ import { assert } from "../../utils/misc";
 import { Grammar } from "../grammar";
 import { LRItemSet } from "../lrbase";
 import { LR1Item, LR1ItemGraph } from "../lr1";
-import { FirstSets } from "../sets";
 
 function From(ig: LR1ItemGraph, ...entries: [string, string, number, number][]): LRItemSet {
   const items = entries.map(([term, label, ri, pos]) => {
@@ -32,8 +31,7 @@ const g3 = new EBNFParser(`
 
 describe("LR1ItemGraph", () => {
   test("Test1", () => {
-    const firstSets = new FirstSets(g3);
-    const ig = new LR1ItemGraph(g3, firstSets).refresh();
+    const ig = new LR1ItemGraph(g3).refresh();
     // ig.itemSets.forEach((set, index) => console.log("Set ", index, "\n", set.debugString));
     expect(ig.size).toBe(10);
     /*

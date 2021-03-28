@@ -1,4 +1,3 @@
-import { NullableSet } from "../sets";
 import { EBNFParser } from "../ebnf";
 import { Str, Grammar } from "../grammar";
 import { Cardinality, multiplyCardinalities as MC } from "../cardinality";
@@ -42,7 +41,7 @@ describe("Grammar Tests", () => {
     expect(g.terminals.length).toBe(2);
     expect(() => g.newTerm("A")).toThrowError();
     expect(g.getSym("B")?.label).toBe("B");
-    const ns = new NullableSet(g).nonterms.map((n) => n.label);
+    const ns = g.nullables.nonterms.map((n) => n.label);
     expect(ns).toEqual([]);
   });
 

@@ -3,7 +3,7 @@ import { Token } from "./tokenizer";
 import { PTNode, Parser as ParserBase } from "./parser";
 import { StringMap, Nullable } from "../types";
 import { assert } from "../utils/misc";
-import { FollowSets } from "./sets";
+import { printGrammar } from "./utils";
 
 export class ParseTableItem {
   readonly nt: Sym;
@@ -25,20 +25,21 @@ export class ParseTableItem {
 export class ParseTable {
   readonly grammar: Grammar;
   protected entries: Map<number, Map<number, ParseTableItem[]>>;
-  followSets: FollowSets;
 
-  constructor(grammar: Grammar, followSets?: FollowSets) {
+  constructor(grammar: Grammar) {
     this.grammar = grammar;
-    this.followSets = followSets || new FollowSets(grammar);
     this.refresh();
   }
 
   refresh(): this {
     this.entries = new Map();
-    this.followSets.refresh();
+    this.grammar.followSets.refresh();
     this.grammar.forEachRule((nt, rule, index) => {
       this.processRule(nt, rule, index);
     });
+    const printed = printGrammar(this.grammar, false);
+    const t1 = this.grammar.cycles;
+    const t2 = this.grammar.leftRecursion;
     return this;
   }
 
@@ -108,7 +109,7 @@ export class ParseTable {
   }
 
   processRule(nt: Sym, rule: Str, index: number): void {
-    const firstSets = this.followSets.firstSets;
+    const firstSets = this.grammar.firstSets;
     // Rule 1
     // For each a in First(rule) add A -> rule to M[A,a]
     let ruleIsNullable = false;
@@ -126,7 +127,7 @@ export class ParseTable {
     // const nullables = this.followSets.nullables;
     // const nullable = rule.isString ? nullables.isStrNullable(rule as Str) : nullables.isNullable((rule as Sym).value);
     if (ruleIsNullable) {
-      this.followSets.forEachTerm(nt, (term) => {
+      this.grammar.followSets.forEachTerm(nt, (term) => {
         assert(term != null, "Follow sets cannot have null");
         this.add(nt, term, new ParseTableItem(nt, index));
       });
@@ -211,9 +212,13 @@ export class Parser extends ParserBase {
       } else {
         const entries = this.parseTable.get(topItem, nextSym);
         if (entries.length != 1) {
-          this.processInvalidReductions(topItem, nextSym, nextValue, entries);
+          this.processInvalidReductions(topNode, topItem, nextSym, nextValue, entries);
         } else {
-          this.popSymAndPushRule(entries[0]);
+          const [sym, ptnode] = this.stack.pop();
+          assert(ptnode == topNode);
+          assert(sym == entries[0].nt);
+          assert(ptnode.sym == sym);
+          this.popSymAndPushRule(ptnode, entries[0]);
         }
       }
       [topItem, topNode] = stack.top(); // Update top pointer
@@ -221,16 +226,13 @@ export class Parser extends ParserBase {
     return stack.rootNode;
   }
 
-  popSymAndPushRule(entry: ParseTableItem): void {
-    const [sym, ptnode] = this.stack.pop();
+  popSymAndPushRule(parentNode: PTNode, entry: ParseTableItem): void {
     // This needs to match so we can push its children
-    assert(sym == entry.nt);
-    assert(ptnode.sym == entry.nt);
     const rule = entry.nt.rules[entry.ruleIndex];
     for (let i = rule.syms.length - 1; i >= 0; i--) {
       const sym = rule.syms[i];
       const node = this.stack.push(sym);
-      ptnode.children.splice(0, 0, node);
+      parentNode.add(node, 0);
     }
   }
   consumeTokenAndPop(nextSym: Sym, nextToken: Token): void {
@@ -247,7 +249,13 @@ export class Parser extends ParserBase {
     return true;
   }
 
-  processInvalidReductions(currSym: Sym, nextSym: Sym, nextValue: any, entries: ParseTableItem[]): boolean {
+  processInvalidReductions(
+    topNode: PTNode,
+    currSym: Sym,
+    nextSym: Sym,
+    nextValue: any,
+    entries: ParseTableItem[],
+  ): boolean {
     throw new Error(`Invalid # reductions ${entries.length} found ${currSym.label} -> ${nextSym.label}`);
     return true;
   }

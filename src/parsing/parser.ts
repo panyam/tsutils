@@ -24,12 +24,16 @@ export class PTNode {
     return this.sym.isTerminal;
   }
 
-  add(node: PTNode): this {
+  add(node: PTNode, index = -1): this {
     if (this.isTerminal) {
       throw new Error(`Cannot add children (${node.sym.label}) to a terminal node: ${this.sym.label}`);
     }
     node.parent = this;
-    this.children.push(node);
+    if (index < 0) {
+      this.children.push(node);
+    } else {
+      this.children.splice(index, 0, node);
+    }
     return this;
   }
 }

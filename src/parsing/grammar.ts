@@ -1,5 +1,6 @@
-import { MAX_INT, Nullable, StringMap } from "../types";
+import { MAX_INT, Nullable, NumMap, StringMap } from "../types";
 import { assert } from "../utils/misc";
+import { allMinimalCycles } from "./graph";
 
 export enum IDType {
   TERM,
@@ -180,6 +181,8 @@ export class Grammar {
   readonly Eof = new Sym(this, "<EOF>", true, -1);
   private _AugStart = new Sym(this, "$", false, -2);
 
+  protected _followSets: Nullable<FollowSets> = null;
+
   /**
    * A way of creating Grammars with a "single expresssion".
    */
@@ -187,6 +190,21 @@ export class Grammar {
     const g = new Grammar();
     callback(g);
     return g;
+  }
+
+  get nullables(): NullableSet {
+    return this.firstSets.nullables;
+  }
+
+  get firstSets(): FirstSets {
+    return this.followSets.firstSets;
+  }
+
+  get followSets(): FollowSets {
+    if (this._followSets == null) {
+      this._followSets = new FollowSets(this);
+    }
+    return this._followSets;
   }
 
   get augStart(): Sym {
@@ -200,6 +218,10 @@ export class Grammar {
       this._AugStart.add(new Str(this.startSymbol));
     }
     return this;
+  }
+
+  refresh(): void {
+    this._followSets = null;
   }
 
   addTerminals(...terminals: string[]): void {
@@ -232,14 +254,6 @@ export class Grammar {
       if (sym.isTerminal) continue;
       if (visitor(sym) == false) return;
     }
-    /*
-    for (const nt of this._nonTerminals) {
-      if (visitor(nt) == false) return;
-    }
-    for (const nt of this._auxNonTerminals) {
-      if (visitor(nt) == false) return;
-    }
-    */
   }
 
   /**
@@ -543,4 +557,56 @@ export class Grammar {
     });
     return out;
   }
+
+  /**
+   * Returns all cycles in this grammar.
+   */
+  get cycles(): any {
+    /*
+     * Returns the edge of the given nonterm
+     * For a nt such that:
+     *             S -> alpha1 X1 beta1 |
+     *                  alpha2 X2 beta2 |
+     *                  ...
+     *                  alphaN XN betaN |
+     *
+     * S's neighbouring nodes would be Xk if all of alphak is optional
+     * AND all of betak is optional
+     */
+    const edgeFunctor = (node: Sym): [Sym, any][] => {
+      const out: [Sym, any][] = [];
+      node.rules.forEach((rule, ruleIndex) => {
+        rule.syms.forEach((s, j) => {
+          if (s.isTerminal) return;
+          if (this.nullables.isStrNullable(rule, 0, j - 1) && this.nullables.isStrNullable(rule, j + 1)) {
+            out.push([s, [node, ruleIndex]]);
+          }
+        });
+      });
+      return out;
+    };
+    return allMinimalCycles(this.nonTerminals, (val: Sym) => val.label, edgeFunctor);
+  }
+
+  /**
+   * Returns a set of "Starting" non terminals which have atleast
+   * one production containing left recursion.
+   */
+  get leftRecursion(): any {
+    const edgeFunctor = (node: Sym): [Sym, any][] => {
+      const out: [Sym, any][] = [];
+      node.rules.forEach((rule, ruleIndex) => {
+        rule.syms.forEach((s, j) => {
+          if (s.isTerminal) return;
+          out.push([s, ruleIndex]);
+          // If this is symbol is not nullable then we can stop here
+          return this.nullables.isNullable(s);
+        });
+      });
+      return out;
+    };
+    return allMinimalCycles(this.nonTerminals, (val: Sym) => val.id, edgeFunctor);
+  }
 }
+
+import { TermSet, FirstSets, FollowSets, NullableSet } from "./sets";

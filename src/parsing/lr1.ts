@@ -1,5 +1,4 @@
 import { Sym, Grammar } from "./grammar";
-import { FirstSets } from "./sets";
 import { assert } from "../utils/misc";
 import { LRItem, LRItemSet, LRItemGraph } from "./lrbase";
 import { LR0Item } from "./lr0";
@@ -49,18 +48,6 @@ export class LR1Item extends LR0Item {
 }
 
 export class LR1ItemGraph extends LRItemGraph {
-  firstSets: FirstSets;
-
-  constructor(grammar: Grammar, firstSets: FirstSets) {
-    super(grammar);
-    this.firstSets = firstSets;
-  }
-
-  reset(): void {
-    this.firstSets.refresh();
-    super.reset();
-  }
-
   /**
    * Overridden to create LR1ItemSet objects with the start state
    * also including the EOF marker as the lookahead.
@@ -88,7 +75,7 @@ export class LR1ItemGraph extends LRItemGraph {
       if (B.isTerminal) continue;
 
       const suffix = rule.copy().append(item.lookahead);
-      this.firstSets.forEachTermIn(suffix, item.position + 1, (term) => {
+      this.grammar.firstSets.forEachTermIn(suffix, item.position + 1, (term) => {
         if (term != null) {
           // For each rule [ B -> beta, term ] add it to
           // our list of items if it doesnt already exist

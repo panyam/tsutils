@@ -1,5 +1,4 @@
 import { Grammar } from "../grammar";
-import { FirstSets, NullableSet, FollowSets } from "../sets";
 import { EBNFParser } from "../ebnf";
 import { assert } from "../../utils/misc";
 import { ParseTable, Parser } from "../ll";
@@ -41,20 +40,20 @@ describe("ParseTable Tests", () => {
       E -> b ;
     `).grammar;
 
-    const ns = new NullableSet(g);
-    const fs = new FirstSets(g, ns);
+    const ns = g.nullables;
+    const fs = g.firstSets;
     expectFSEntries(g, fs, {
       S: ["i", "a"],
       S1: ["e", ""],
       E: ["b"],
     });
-    const fls = new FollowSets(g, fs);
+    const fls = g.followSets;
     expectFSEntries(g, fls, {
       S: ["e", g.Eof.label],
       S1: ["e", g.Eof.label],
       E: ["t"],
     });
-    const ptab = new ParseTable(g, fls);
+    const ptab = new ParseTable(g);
     expect(ptab.count).toBe(6);
     expectPTabEntries(g, ptab, [
       ["S", "a", [["S", 1]]],
@@ -75,10 +74,10 @@ describe("ParseTable Tests", () => {
   test("Tests 2", () => {
     const g = new EBNFParser(Samples.expr2).grammar;
 
-    const ns = new NullableSet(g);
-    const fs = new FirstSets(g, ns);
-    const fls = new FollowSets(g, fs);
-    const ptab = new ParseTable(g, fls);
+    const ns = g.nullables;
+    const fs = g.firstSets;
+    const fls = g.followSets;
+    const ptab = new ParseTable(g);
     expect(ptab.count).toBe(13);
     expectPTabEntries(g, ptab, [
       ["E", "id", [["E", 0]]],
@@ -109,10 +108,10 @@ describe("Parser Tests", () => {
   test("Tests 1", () => {
     const g = new EBNFParser(Samples.expr2).grammar;
 
-    const ns = new NullableSet(g);
-    const fs = new FirstSets(g, ns);
-    const fls = new FollowSets(g, fs);
-    const ptab = new ParseTable(g, fls);
+    const ns = g.nullables;
+    const fs = g.firstSets;
+    const fls = g.followSets;
+    const ptab = new ParseTable(g);
 
     const tokenizer = new MockTokenizer(
       tok("id", "A"),

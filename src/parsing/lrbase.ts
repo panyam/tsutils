@@ -175,6 +175,7 @@ export abstract class LRItemGraph {
   protected abstract startItem(): LRItem;
 
   reset(): void {
+    this.grammar.refresh();
     this.gotoSets = {};
     this.items.clear();
     this.itemSets.clear();
