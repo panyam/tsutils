@@ -1,24 +1,7 @@
 import { MAX_INT, Nullable, NumMap, StringMap } from "../types";
 import { assert } from "../utils/misc";
 import { allMinimalCycles } from "./graph";
-
-export enum IDType {
-  TERM,
-  NON_TERM,
-  STR,
-  MAX_TYPES,
-}
-
-abstract class GObj {
-  grammar: Grammar;
-  abstract readonly tag: IDType;
-
-  equals(another: GObj): boolean {
-    return this.tag == another.tag;
-  }
-
-  abstract toString(): string;
-}
+import { TermSet, FirstSets, FollowSets, NullableSet } from "./sets";
 
 /**
  * Symbols represent both terminals and non-terminals in our system.
@@ -102,12 +85,10 @@ export class Sym {
   }
 }
 
-export class Str extends GObj {
-  readonly tag: IDType = IDType.STR;
+export class Str {
   syms: Sym[];
 
   constructor(...syms: Sym[]) {
-    super();
     this.syms = syms || [];
     // this.cardinalities = [];
   }
@@ -143,7 +124,6 @@ export class Str extends GObj {
   }
 
   equals(another: this): boolean {
-    if (!super.equals(another)) return false;
     if (this.syms.length != another.syms.length) return false;
     for (let i = 0; i < this.syms.length; i++) {
       if (!this.syms[i].equals(another.syms[i])) return false;
@@ -504,7 +484,6 @@ export class Grammar {
     } else {
       // We have an expression that needs to be fronted by an
       // auxiliarry non-terminal
-      assert(exp.tag == IDType.STR /* || exp.tag == IDType.SYM */, "Found tag: " + exp.tag);
       return exp;
     }
   }
@@ -608,5 +587,3 @@ export class Grammar {
     return allMinimalCycles(this.nonTerminals, (val: Sym) => val.id, edgeFunctor);
   }
 }
-
-import { TermSet, FirstSets, FollowSets, NullableSet } from "./sets";
