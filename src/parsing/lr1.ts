@@ -1,27 +1,26 @@
-import { Sym, Grammar } from "./grammar";
+import { Sym, Grammar, Rule } from "./grammar";
 import { assert } from "../utils/misc";
 import { LRItem, LRItemSet, LRItemGraph } from "./lrbase";
 import { LR0Item } from "./lr0";
 
 export class LR1Item extends LR0Item {
   readonly lookahead: Sym;
-  constructor(lookahead: Sym, nt: Sym, ruleIndex = 0, position = 0) {
-    super(nt, ruleIndex, position);
+  constructor(lookahead: Sym, rule: Rule, position = 0) {
+    super(rule, position);
     this.lookahead = lookahead;
   }
 
   copy(): LR1Item {
-    return new LR1Item(this.lookahead, this.nt, this.ruleIndex, this.position);
+    return new LR1Item(this.lookahead, this.rule, this.position);
   }
 
   advance(): LRItem {
-    const rule = this.nt.rules[this.ruleIndex];
-    assert(this.position < rule.length);
-    return new LR1Item(this.lookahead, this.nt, this.ruleIndex, this.position + 1);
+    assert(this.position < this.rule.rhs.length);
+    return new LR1Item(this.lookahead, this.rule, this.position + 1);
   }
 
   get key(): string {
-    return this.nt.id + ":" + this.ruleIndex + ":" + this.position + ":" + this.lookahead.id;
+    return this.rule.id + ":" + this.position + ":" + this.lookahead.id;
   }
 
   compareTo(another: this): number {
@@ -35,15 +34,10 @@ export class LR1Item extends LR0Item {
   }
 
   get debugString(): string {
-    const rule = this.nt.rules[this.ruleIndex];
     const pos = this.position;
-    const pre = rule.syms.slice(0, pos).join(" ");
-    const post = rule.syms.slice(pos).join(" ");
-    return (
-      `(${this.ruleIndex}, ${this.position}) - (${this.nt.id}) ${this.nt} -> ${pre} . ${post}` +
-      "   /   " +
-      this.lookahead.label
-    );
+    const pre = this.rule.rhs.syms.slice(0, pos).join(" ");
+    const post = this.rule.rhs.syms.slice(pos).join(" ");
+    return `${this.rule.nt.label} -> ${pre} . ${post}` + "   /   " + this.lookahead.label;
   }
 }
 
@@ -55,7 +49,7 @@ export class LR1ItemGraph extends LRItemGraph {
    * StartSet = closure({S' -> . S, $})
    */
   startItem(): LRItem {
-    return this.items.ensure(new LR1Item(this.grammar.Eof, this.grammar.augStart, 0, 0));
+    return this.items.ensure(new LR1Item(this.grammar.Eof, this.grammar.augStartRule, 0));
   }
 
   /**
@@ -67,20 +61,20 @@ export class LR1ItemGraph extends LRItemGraph {
     for (let i = 0; i < out.values.length; i++) {
       const itemId = out.values[i];
       const item = this.items.get(itemId) as LR1Item;
-      const rule = item.nt.rules[item.ruleIndex];
       // Evaluate the closure
       // Cannot do anything past the end
-      if (item.position >= rule.length) continue;
-      const B = rule.syms[item.position];
+      if (item.position >= item.rule.rhs.length) continue;
+      const B = item.rule.rhs.syms[item.position];
       if (B.isTerminal) continue;
 
-      const suffix = rule.copy().append(item.lookahead);
+      const suffix = item.rule.rhs.copy().append(item.lookahead);
       this.grammar.firstSets.forEachTermIn(suffix, item.position + 1, (term) => {
         if (term != null) {
           // For each rule [ B -> beta, term ] add it to
           // our list of items if it doesnt already exist
-          for (let j = 0; j < B.rules.length; j++) {
-            const newItem = this.items.ensure(new LR1Item(term, B, j, 0));
+          const bRules = this.grammar.rulesForNT(B);
+          for (const br of bRules) {
+            const newItem = this.items.ensure(new LR1Item(term, br, 0));
             out.add(newItem.id);
           }
         }

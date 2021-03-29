@@ -4,6 +4,7 @@ import { Grammar } from "../grammar";
 import { LRItemSet } from "../lrbase";
 import { LR1Item, LR1ItemGraph } from "../lr1";
 
+/*
 function From(ig: LR1ItemGraph, ...entries: [string, string, number, number][]): LRItemSet {
   const items = entries.map(([term, label, ri, pos]) => {
     const item = new LR1Item(ig.grammar.getSym(term)!, ig.grammar.getSym(label)!, ri, pos);
@@ -23,6 +24,7 @@ export function expectItemSet(g: Grammar, set: LRItemSet, entries: [string, stri
     expect(set.has(ig.items.ensure(new LR1Item(la, nt, index, pos)).id)).toBe(true);
   }
 }
+*/
 
 const g3 = new EBNFParser(`
   S -> C C ;

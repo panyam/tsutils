@@ -110,7 +110,7 @@ export class EBNFParser {
         assert(!nt.isAuxiliary, "NT is already auxiliary and cannot be reused.");
       }
       for (const rule of this.parseProductions(grammar, nt)) {
-        nt.add(rule);
+        grammar.add(nt, rule);
       }
       this.tokenizer.expectToken(TokenType.SEMI_COLON);
     }

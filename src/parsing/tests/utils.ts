@@ -14,8 +14,8 @@ export function Shift(itemGraph: LRItemGraph, newState: number): LRAction {
   return LRAction.Shift(itemGraph.itemSets.get(newState));
 }
 
-export function Reduce(g: Grammar, nt: string, rule: number): LRAction {
-  return LRAction.Reduce(g.getSym(nt)!, rule);
+export function Reduce(rule: Rule): LRAction {
+  return LRAction.Reduce(rule);
 }
 
 export function listsEqual(l1: string[], l2: string[]): boolean {
@@ -55,9 +55,9 @@ export function expectRules(g: Grammar, nt: string, ...rules: (string | Str)[]):
   const ntRules = g.rulesForNT(nonterm);
   expect(ntRules.length).toBe(rules.length);
   for (let i = 0; i < rules.length; i++) {
-    const eq = ntRules[i].equals(g.normalizeRule(rules[i]));
+    const eq = ntRules[i].rhs.equals(g.normalizeRule(rules[i]));
     if (!eq) {
-      console.log("Expected: ", rules[i], "Found: ", ntRules[i]);
+      console.log("Expected: ", rules[i], "Found: ", ntRules[i].rhs);
       assert(false, `Rule ${i} does not match`);
     }
   }
