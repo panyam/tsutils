@@ -53,149 +53,52 @@ describe("LRItemSet", () => {
   test("Test Closure", () => {
     const ig = new LR0ItemGraph(g1).refresh();
     verifyItemGraphs(ig, {
-        '0': {
-          items: [
-            'E1 ->  . E',
-            'E ->  . E PLUS T',
-            'E ->  . T',
-            'T ->  . T STAR F',
-            'T ->  . F',
-            'F ->  . OPEN E CLOSE',
-            'F ->  . id'
-          ],
-          next: { E: 1, T: 2, F: 3, OPEN: 4, id: 5 }
-        },
-        '1': { items: [ 'E1 -> E . ', 'E -> E . PLUS T' ], next: { PLUS: 6 } },
-        '2': { items: [ 'T -> T . STAR F', 'E -> T . ' ], next: { STAR: 7 } },
-        '3': { items: [ 'T -> F . ' ], next: {} },
-        '4': {
-          items: [
-            'E ->  . E PLUS T',
-            'F -> OPEN . E CLOSE',
-            'E ->  . T',
-            'T ->  . T STAR F',
-            'T ->  . F',
-            'F ->  . OPEN E CLOSE',
-            'F ->  . id'
-          ],
-          next: { E: 8, T: 2, F: 3, OPEN: 4, id: 5 }
-        },
-        '5': { items: [ 'F -> id . ' ], next: {} },
-        '6': {
-          items: [
-            'E -> E PLUS . T',
-            'T ->  . T STAR F',
-            'T ->  . F',
-            'F ->  . OPEN E CLOSE',
-            'F ->  . id'
-          ],
-          next: { T: 9, F: 3, OPEN: 4, id: 5 }
-        },
-        '7': {
-          items: [ 'T -> T STAR . F', 'F ->  . OPEN E CLOSE', 'F ->  . id' ],
-          next: { F: 10, OPEN: 4, id: 5 }
-        },
-        '8': {
-          items: [ 'F -> OPEN E . CLOSE', 'E -> E . PLUS T' ],
-          next: { PLUS: 6, CLOSE: 11 }
-        },
-        '9': {
-          items: [ 'T -> T . STAR F', 'E -> E PLUS T . ' ],
-          next: { STAR: 7 }
-        },
-        '10': { items: [ 'T -> T STAR F . ' ], next: {} },
-        '11': { items: [ 'F -> OPEN E CLOSE . ' ], next: {} }
-      }, true);
-  });
-});
-
-describe("LR0ItemGraph", () => {
-  test("Test Basic", () => {
-    const ig = new LR0ItemGraph(g1).refresh();
-
-    expect(ig.size).toBe(12);
-    expect(
-      ig.itemSets.has(
-        From(ig, ["E1", 0, 0], ["E", 0, 0], ["E", 1, 0], ["T", 0, 0], ["T", 1, 0], ["F", 0, 0], ["F", 1, 0]),
-      ),
-    );
-    expect(ig.itemSets.has(From(ig, ["E1", 0, 1], ["E", 0, 1])));
-    // Set I2
-    expect(ig.itemSets.has(From(ig, ["E", 1, 1], ["T", 0, 1])));
-    // Set 3
-    expect(ig.itemSets.has(From(ig, ["T", 1, 1])));
-
-    // Set 4
-    expect(
-      ig.itemSets.has(
-        From(ig, ["F", 0, 1], ["E", 0, 0], ["E", 1, 0], ["T", 0, 0], ["T", 1, 0], ["F", 0, 0], ["F", 1, 0]),
-      ),
-    );
-
-    // Set 5
-    expect(ig.itemSets.has(From(ig, ["F", 1, 1])));
-
-    // Set 6
-    expect(ig.itemSets.has(From(ig, ["E", 0, 2], ["T", 0, 0], ["T", 1, 0], ["F", 0, 0], ["F", 1, 0])));
-
-    // Set 7
-    expect(ig.itemSets.has(From(ig, ["T", 0, 2], ["F", 0, 0], ["F", 1, 0])));
-
-    // Set 8
-    expect(ig.itemSets.has(From(ig, ["F", 0, 2], ["E", 0, 1])));
-
-    // Set 9
-    expect(ig.itemSets.has(From(ig, ["E", 0, 3], ["T", 0, 1])));
-
-    // Set 10
-    expect(ig.itemSets.has(From(ig, ["T", 0, 3])));
-
-    // Set 11
-    expect(ig.itemSets.has(From(ig, ["F", 0, 3])));
-  });
-});
-
-const g2 = new EBNFParser(`
-  S -> L EQ R ;
-  S -> R ;
-  L -> STAR R ;
-  L -> id ;
-  R -> L ;
-`).grammar.augmentStartSymbol("S1");
-
-describe("LR0ItemGraph with Conflicts", () => {
-  test("Test1", () => {
-    const ig = new LR0ItemGraph(g2).refresh();
-
-    expect(ig.size).toBe(10);
-    // Set 0
-    expect(ig.itemSets.has(From(ig, ["S1", 0, 0], ["S", 0, 0], ["S", 1, 0], ["L", 0, 0], ["L", 1, 0], ["R", 0, 0])));
-
-    // Set 1
-    expect(ig.itemSets.has(From(ig, ["S1", 0, 1])));
-
-    // Set I2
-    expect(ig.itemSets.has(From(ig, ["S", 0, 1], ["R", 0, 1])));
-
-    // Set 3
-    expect(ig.itemSets.has(From(ig, ["S", 1, 1])));
-
-    // Set 4
-    expect(ig.itemSets.has(From(ig, ["L", 0, 1], ["R", 0, 0], ["L", 0, 0], ["L", 1, 0])));
-
-    // Set 5
-    expect(ig.itemSets.has(From(ig, ["L", 1, 1])));
-
-    // Set 6
-    expect(ig.itemSets.has(From(ig, ["S", 0, 2], ["R", 0, 0], ["L", 0, 0], ["L", 1, 0])));
-
-    // Set 7
-    expect(ig.itemSets.has(From(ig, ["L", 0, 2])));
-
-    // Set 8
-    expect(ig.itemSets.has(From(ig, ["R", 0, 1])));
-
-    // Set 9
-    expect(ig.itemSets.has(From(ig, ["S", 0, 3])));
+      "0": {
+        items: [
+          "E1 ->  . E",
+          "E ->  . E PLUS T",
+          "E ->  . T",
+          "T ->  . T STAR F",
+          "T ->  . F",
+          "F ->  . OPEN E CLOSE",
+          "F ->  . id",
+        ],
+        next: { E: 1, T: 2, F: 3, OPEN: 4, id: 5 },
+      },
+      "1": { items: ["E1 -> E . ", "E -> E . PLUS T"], next: { PLUS: 6 } },
+      "2": { items: ["T -> T . STAR F", "E -> T . "], next: { STAR: 7 } },
+      "3": { items: ["T -> F . "], next: {} },
+      "4": {
+        items: [
+          "E ->  . E PLUS T",
+          "F -> OPEN . E CLOSE",
+          "E ->  . T",
+          "T ->  . T STAR F",
+          "T ->  . F",
+          "F ->  . OPEN E CLOSE",
+          "F ->  . id",
+        ],
+        next: { E: 8, T: 2, F: 3, OPEN: 4, id: 5 },
+      },
+      "5": { items: ["F -> id . "], next: {} },
+      "6": {
+        items: ["E -> E PLUS . T", "T ->  . T STAR F", "T ->  . F", "F ->  . OPEN E CLOSE", "F ->  . id"],
+        next: { T: 9, F: 3, OPEN: 4, id: 5 },
+      },
+      "7": {
+        items: ["T -> T STAR . F", "F ->  . OPEN E CLOSE", "F ->  . id"],
+        next: { F: 10, OPEN: 4, id: 5 },
+      },
+      "8": {
+        items: ["F -> OPEN E . CLOSE", "E -> E . PLUS T"],
+        next: { PLUS: 6, CLOSE: 11 },
+      },
+      "9": {
+        items: ["T -> T . STAR F", "E -> E PLUS T . "],
+        next: { STAR: 7 },
+      },
+      "10": { items: ["T -> T STAR F . "], next: {} },
+      "11": { items: ["F -> OPEN E CLOSE . "], next: {} },
+    });
   });
 });

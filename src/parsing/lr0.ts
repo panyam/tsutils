@@ -32,7 +32,7 @@ export class LR0Item implements LRItem {
    * <padding 16 bits><nt id 16 bits><ruleIndex 16 bits><position 16 bits>
    */
   get key(): string {
-    assert(!isNaN(this.rule.id));
+    assert(!isNaN(this.rule.id), "Rule's ID is not yet set.");
     return this.rule.id + ":" + this.position;
   }
 

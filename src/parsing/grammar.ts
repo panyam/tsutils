@@ -282,7 +282,7 @@ export class Grammar {
    *
    * Null production can be represented with an empty exps list.
    */
-  add(nt: string | Sym, production: Str): this {
+  add(nt: string | Sym, production: Str): Rule {
     let nonterm: Nullable<Sym> = null;
     if (typeof nt === "string") {
       nonterm = this.getSym(nt);
@@ -299,14 +299,15 @@ export class Grammar {
   /**
    * Add a rule directly.
    */
-  addRule(rule: Rule): this {
+  addRule(rule: Rule): Rule {
     if (this.findRule(rule.nt, rule.rhs) >= 0) {
       throw new Error("Duplicate rule");
     }
+    rule.id = this.allRules.length;
     this.allRules.push(rule);
     this.rulesForNT(rule.nt).push(rule);
     this.modified = true;
-    return this;
+    return rule;
   }
 
   /**
