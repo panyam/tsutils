@@ -1,6 +1,7 @@
 import { assert } from "../../utils/misc";
 import { StringMap } from "../../types";
-import { Str, FirstSets, NullableSet, FollowSets, Grammar } from "../grammar";
+import { Str, Grammar, Rule } from "../grammar";
+import { FirstSets, NullableSet, FollowSets } from "../sets";
 import { ParseTable as LLParseTable } from "../ll";
 import { LRAction, ParseTable, LRItemGraph } from "../lrbase";
 import { makeSLRParseTable, makeLRParseTable } from "../ptables";
@@ -13,8 +14,8 @@ export function Shift(itemGraph: LRItemGraph, newState: number): LRAction {
   return LRAction.Shift(itemGraph.itemSets.get(newState));
 }
 
-export function Reduce(g: Grammar, nt: string, rule: number): LRAction {
-  return LRAction.Reduce(g.getSym(nt)!, rule);
+export function Reduce(rule: Rule): LRAction {
+  return LRAction.Reduce(rule);
 }
 
 export function listsEqual(l1: string[], l2: string[]): boolean {
@@ -51,54 +52,31 @@ export function expectFSEntries(g: Grammar, fs: FirstSets | FollowSets, entries:
 export function expectRules(g: Grammar, nt: string, ...rules: (string | Str)[]): void {
   const nonterm = g.getSym(nt);
   assert(nonterm != null, `Nonterminal {nt} does not exist`);
-  expect(nonterm?.rules.length).toBe(rules.length);
+  const ntRules = g.rulesForNT(nonterm);
+  expect(ntRules.length).toBe(rules.length);
   for (let i = 0; i < rules.length; i++) {
-    const eq = nonterm?.rules[i].equals(g.normalizeRule(rules[i]));
+    const eq = ntRules[i].rhs.equals(g.normalizeRule(rules[i]));
     if (!eq) {
-      console.log("Expected: ", rules[i], "Found: ", nonterm?.rules[i]);
+      console.log("Expected: ", rules[i], "Found: ", ntRules[i].rhs);
       assert(false, `Rule ${i} does not match`);
     }
   }
 }
 
-export function expectPTableActions(
-  g: Grammar,
-  pt: ParseTable,
-  itemGraph: LRItemGraph,
-  fromSet: number,
-  actions: StringMap<LRAction[]>,
-): void {
-  const itemSet = itemGraph.itemSets.get(fromSet);
-  for (const label in actions) {
-    const sym = label == g.Eof.label ? g.Eof : g.getSym(label);
-    assert(sym != null, `Symbol '${label}' not found`);
-    const foundActions = pt.getActions(itemSet, sym);
-    const expectedActions = actions[label];
-    if (foundActions.length != expectedActions.length) {
-      console.log("Action Mismatch: ", label, sym);
-      expect(foundActions.length).toEqual(expectedActions.length);
-    }
-    for (let i = 0; i < foundActions.length; i++) {
-      if (!foundActions[i].equals(expectedActions[i])) {
-        assert(
-          false,
-          `State ${fromSet} - Action Mismatch for label ${label} at index: ${i}.  Found: ${foundActions[
-            i
-          ].toString()}, Expected: ${expectedActions[i].toString()}`,
-        );
-      }
-    }
-  }
+export function verifyItemGraphs(ig: LRItemGraph, entries: any, debug = false): boolean {
+  const foundValue = ig.debugValue;
+  if (debug) console.log("ItemSets and GOTO: ", foundValue);
+  expect(foundValue).toEqual(entries);
+  return true;
 }
 
 export function verifyLLParseTable(
   name: string,
   g: Grammar,
-  maker: (g: Grammar) => LLParseTable,
   actions: StringMap<StringMap<string[]>>,
   debug = false,
 ): boolean {
-  const ptable = maker(g);
+  const ptable = new LLParseTable(g);
   const ptabValue = ptable.debugValue;
   if (debug) console.log(`${name} Actions: `, ptabValue);
   expect(actions).toEqual(ptabValue);

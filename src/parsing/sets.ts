@@ -1,5 +1,5 @@
 import { StringMap, NumMap, Nullable } from "../types";
-import { Grammar, Sym, Str } from "./grammar";
+import { Grammar, Sym, Str, Rule } from "./grammar";
 import { assert } from "../utils/misc";
 
 const defaultKeyFunc = (x: any) => x.key;
@@ -22,8 +22,9 @@ export class IDSet<T extends { id: number }> {
     return this._entries;
   }
 
-  get(id: number): Nullable<T> {
-    return this._entries[id] || null;
+  get(id: number): T {
+    assert(id >= 0 && id < this._entries.length);
+    return this._entries[id];
   }
 
   getByKey(key: string): Nullable<T> {
@@ -141,17 +142,15 @@ export class NullableSet {
     let beforeCount = 0;
     do {
       beforeCount = this.entries.size;
-      this.grammar.forEachRule((nt) => this.visit(nt));
+      this.grammar.nonTerminals.forEach((nt) => this.visit(nt));
     } while (beforeCount != this.entries.size);
   }
 
   protected visit(nt: Sym): void {
-    if (nt.rules.length > 0) {
-      for (const rule of nt.rules) {
-        if (this.evaluate(rule)) {
-          this.add(nt);
-          break;
-        }
+    for (const rule of this.grammar.rulesForNT(nt)) {
+      if (this.isStrNullable(rule.rhs)) {
+        this.add(nt);
+        break;
       }
     }
   }
@@ -175,10 +174,6 @@ export class NullableSet {
   add(nt: Sym): void {
     assert(!nt.isTerminal);
     this.entries.add(nt.id);
-  }
-
-  protected evaluate(exp: Str): boolean {
-    return this.isStrNullable(exp);
   }
 }
 
@@ -323,19 +318,19 @@ export class FirstSets extends SymTermSets {
     let beforeCount = 0;
     do {
       beforeCount = this.count;
-      this.grammar.forEachRule((nt, exp) => {
-        this.processRule(nt, exp);
+      this.grammar.forEachRule(null, (rule) => {
+        this.processRule(rule);
       });
     } while (beforeCount != this.count);
   }
 
-  processRule(nonterm: Sym, rule: Str): void {
+  processRule(rule: Rule): void {
     const nullables = this.nullables;
     let allNullable = true;
-    for (const s of rule.syms) {
+    for (const s of rule.rhs.syms) {
       // First(s) - null will be in First(nonterm)
       // Null will onlybe added if all symbols are nullable
-      this.add(nonterm, s, false);
+      this.add(rule.nt, s, false);
       if (s.isTerminal || !nullables.isNullable(s as Sym)) {
         // since s is not nullable the next rule's first set
         // cannot affect nonterm's firs set
@@ -343,7 +338,7 @@ export class FirstSets extends SymTermSets {
         break;
       }
     }
-    if (allNullable) this.addNull(nonterm);
+    if (allNullable) this.addNull(rule.nt);
   }
 }
 
@@ -382,15 +377,15 @@ export class FollowSets extends SymTermSets {
     let beforeCount = 0;
     do {
       beforeCount = this.count;
-      this.grammar.forEachRule((nt, rule) => this.processRule(nt, rule));
+      this.grammar.forEachRule(null, (rule) => this.processRule(rule));
     } while (beforeCount != this.count);
   }
 
   /**
    * Add Follows[source] into Follows[dest] recursively.
    */
-  processRule(nonterm: Sym, rule: Str): void {
-    const syms = rule.syms;
+  processRule(rule: Rule): void {
+    const syms = rule.rhs.syms;
     const firstSets = this.firstSets;
     const nullables = this.firstSets.nullables;
 
@@ -400,7 +395,7 @@ export class FollowSets extends SymTermSets {
     for (let i = 0; i < syms.length; i++) {
       const sym = syms[i];
       if (sym.isTerminal) continue;
-      firstSets.forEachTermIn(rule, i + 1, (term) => {
+      firstSets.forEachTermIn(rule.rhs, i + 1, (term) => {
         if (term != null) this.add(sym, term);
       });
     }
@@ -422,7 +417,7 @@ export class FollowSets extends SymTermSets {
         }
       }
       if (allNullable) {
-        this.add(syms[i], nonterm);
+        this.add(syms[i], rule.nt);
       }
     }
   }

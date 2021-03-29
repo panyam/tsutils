@@ -4,7 +4,7 @@ import { Grammar } from "../grammar";
 import { EBNFParser } from "../ebnf";
 import { LRAction, ParseTable, LRItemGraph } from "../lrbase";
 import { LR1ItemGraph } from "../lr1";
-import { testParseTable, Goto, Shift, Reduce, expectPTableActions } from "./utils";
+import { testParseTable, Goto, Shift, Reduce } from "./utils";
 
 const g1 = new EBNFParser(` `).grammar.augmentStartSymbol("S1");
 

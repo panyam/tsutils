@@ -1,26 +1,23 @@
-import { Sym } from "./grammar";
+import { Sym, Rule, Grammar } from "./grammar";
 import { assert } from "../utils/misc";
 import { LRItem, LRItemSet, LRItemGraph } from "./lrbase";
 
 export class LR0Item implements LRItem {
   id = 0;
-  readonly nt: Sym;
-  readonly ruleIndex: number;
+  readonly rule: Rule;
   readonly position: number;
-  constructor(nt: Sym, ruleIndex = 0, position = 0) {
-    this.nt = nt;
-    this.ruleIndex = ruleIndex;
+  constructor(rule: Rule, position = 0) {
+    this.rule = rule;
     this.position = position;
   }
 
   advance(): LRItem {
-    const rule = this.nt.rules[this.ruleIndex];
-    assert(this.position < rule.length);
-    return new LR0Item(this.nt, this.ruleIndex, this.position + 1);
+    assert(this.position < this.rule.rhs.length);
+    return new LR0Item(this.rule, this.position + 1);
   }
 
   copy(): LRItem {
-    return new LR0Item(this.nt, this.ruleIndex, this.position);
+    return new LR0Item(this.rule, this.position);
   }
 
   /**
@@ -35,12 +32,12 @@ export class LR0Item implements LRItem {
    * <padding 16 bits><nt id 16 bits><ruleIndex 16 bits><position 16 bits>
    */
   get key(): string {
-    return this.nt.id + ":" + this.ruleIndex + ":" + this.position;
+    assert(!isNaN(this.rule.id));
+    return this.rule.id + ":" + this.position;
   }
 
   compareTo(another: this): number {
-    let diff = this.nt.id - another.nt.id;
-    if (diff == 0) diff = this.ruleIndex - another.ruleIndex;
+    let diff = this.rule.id - another.rule.id;
     if (diff == 0) diff = this.position - another.position;
     return diff;
   }
@@ -50,17 +47,17 @@ export class LR0Item implements LRItem {
   }
 
   get debugString(): string {
-    const rule = this.nt.rules[this.ruleIndex];
+    const rule = this.rule;
     const pos = this.position;
-    const pre = rule.syms.slice(0, pos).join(" ");
-    const post = rule.syms.slice(pos).join(" ");
-    return `(${this.ruleIndex}, ${this.position}) - (${this.nt.id}) ${this.nt} -> ${pre} . ${post}`;
+    const pre = rule.rhs.syms.slice(0, pos).join(" ");
+    const post = rule.rhs.syms.slice(pos).join(" ");
+    return `${rule.nt} -> ${pre} . ${post}`;
   }
 }
 
 export class LR0ItemGraph extends LRItemGraph {
   protected startItem(): LRItem {
-    return this.items.ensure(new LR0Item(this.grammar.augStart));
+    return this.items.ensure(new LR0Item(this.grammar.augStartRule));
   }
 
   /**
@@ -71,17 +68,17 @@ export class LR0ItemGraph extends LRItemGraph {
     const out = new LRItemSet(this, ...itemSet.values);
     for (let i = 0; i < out.values.length; i++) {
       const itemId = out.values[i];
-      const item = this.items.get(itemId);
-      const rule = item.nt.rules[item.ruleIndex];
+      const item = this.items.get(itemId)!;
+      const rule = item.rule;
       // Evaluate the closure
       // Cannot do anything past the end
-      if (item.position < rule.length) {
-        const sym = rule.syms[item.position];
+      if (item.position < rule.rhs.length) {
+        const sym = rule.rhs.syms[item.position];
         if (!sym.isTerminal) {
-          for (let i = 0; i < sym.rules.length; i++) {
-            const newItem = this.items.ensure(new LR0Item(sym, i, 0));
-            out.add(newItem.id);
-          }
+        for (const rule of this.grammar.rulesForNT(sym)) {
+          const newItem = this.items.ensure(new LR0Item(rule, 0));
+          out.add(newItem.id);
+        }
         }
       }
     }

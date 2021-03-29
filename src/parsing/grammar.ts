@@ -18,7 +18,6 @@ export class Sym {
   readonly grammar: Grammar;
   readonly label: string;
   isTerminal = false;
-  rules: Str[] = [];
   isAuxiliary = false;
   precedence = 1;
   assocLeft = true;
@@ -40,48 +39,16 @@ export class Sym {
     }
   }
 
+  compareTo(another: this): number {
+    return this.label.localeCompare(another.label);
+  }
+
   equals(another: this): boolean {
     return this.label == another.label;
   }
 
   toString(): string {
     return this.label;
-  }
-
-  add(production: Str): void {
-    if (this.findRule(production) >= 0) {
-      throw new Error("Duplicate rule");
-    }
-    this.rules.push(production);
-  }
-
-  /**
-   * Checks if a rule already exists in the list of productions for
-   * this non terminal.
-   */
-  findRule(production: Str): number {
-    for (let i = this.rules.length - 1; i >= 0; i--) {
-      const rule = this.rules[i];
-      if (rule == production) return i;
-      if (rule.equals(production)) return i;
-    }
-    return -1;
-  }
-
-  /**
-   * Returns true if the rules of this non-term match the rules of
-   * another non terminal.
-   * This is used for seeing if duplicates exist when creating auxiliary
-   * non-terminals so duplicates are not created.
-   */
-  rulesEqual(rules: Str[]): boolean {
-    if (this.rules.length != rules.length) return false;
-    for (let i = this.rules.length - 1; i >= 0; i--) {
-      if (!this.rules[i].equals(rules[i])) {
-        return false;
-      }
-    }
-    return true;
   }
 }
 
@@ -123,13 +90,16 @@ export class Str {
     return this.syms.map((s) => s.toString()).join(" ");
   }
 
-  equals(another: this): boolean {
-    if (this.syms.length != another.syms.length) return false;
-    for (let i = 0; i < this.syms.length; i++) {
-      if (!this.syms[i].equals(another.syms[i])) return false;
-      // if (this.cardinalities[i] != another.cardinalities[i]) return false;
+  compareTo(another: this): number {
+    for (let i = 0; i < this.syms.length && i < another.syms.length; i++) {
+      const diff = this.syms[i].compareTo(another.syms[i]);
+      if (diff != 0) return diff;
     }
-    return true;
+    return this.syms.length - another.syms.length;
+  }
+
+  equals(another: this): boolean {
+    return this.compareTo(another) == 0;
   }
 
   /**
@@ -150,16 +120,47 @@ export class Str {
   }
 }
 
+export class Rule {
+  id: number;
+  nt: Sym;
+  rhs: Str;
+  constructor(nt: Sym, rhs: Str) {
+    if (nt.isTerminal) {
+      throw new Error("Cannot add rules to a terminal");
+    }
+    this.nt = nt;
+    this.rhs = rhs;
+  }
+
+  get debugString(): string {
+    return `${this.nt.label} -> ${this.rhs.debugString}`;
+  }
+
+  equals(another: this): boolean {
+    return this.compareTo(another) == 0;
+  }
+
+  compareTo(another: this): number {
+    assert(!isNaN(this.id));
+    let diff = this.nt.compareTo(another.nt);
+    if (diff == 0) {
+      this.rhs.compareTo(another.rhs);
+    }
+    return diff;
+  }
+}
+
 export class Grammar {
   public startSymbol: Nullable<Sym> = null;
-  private _modified = true;
+  modified = true;
   protected symbolSet = new IDSet<Sym>((s) => s.label);
+  protected allRules: Rule[] = [];
+  protected _rulesForNT: StringMap<Rule[]> = {};
   protected currentNonTerm: Nullable<Sym> = null;
+  protected _followSets: Nullable<FollowSets> = null;
 
   readonly Eof = new Sym(this, "<EOF>", true, -1);
-  private _AugStart = new Sym(this, "$", false, -2);
-
-  protected _followSets: Nullable<FollowSets> = null;
+  private _AugStartRule: Rule;
 
   /**
    * A way of creating Grammars with a "single expresssion".
@@ -168,6 +169,14 @@ export class Grammar {
     const g = new Grammar();
     callback(g);
     return g;
+  }
+
+  rulesForNT(nt: Sym): Rule[] {
+    assert(!nt.isTerminal);
+    if (!(nt.label in this._rulesForNT)) {
+      this._rulesForNT[nt.label] = [];
+    }
+    return this._rulesForNT[nt.label];
   }
 
   get nullables(): NullableSet {
@@ -179,27 +188,31 @@ export class Grammar {
   }
 
   get followSets(): FollowSets {
-    if (this._followSets == null) {
-      this._followSets = new FollowSets(this);
+    if (this.modified || this._followSets == null) {
+      this._followSets = this.refresh();
     }
     return this._followSets;
   }
 
-  get augStart(): Sym {
-    return this._AugStart;
+  get augStartRule(): Rule{
+    return this._AugStartRule;
   }
 
   augmentStartSymbol(label = "$"): this {
     assert(this.getSym(label) == null);
-    this._AugStart = new Sym(this, label, false, -2);
     if (this.startSymbol) {
-      this._AugStart.add(new Str(this.startSymbol));
+      const augSym = new Sym(this, label, false, -2);
+      this._AugStartRule = new Rule(augSym, new Str(this.startSymbol));
+      this.addRule(this._AugStartRule);
     }
     return this;
   }
 
-  refresh(): void {
-    this._followSets = null;
+  refresh(): FollowSets {
+    this.allRules.forEach((rule, i) => rule.id = i);
+    this._followSets = new FollowSets(this);
+    this.modified = false;
+    return this._followSets;
   }
 
   addTerminals(...terminals: string[]): void {
@@ -235,16 +248,30 @@ export class Grammar {
   }
 
   /**
-   * A iterator across all the rules of all non terminals in this grammar.
+   * A iterator across all the rules for either all non terminals in this grammar
+   * for a single non terminal (if the nt value is non null).
    *
    * @param visitor
    */
-  forEachRule(visitor: (nt: Sym, rule: Str, index: number) => void | boolean | undefined | null): void {
-    this.forEachNT((nt: Sym) => {
-      for (let i = 0; i < nt.rules.length; i++) {
-        if (visitor(nt, nt.rules[i], i) == false) return false;
-      }
-    });
+  forEachRule(nt: Nullable<Sym>, visitor: (rule: Rule, index: number) => void | boolean | undefined | null): boolean {
+    const rules = nt == null ? this.allRules : this.rulesForNT(nt) || [];
+    for (let i = 0; i < rules.length; i++) {
+      if (visitor(rules[i], i) == false) return false;
+    }
+    return true;
+  }
+
+  getRule(nt: string | Sym, index: number): Rule {
+    if (typeof nt === "string") nt = this.getSym(nt)!;
+    assert(nt != null);
+    return this.rulesForNT(nt)[index];
+  }
+
+  /**
+   * Return the the index of a rule if it already exists to prevent duplicates.
+   */
+  findRule(nt: Sym, production: Str): number {
+    return this.rulesForNT(nt).findIndex((r) => r.nt == nt && r.rhs.equals(production));
   }
 
   /**
@@ -255,17 +282,30 @@ export class Grammar {
    *
    * Null production can be represented with an empty exps list.
    */
-  add(nt: string, production: Str): this {
-    let nonterm = this.getSym(nt);
-    if (nonterm == null) {
-      // create it
-      nonterm = this.newNT(nt);
-    } else {
-      if (nonterm.isTerminal) {
-        throw new Error("Cannot add rules to a terminal");
+  add(nt: string | Sym, production: Str): this {
+    let nonterm: Nullable<Sym> = null;
+    if (typeof nt === "string") {
+      nonterm = this.getSym(nt);
+      if (nonterm == null) {
+        // create it
+        nonterm = this.newNT(nt);
       }
+    } else {
+      nonterm = this.symbolSet.ensure(nt);
     }
-    nonterm.add(production);
+    return this.addRule(new Rule(nonterm, production));
+  }
+
+  /**
+   * Add a rule directly.
+   */
+  addRule(rule: Rule): this {
+    if (this.findRule(rule.nt, rule.rhs) >= 0) {
+      throw new Error("Duplicate rule");
+    }
+    this.allRules.push(rule);
+    this.rulesForNT(rule.nt).push(rule);
+    this.modified = true;
     return this;
   }
 
@@ -281,12 +321,12 @@ export class Grammar {
 
   getSymById(id: number): Nullable<Sym> {
     if (id == -1) return this.Eof;
-    else if (id == -2) return this._AugStart;
+    else if (id == -2) return this._AugStartRule?.nt || null;
     return this.symbolSet.get(id);
   }
 
   getSym(label: string): Nullable<Sym> {
-    if (label == this._AugStart.label) return this._AugStart;
+    if (this._AugStartRule && label == this._AugStartRule.nt.label) return this._AugStartRule.nt;
     return this.symbolSet.getByKey(label);
   }
 
@@ -393,18 +433,19 @@ export class Grammar {
     //
     //    X -> X exp | ;    # otherwise:
     let auxNT = this.findAuxNT((auxNT) => {
-      if (auxNT.rules.length != 2) return false;
+      const rules = this.rulesForNT(auxNT);
+      if (rules.length != 2) return false;
 
       let which = 0;
-      if (auxNT.rules[0].length == 0) {
+      if (rules[0].rhs.length == 0) {
         which = 1;
-      } else if (auxNT.rules[1].length == 0) {
+      } else if (rules[1].rhs.length == 0) {
         which = 0;
       } else {
         return false;
       }
 
-      const rule = auxNT.rules[which];
+      const rule = rules[which].rhs;
       if (rule.length != 1 + exp.length) return false;
       if (rule.syms[0].equals(auxNT)) {
         return rule.containsAt(1, s);
@@ -415,11 +456,11 @@ export class Grammar {
     });
     if (auxNT == null) {
       auxNT = this.newAuxNT();
-      auxNT.add(new Str());
+      this.add(auxNT, new Str());
       if (leftRec) {
-        auxNT.add(new Str(auxNT).extend(s));
+        this.add(auxNT, new Str(auxNT).extend(s));
       } else {
-        auxNT.add(s.copy().append(auxNT));
+        this.add(auxNT, s.copy().append(auxNT));
       }
     }
     return new Str(auxNT);
@@ -432,18 +473,19 @@ export class Grammar {
     //
     //    X -> X exp | exp ;    # otherwise:
     let auxNT = this.findAuxNT((auxNT) => {
-      if (auxNT.rules.length != 2) return false;
+      const rules = this.rulesForNT(auxNT);
+      if (rules.length != 2) return false;
 
       let which = 0;
-      if (auxNT.rules[0].equals(s)) {
+      if (rules[0].rhs.equals(s)) {
         which = 1;
-      } else if (auxNT.rules[1].equals(s)) {
+      } else if (rules[1].rhs.equals(s)) {
         which = 0;
       } else {
         return false;
       }
 
-      const rule = auxNT.rules[which];
+      const rule = rules[which].rhs;
       if (rule.length != 1 + exp.length) return false;
       if (rule.syms[0].equals(auxNT)) {
         return rule.containsAt(1, s);
@@ -454,11 +496,11 @@ export class Grammar {
     });
     if (auxNT == null) {
       auxNT = this.newAuxNT();
-      auxNT.add(s);
+      this.add(auxNT, s);
       if (leftRec) {
-        auxNT.add(new Str(auxNT).extend(s));
+        this.add(auxNT, new Str(auxNT).extend(s));
       } else {
-        auxNT.add(s.copy().append(auxNT));
+        this.add(auxNT, s.copy().append(auxNT));
       }
     }
     return new Str(auxNT);
@@ -491,7 +533,7 @@ export class Grammar {
     let nt = this.findAuxNTByRules(...rules);
     if (nt == null) {
       nt = this.newAuxNT();
-      for (const rule of rules) nt.add(rule);
+      for (const rule of rules) this.add(nt, rule);
     }
     return nt;
   }
@@ -510,7 +552,14 @@ export class Grammar {
   }
 
   findAuxNTByRules(...rules: Str[]): Nullable<Sym> {
-    return this.findAuxNT((auxNT) => auxNT.rulesEqual(rules));
+    return this.findAuxNT((auxNT) => {
+      const ntRules = this.rulesForNT(auxNT);
+      if (ntRules.length != rules.length) return false;
+      for (let i = 0; i < ntRules.length; i++) {
+        if (!ntRules[i].rhs.equals(rules[i])) return false;
+      }
+      return true;
+    });
   }
 
   /**
@@ -518,8 +567,8 @@ export class Grammar {
    */
   debugValue(hideAux = false): string[] {
     const out: string[] = [];
-    this.forEachRule((nt: Sym, rule: Str, index: number) => {
-      out.push(`${nt.label} -> ${rule.debugString}`);
+    this.forEachRule(null, (rule: Rule, index: number) => {
+      out.push(`${rule.nt.label} -> ${rule.rhs.debugString}`);
     });
     return out;
   }
@@ -541,10 +590,10 @@ export class Grammar {
      */
     const edgeFunctor = (node: Sym): [Sym, any][] => {
       const out: [Sym, any][] = [];
-      node.rules.forEach((rule, ruleIndex) => {
-        rule.syms.forEach((s, j) => {
+      this.forEachRule(node, (rule, ruleIndex) => {
+        rule.rhs.syms.forEach((s, j) => {
           if (s.isTerminal) return;
-          if (this.nullables.isStrNullable(rule, 0, j - 1) && this.nullables.isStrNullable(rule, j + 1)) {
+          if (this.nullables.isStrNullable(rule.rhs, 0, j - 1) && this.nullables.isStrNullable(rule.rhs, j + 1)) {
             out.push([s, [node, ruleIndex]]);
           }
         });
@@ -561,8 +610,8 @@ export class Grammar {
   get leftRecursion(): any {
     const edgeFunctor = (node: Sym): [Sym, any][] => {
       const out: [Sym, any][] = [];
-      node.rules.forEach((rule, ruleIndex) => {
-        rule.syms.forEach((s, j) => {
+      this.forEachRule(node, (rule, ruleIndex) => {
+        rule.rhs.syms.forEach((s, j) => {
           if (s.isTerminal) return;
           out.push([s, ruleIndex]);
           // If this is symbol is not nullable then we can stop here

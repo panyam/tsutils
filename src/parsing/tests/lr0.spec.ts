@@ -3,9 +3,10 @@ import { LRItemSet } from "../lrbase";
 import { LR0Item, LR0ItemGraph } from "../lr0";
 import { Grammar } from "../grammar";
 import { assert } from "../../utils/misc";
+import { verifyItemGraphs } from "./utils";
 
 function From(ig: LR0ItemGraph, ...entries: [string, number, number][]): LRItemSet {
-  const items = entries.map(([label, ri, pos]) => ig.items.ensure(new LR0Item(ig.grammar.getSym(label)!, ri, pos)).id);
+  const items = entries.map(([label, ri, pos]) => ig.items.ensure(new LR0Item(ig.grammar.getRule(label, ri), pos)).id);
   const set = new LRItemSet(ig, ...items);
   return ig.itemSets.ensure(set);
 }
@@ -16,7 +17,7 @@ export function expectItemSet(g: Grammar, set: LRItemSet, entries: [string, numb
   for (const [sym, index, pos] of entries) {
     const nt = g.getSym(sym);
     assert(nt != null, "Cannot find symbol: " + sym);
-    expect(set.has(ig.items.ensure(new LR0Item(nt, index, pos)).id)).toBe(true);
+    expect(set.has(ig.items.ensure(new LR0Item(g.getRule(nt, index), pos)).id)).toBe(true);
   }
 }
 
@@ -34,15 +35,15 @@ describe("LRItem", () => {
   });
 
   test("Test Advance", () => {
-    const ig = new LR0ItemGraph(g1);
+    const ig = new LR0ItemGraph(g1).refresh();
     const E = g1.getSym("E")!;
-    const l1 = ig.items.ensure(new LR0Item(E, 1));
-    const l1a = ig.items.ensure(new LR0Item(E, 1));
+    const rule = g1.getRule(E, 1);
+    const l1 = ig.items.ensure(new LR0Item(rule));
+    const l1a = ig.items.ensure(new LR0Item(rule));
     expect(l1.equals(l1a)).toBe(true);
-    expect(l1.key).toEqual(`${E.id}:1:0`);
+    expect(l1.key).toEqual(`${rule.id}:0`);
     const l2 = l1.advance();
-    expect(l2.nt.equals(l1.nt)).toBe(true);
-    expect(l2.ruleIndex).toEqual(l1.ruleIndex);
+    expect(l2.rule.equals(l1.rule)).toBe(true);
     expect(l2.position).toEqual(l1.position + 1);
     expect(() => l2.advance()).toThrowError();
   });
@@ -50,20 +51,61 @@ describe("LRItem", () => {
 
 describe("LRItemSet", () => {
   test("Test Closure", () => {
-    const ig = new LR0ItemGraph(g1);
-    const s1 = ig.startSet();
-    const s2 = ig.startSet();
-    expect(s1.equals(s2)).toBe(true);
-    expect(ig.itemSets.size).toBe(1);
-    expectItemSet(g1, s1, [
-      ["E1", 0, 0],
-      ["E", 0, 0],
-      ["E", 1, 0],
-      ["T", 0, 0],
-      ["T", 1, 0],
-      ["F", 0, 0],
-      ["F", 1, 0],
-    ]);
+    const ig = new LR0ItemGraph(g1).refresh();
+    verifyItemGraphs(ig, {
+        '0': {
+          items: [
+            'E1 ->  . E',
+            'E ->  . E PLUS T',
+            'E ->  . T',
+            'T ->  . T STAR F',
+            'T ->  . F',
+            'F ->  . OPEN E CLOSE',
+            'F ->  . id'
+          ],
+          next: { E: 1, T: 2, F: 3, OPEN: 4, id: 5 }
+        },
+        '1': { items: [ 'E1 -> E . ', 'E -> E . PLUS T' ], next: { PLUS: 6 } },
+        '2': { items: [ 'T -> T . STAR F', 'E -> T . ' ], next: { STAR: 7 } },
+        '3': { items: [ 'T -> F . ' ], next: {} },
+        '4': {
+          items: [
+            'E ->  . E PLUS T',
+            'F -> OPEN . E CLOSE',
+            'E ->  . T',
+            'T ->  . T STAR F',
+            'T ->  . F',
+            'F ->  . OPEN E CLOSE',
+            'F ->  . id'
+          ],
+          next: { E: 8, T: 2, F: 3, OPEN: 4, id: 5 }
+        },
+        '5': { items: [ 'F -> id . ' ], next: {} },
+        '6': {
+          items: [
+            'E -> E PLUS . T',
+            'T ->  . T STAR F',
+            'T ->  . F',
+            'F ->  . OPEN E CLOSE',
+            'F ->  . id'
+          ],
+          next: { T: 9, F: 3, OPEN: 4, id: 5 }
+        },
+        '7': {
+          items: [ 'T -> T STAR . F', 'F ->  . OPEN E CLOSE', 'F ->  . id' ],
+          next: { F: 10, OPEN: 4, id: 5 }
+        },
+        '8': {
+          items: [ 'F -> OPEN E . CLOSE', 'E -> E . PLUS T' ],
+          next: { PLUS: 6, CLOSE: 11 }
+        },
+        '9': {
+          items: [ 'T -> T . STAR F', 'E -> E PLUS T . ' ],
+          next: { STAR: 7 }
+        },
+        '10': { items: [ 'T -> T STAR F . ' ], next: {} },
+        '11': { items: [ 'F -> OPEN E CLOSE . ' ], next: {} }
+      }, true);
   });
 });
 

@@ -1,4 +1,4 @@
-import { Sym, Grammar } from "./grammar";
+import { Sym, Grammar, Rule } from "./grammar";
 import { Tokenizer, PTNode, Parser as ParserBase } from "./parser";
 import { StringMap, NumMap, Nullable } from "../types";
 import { assert } from "../utils/misc";
@@ -20,32 +20,22 @@ export class LRAction {
   // Next state to go to after performing the action (if valid).
   nextState: Nullable<LRItemSet> = null;
 
-  // The symbol that would trigger this action.
-  nonterm: Nullable<Sym> = null;
-
-  // Index of the rule to be used if action is REDUCE
-  // here sym MUST be a non terminal as ruleIndex would
-  // index into its list of rules.
-  ruleIndex = -1;
+  // The rule to be used for a reduce action
+  rule: Nullable<Rule> = null;
 
   toString(): string {
     if (this.tag == LRActionType.ACCEPT) return "Acc";
     else if (this.tag == LRActionType.SHIFT) {
       return "S" + this.nextState!.id;
     } else if (this.tag == LRActionType.REDUCE) {
-      return "R <" + this.nonterm!.label + " -> " + this.nonterm!.rules[this.ruleIndex] + ">";
+      return "R <" + this.rule!.debugString + ">";
     } else {
       return "" + this.nextState!.id;
     }
   }
 
   equals(another: LRAction): boolean {
-    return (
-      this.tag == another.tag &&
-      this.nextState == another.nextState &&
-      this.nonterm == another.nonterm &&
-      this.ruleIndex == another.ruleIndex
-    );
+    return this.tag == another.tag && this.nextState == another.nextState && this.rule == another.rule;
   }
 
   static Shift(next: LRItemSet): LRAction {
@@ -55,12 +45,10 @@ export class LRAction {
     return out;
   }
 
-  static Reduce(sym: Sym, ruleIndex: number): LRAction {
-    assert(!sym.isTerminal, "Reduce only applies non terminals");
+  static Reduce(rule: Rule): LRAction {
     const out = new LRAction();
     out.tag = LRActionType.REDUCE;
-    out.ruleIndex = ruleIndex;
-    out.nonterm = sym;
+    out.rule = rule;
     return out;
   }
 
@@ -80,8 +68,7 @@ export class LRAction {
 
 export interface LRItem {
   id: number;
-  readonly nt: Sym;
-  readonly ruleIndex: number;
+  readonly rule: Rule;
   readonly position: number;
   readonly key: string;
   readonly debugString: string;
@@ -142,7 +129,11 @@ export class LRItemSet {
   }
 
   get debugString(): string {
-    return this.sortedValues.map((v: number) => this.itemGraph.items.get(v).debugString).join("\n");
+    return this.debugValue.join("\n");
+  }
+
+  get debugValue(): any {
+    return this.sortedValues.map((v: number) => this.itemGraph.items.get(v).debugString);
   }
 }
 
@@ -184,6 +175,7 @@ export abstract class LRItemGraph {
 
   refresh(): this {
     this.reset();
+    this.grammar.refresh();
     this.evalGotoSets();
     return this;
   }
@@ -213,9 +205,9 @@ export abstract class LRItemGraph {
     for (const itemId of itemSet.values) {
       const item = this.items.get(itemId);
       // see if item.position points to "sym" in its rule
-      const rule = item.nt.rules[item.ruleIndex];
-      if (item.position < rule.length) {
-        if (rule.syms[item.position] == sym) {
+      const rule = item.rule;
+      if (item.position < rule.rhs.length) {
+        if (rule.rhs.syms[item.position] == sym) {
           // advance the item and add it
           out.add(this.items.ensure(item.advance()).id);
         }
@@ -275,6 +267,21 @@ export abstract class LRItemGraph {
 
   gotoSetFor(itemSet: LRItemSet): NumMap<LRItemSet> {
     return this.gotoSets[itemSet.id] || {};
+  }
+
+  get debugValue(): any {
+    const out = {} as any;
+    this.itemSets.entries.forEach((iset) => {
+      out[iset.id] = { items: [], next: {} };
+      out[iset.id]["items"] = iset.debugValue;
+      out[iset.id]["next"] = {};
+      const g = this.gotoSets[iset.id];
+      for (const symid in g) {
+        const sym = this.grammar.getSymById(symid as any)!;
+        out[iset.id]["next"][sym.label] = g[symid].id;
+      }
+    });
+    return out;
   }
 }
 
@@ -408,21 +415,20 @@ export class LRParser extends ParserBase {
         stack.push(action.nextState!, newNode);
       } else {
         // reduce
-        assert(action.nonterm != null, "Nonterm and ruleindex must be provided for a reduction action");
-        const rule = action.nonterm.rules[action.ruleIndex];
-        const ruleLen = rule.length;
+        assert(action.rule != null, "Nonterm and ruleindex must be provided for a reduction action");
+        const ruleLen = action.rule.rhs.length;
         // pop this many items off the stack and create a node
         // from this
-        const newNode = new PTNode(action.nonterm);
+        const newNode = new PTNode(action.rule.nt);
         for (let i = 0; i < ruleLen; i++) {
           const [_, node] = stack.pop();
           newNode.children.splice(0, 0, node);
         }
         [topState, topNode] = stack.top();
-        const newAction = this.resolveActions(this.parseTable.getActions(topState, action.nonterm), stack, tokenizer);
+        const newAction = this.resolveActions(this.parseTable.getActions(topState, action.rule.nt), stack, tokenizer);
         assert(newAction != null, "Top item does not have an action.");
         stack.push(newAction.nextState!, newNode);
-        this.notifyReduction(newNode, action.ruleIndex);
+        this.notifyReduction(newNode, action.rule);
       }
     }
     while (true); // !stack.isEmpty);
@@ -437,7 +443,7 @@ export class LRParser extends ParserBase {
    * cannot modify the stack.  It can only be used to perform
    * things like AST building or logging etc.
    */
-  notifyReduction(node: PTNode, ruleIndex: number): void {
+  notifyReduction(node: PTNode, rule: Rule): void {
     //
   }
 

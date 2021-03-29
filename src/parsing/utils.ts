@@ -1,4 +1,4 @@
-import { Sym, Str, Grammar } from "./grammar";
+import { Sym, Str, Grammar, Rule } from "./grammar";
 import { PTNode } from "./parser";
 
 export function printGrammar(g: Grammar, hideAux = true): string {
@@ -6,13 +6,13 @@ export function printGrammar(g: Grammar, hideAux = true): string {
   g.forEachNT((nt) => {
     if (!hideAux || !nt.isAuxiliary) {
       out += nt.label + " -> ";
-      out += printRules(g, nt.rules, hideAux) + "\n\n";
+      out += printRules(g, g.rulesForNT(nt), hideAux) + "\n\n";
     }
   });
   return out;
 }
 
-export function printRules(g: Grammar, rules: Str[], hideAux = true): string {
+export function printRules(g: Grammar, rules: Rule[], hideAux = true): string {
   // If auxiliaries are hidden then we dont show the rule name
   let out = "";
   const indentStr = "    ";
@@ -25,7 +25,7 @@ export function printRules(g: Grammar, rules: Str[], hideAux = true): string {
       }
       out += " | ";
     }
-    out += printRule(g, rule, hideAux);
+    out += printRule(g, rule.rhs, hideAux);
   }
   if (!hideAux) {
     out += "\n";

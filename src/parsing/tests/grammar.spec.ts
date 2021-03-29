@@ -51,9 +51,9 @@ describe("Grammar Tests", () => {
     const A = g.newTerm("a");
     const B = g.newTerm("b");
     const C = g.newTerm("c");
-    x.add(new Str(A));
-    x.add(new Str(B));
-    x.add(new Str(C));
+    g.add(x, new Str(A));
+    g.add(x, new Str(B));
+    g.add(x, new Str(C));
 
     const y = g.anyof(new Str(A), new Str(B), new Str(C));
     expect(y.length).toBe(1);
@@ -67,9 +67,9 @@ describe("Auxilliary Rules", () => {
     g.newNT("A");
     g.opt("A").syms[0]; // Create an optional here
     const B = g.newNT("B");
-    B.add(g.opt("A"));
+    g.add(B, g.opt("A"));
 
-    expect(B.rules[0].equals(g.opt("A"))).toBe(true);
+    expect(g.rulesForNT(B)[0].rhs.equals(g.opt("A"))).toBe(true);
   });
 
   test("Atleast0 Rules", () => {
@@ -77,8 +77,8 @@ describe("Auxilliary Rules", () => {
     const A = g.newNT("A");
     const B = g.newNT("B");
     const C = g.newNT("C");
-    B.add(g.atleast0(new Str(A, B), false));
-    C.add(g.atleast0(new Str(A, B), false));
+    g.add(B, g.atleast0(new Str(A, B), false));
+    g.add(C, g.atleast0(new Str(A, B), false));
 
     // expect(B.rules[0].equals(g.opt("A"))).toBe(true);
     console.log("printed: ", printGrammar(g, false));
@@ -89,8 +89,8 @@ describe("Auxilliary Rules", () => {
     const A = g.newNT("A");
     const B = g.newNT("B");
     const C = g.newNT("C");
-    B.add(g.atleast1(new Str(A, B), false));
-    C.add(g.atleast1(new Str(A, B), false));
+    g.add(B, g.atleast1(new Str(A, B), false));
+    g.add(C, g.atleast1(new Str(A, B), false));
 
     // expect(B.rules[0].equals(g.opt("A"))).toBe(true);
     console.log("printed: ", printGrammar(g, false));

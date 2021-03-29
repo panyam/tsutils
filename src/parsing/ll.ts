@@ -1,30 +1,13 @@
-import { Sym, Str, Grammar } from "./grammar";
+import { Sym, Str, Grammar, Rule } from "./grammar";
 import { Token } from "./tokenizer";
 import { PTNode, Parser as ParserBase } from "./parser";
 import { StringMap, Nullable } from "../types";
 import { assert } from "../utils/misc";
 import { printGrammar } from "./utils";
 
-export class ParseTableItem {
-  readonly nt: Sym;
-  readonly ruleIndex: number;
-  constructor(nt: Sym, ruleIndex = 0) {
-    this.nt = nt;
-    this.ruleIndex = ruleIndex;
-  }
-
-  get debugString(): string {
-    return `${this.nt.label} -> ${this.nt.rules[this.ruleIndex].debugString}`;
-  }
-
-  equals(another: ParseTableItem): boolean {
-    return this.nt == another.nt && this.ruleIndex == another.ruleIndex;
-  }
-}
-
 export class ParseTable {
   readonly grammar: Grammar;
-  protected entries: Map<number, Map<number, ParseTableItem[]>>;
+  protected entries: Map<number, Map<number, Rule[]>>;
 
   constructor(grammar: Grammar) {
     this.grammar = grammar;
@@ -34,8 +17,8 @@ export class ParseTable {
   refresh(): this {
     this.entries = new Map();
     this.grammar.followSets.refresh();
-    this.grammar.forEachRule((nt, rule, index) => {
-      this.processRule(nt, rule, index);
+    this.grammar.forEachRule(null, (rule, index) => {
+      this.processRule(rule, index);
     });
     const printed = printGrammar(this.grammar, false);
     const t1 = this.grammar.cycles;
@@ -53,14 +36,14 @@ export class ParseTable {
     return c;
   }
 
-  ensureEntry(nt: Sym, term: Sym): ParseTableItem[] {
+  ensureEntry(nt: Sym, term: Sym): Rule[] {
     assert(!nt.isTerminal && term.isTerminal);
-    let entriesForNT = this.entries.get(nt.id) as Map<number, ParseTableItem[]>;
+    let entriesForNT = this.entries.get(nt.id) as Map<number, Rule[]>;
     if (!entriesForNT) {
       entriesForNT = new Map();
       this.entries.set(nt.id, entriesForNT);
     }
-    let entries = entriesForNT.get(term.id) as ParseTableItem[];
+    let entries = entriesForNT.get(term.id) as Rule[];
     if (!entries) {
       entries = [];
       entriesForNT.set(term.id, entries);
@@ -68,7 +51,7 @@ export class ParseTable {
     return entries;
   }
 
-  add(nt: Sym, term: Sym, entry: ParseTableItem): boolean {
+  add(nt: Sym, term: Sym, entry: Rule): boolean {
     const entries = this.ensureEntry(nt, term);
     if (entries.findIndex((e) => e.equals(entry)) < 0) {
       entries.push(entry);
@@ -76,11 +59,11 @@ export class ParseTable {
     return entries.length == 1;
   }
 
-  get(nt: Sym, term: Sym): ParseTableItem[] {
+  get(nt: Sym, term: Sym): Rule[] {
     return this.ensureEntry(nt, term);
   }
 
-  forEachEntry(visitor: (nonterm: Sym, term: Sym, items: ParseTableItem[]) => boolean | void): void {
+  forEachEntry(visitor: (nonterm: Sym, term: Sym, items: Rule[]) => boolean | void): void {
     for (const ntId of this.entries.keys()) {
       const ntMap = this.entries.get(ntId) || null;
       assert(ntMap != null);
@@ -108,16 +91,16 @@ export class ParseTable {
     return out;
   }
 
-  processRule(nt: Sym, rule: Str, index: number): void {
+  processRule(rule: Rule, index: number): void {
     const firstSets = this.grammar.firstSets;
     // Rule 1
     // For each a in First(rule) add A -> rule to M[A,a]
     let ruleIsNullable = false;
-    firstSets.forEachTermIn(rule, 0, (term) => {
+    firstSets.forEachTermIn(rule.rhs, 0, (term) => {
       if (term == null) {
         ruleIsNullable = true;
       } else {
-        this.add(nt, term, new ParseTableItem(nt, index));
+        this.add(rule.nt, term, rule);
       }
     });
 
@@ -127,9 +110,9 @@ export class ParseTable {
     // const nullables = this.followSets.nullables;
     // const nullable = rule.isString ? nullables.isStrNullable(rule as Str) : nullables.isNullable((rule as Sym).value);
     if (ruleIsNullable) {
-      this.grammar.followSets.forEachTerm(nt, (term) => {
+      this.grammar.followSets.forEachTerm(rule.nt, (term) => {
         assert(term != null, "Follow sets cannot have null");
-        this.add(nt, term, new ParseTableItem(nt, index));
+        this.add(rule.nt, term, rule);
       });
     }
   }
@@ -226,11 +209,10 @@ export class Parser extends ParserBase {
     return stack.rootNode;
   }
 
-  popSymAndPushRule(parentNode: PTNode, entry: ParseTableItem): void {
+  popSymAndPushRule(parentNode: PTNode, rule: Rule): void {
     // This needs to match so we can push its children
-    const rule = entry.nt.rules[entry.ruleIndex];
-    for (let i = rule.syms.length - 1; i >= 0; i--) {
-      const sym = rule.syms[i];
+    for (let i = rule.rhs.syms.length - 1; i >= 0; i--) {
+      const sym = rule.rhs.syms[i];
       const node = this.stack.push(sym);
       parentNode.add(node, 0);
     }
@@ -249,13 +231,7 @@ export class Parser extends ParserBase {
     return true;
   }
 
-  processInvalidReductions(
-    topNode: PTNode,
-    currSym: Sym,
-    nextSym: Sym,
-    nextValue: any,
-    entries: ParseTableItem[],
-  ): boolean {
+  processInvalidReductions(topNode: PTNode, currSym: Sym, nextSym: Sym, nextValue: any, entries: Rule[]): boolean {
     throw new Error(`Invalid # reductions ${entries.length} found ${currSym.label} -> ${nextSym.label}`);
     return true;
   }
