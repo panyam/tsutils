@@ -95,4 +95,16 @@ describe("Auxilliary Rules", () => {
     // expect(B.rules[0].equals(g.opt("A"))).toBe(true);
     console.log("printed: ", printGrammar(g, false));
   });
+
+  test("Removing Symbols", () => {
+    const g = new EBNFParser(`
+      A -> A B C ;
+      B -> a b c ;
+      C -> d e f ;
+      D -> A f D ;
+      D -> b ;
+    `).grammar;
+    g.removeSymbols(s => s.label == 'A');
+    expect(g.debugValue()).toEqual(["B -> a b c", "C -> d e f", "D -> f D", "D -> b"]);
+  });
 });

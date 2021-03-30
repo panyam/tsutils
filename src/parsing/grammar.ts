@@ -1,7 +1,7 @@
 import { MAX_INT, Nullable, NumMap, StringMap } from "../types";
 import { assert } from "../utils/misc";
 import { allMinimalCycles } from "./graph";
-import { IDSet, TermSet, FirstSets, FollowSets, NullableSet } from "./sets";
+import { IDSet, SymbolSet, FirstSets, FollowSets, NullableSet } from "./sets";
 
 /**
  * Symbols represent both terminals and non-terminals in our system.
@@ -57,7 +57,6 @@ export class Str {
 
   constructor(...syms: Sym[]) {
     this.syms = syms || [];
-    // this.cardinalities = [];
   }
 
   append(...lits: Sym[]): this {
@@ -88,6 +87,15 @@ export class Str {
 
   toString(): string {
     return this.syms.map((s) => s.toString()).join(" ");
+  }
+
+  slice(startIndex: number, endIndex: number): Str {
+    return new Str(...this.syms.slice(startIndex, endIndex));
+  }
+
+  splice(index: number, numToDelete: number, ...itemsToAdd: Sym[]): Str {
+    this.syms.splice(index, numToDelete, ...itemsToAdd);
+    return this;
   }
 
   compareTo(another: this): number {
@@ -155,8 +163,7 @@ export class Grammar {
   modified = true;
   protected symbolSet = new IDSet<Sym>((s) => s.label);
   protected allRules: Rule[] = [];
-  protected _rulesForNT: StringMap<Rule[]> = {};
-  protected currentNonTerm: Nullable<Sym> = null;
+  protected _rulesForNT: Nullable<StringMap<Rule[]>> = null;
   protected _followSets: Nullable<FollowSets> = null;
 
   readonly Eof = new Sym(this, "<EOF>", true, -1);
@@ -173,6 +180,15 @@ export class Grammar {
 
   rulesForNT(nt: Sym): Rule[] {
     assert(!nt.isTerminal);
+    if (this._rulesForNT == null) {
+      this._rulesForNT = {};
+      for (const rule of this.allRules) {
+        if (!(rule.nt.label in this._rulesForNT)) {
+          this._rulesForNT[rule.nt.label] = [];
+        }
+        this._rulesForNT[rule.nt.label].push(rule);
+      }
+    }
     if (!(nt.label in this._rulesForNT)) {
       this._rulesForNT[nt.label] = [];
     }
@@ -189,12 +205,13 @@ export class Grammar {
 
   get followSets(): FollowSets {
     if (this.modified || this._followSets == null) {
-      this._followSets = this.refresh();
+      this.refresh();
     }
+    assert(this._followSets != null);
     return this._followSets;
   }
 
-  get augStartRule(): Rule{
+  get augStartRule(): Rule {
     return this._AugStartRule;
   }
 
@@ -208,11 +225,15 @@ export class Grammar {
     return this;
   }
 
-  refresh(): FollowSets {
-    this.allRules.forEach((rule, i) => rule.id = i);
+  refresh(): this {
+    this.symbolSet.entries.forEach((s, i) => (s.id = i));
+    this._rulesForNT = null;
+    this.allRules.forEach((rule, i) => {
+      rule.id = i;
+    });
     this._followSets = new FollowSets(this);
     this.modified = false;
-    return this._followSets;
+    return this;
   }
 
   addTerminals(...terminals: string[]): void {
@@ -311,6 +332,42 @@ export class Grammar {
   }
 
   /**
+   * Removes all rules from the grammar which match the given predicate.
+   */
+  removeRules(pred: (r: Rule) => boolean): boolean {
+    this.allRules = this.allRules.filter((r) => !pred(r));
+    this._rulesForNT = null;
+    this.modified = true;
+    return true;
+  }
+
+  /**
+   * Removes all symbols from the grammar and all of its productions which match
+   * a particular predicate.
+   */
+  removeSymbols(pred: (s: Sym) => boolean): boolean {
+    let modified = false;
+    const newRules: Rule[] = [];
+    this.allRules.forEach((r) => {
+      if (pred(r.nt)) return;
+      // if it was already a null production then leave it
+      if (r.rhs.length == 0) {
+        newRules.push(r);
+      } else {
+        const newRhs = new Str(...r.rhs.syms.filter((s) => !pred(s)));
+        modified = modified || r.rhs.length != newRhs.length;
+        if (newRhs.length > 0) {
+          newRules.push(new Rule(r.nt, newRhs))
+        }
+      }
+    });
+    this.allRules = newRules;
+    modified = this.symbolSet.remove(pred) || modified;
+    this.modified = this.modified || modified;
+    return modified;
+  }
+
+  /**
    * Gets or creates a terminal with the given label.
    * The grammar acts as a factory for terminal symbols
    * so that we can reuse symbols instead of having
@@ -319,7 +376,6 @@ export class Grammar {
    * This also ensures that users are not able mix terminal
    * and non terminal labels.
    */
-
   getSymById(id: number): Nullable<Sym> {
     if (id == -1) return this.Eof;
     else if (id == -2) return this._AugStartRule?.nt || null;
@@ -572,6 +628,64 @@ export class Grammar {
       out.push(`${rule.nt.label} -> ${rule.rhs.debugString}`);
     });
     return out;
+  }
+
+  /**
+   * Returns all non terminals that can derive terminals.
+   */
+  get terminalDerivingSymbols(): SymbolSet {
+    const out = new SymbolSet(this, null);
+    let nadded = -1;
+    let allDerive = true;
+    while (nadded != 0) {
+      nadded = 0;
+      for (const rule of this.allRules) {
+        allDerive = true;
+        for (const sym of rule.rhs.syms) {
+          if (!out.has(sym)) {
+            if (sym.isTerminal) {
+              out.add(sym);
+              nadded++;
+            } else {
+              allDerive = false;
+            }
+          }
+        }
+        if (allDerive && !out.has(rule.nt)) {
+          out.add(rule.nt);
+          nadded++;
+        }
+      }
+    }
+    return out;
+  }
+
+  /*
+   * Returns all non terminal that are reachable from a given symbol.
+   * If the FROM symbol is omitted then the start symbol is used.
+   */
+  reachableSymbols(fromSymbol: Nullable<Sym> = null): SymbolSet {
+    if (fromSymbol == null) {
+      fromSymbol = this._AugStartRule ? this._AugStartRule.nt : this.startSymbol;
+    }
+    assert(fromSymbol != null, "Start symbol does not exist");
+    const reachable = new SymbolSet(this, false).add(fromSymbol);
+    let queue: Sym[] = [fromSymbol];
+    while (queue.length > 0) {
+      const newQueue: Sym[] = [];
+      for (const curr of queue) {
+        for (const rule of this.rulesForNT(curr)) {
+          for (const sym of rule.rhs.syms) {
+            if (!sym.isTerminal && !reachable.has(sym)) {
+              newQueue.push(sym);
+              reachable.add(sym);
+            }
+          }
+        }
+      }
+      queue = newQueue;
+    }
+    return reachable;
   }
 
   /**

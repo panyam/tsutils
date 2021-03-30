@@ -18,6 +18,27 @@ export class IDSet<T extends { id: number }> {
     this._entriesByKey = {};
   }
 
+  /**
+   * Removes all entries that match a predict.
+   */
+  remove(predicate: (t:T) => boolean): boolean {
+    const e2: T[] = [];
+    this._entriesByKey = {};
+    let modified = false;
+    for (let l = 0; l < this._entries.length;l++) {
+      const e = this._entries[l];
+      if (!predicate(e)) {  // keep it if predicate failes
+        e.id = e2.length;
+        e2.push(e);
+        this._entriesByKey[this.keyFunc(e)] = e;
+      } else {
+        modified = true;
+      }
+    }
+    this._entries = e2;
+    return modified;
+  }
+
   get entries(): ReadonlyArray<T> {
     return this._entries;
   }
@@ -53,13 +74,15 @@ export class IDSet<T extends { id: number }> {
   }
 }
 
-export class TermSet {
+export class SymbolSet {
   readonly grammar: Grammar;
+  readonly enforceSymbolType: Nullable<boolean>;
   entries = new Set<number>();
   hasNull = false;
 
-  constructor(grammar: Grammar) {
+  constructor(grammar: Grammar, enforceSymbolType: Nullable<boolean> = true) {
     this.grammar = grammar;
+    this.enforceSymbolType = enforceSymbolType;
   }
 
   get debugString(): string {
@@ -77,11 +100,11 @@ export class TermSet {
     return out;
   }
 
-  addFrom(another: TermSet, includeNull = true): number {
+  addFrom(another: SymbolSet, includeNull = true): number {
     return another.addTo(this, includeNull);
   }
 
-  addTo(another: TermSet, includeNull = true): number {
+  addTo(another: SymbolSet, includeNull = true): number {
     const before = another.entries.size;
     for (const termid of this.entries) {
       another.entries.add(termid);
@@ -97,7 +120,7 @@ export class TermSet {
   }
 
   add(term: Sym): this {
-    assert(term.isTerminal);
+    assert(this.enforceSymbolType == null || this.enforceSymbolType == term.isTerminal, `Terminal types being enforced: ${this.enforceSymbolType}`);
     this.entries.add(term.id);
     return this;
   }
@@ -177,9 +200,9 @@ export class NullableSet {
   }
 }
 
-class SymTermSets {
+class SymSymbolSets {
   readonly grammar: Grammar;
-  entries: NumMap<TermSet> = {};
+  entries: NumMap<SymbolSet> = {};
   private _count = 0;
 
   constructor(grammar: Grammar) {
@@ -215,11 +238,11 @@ class SymTermSets {
     // return this._count;
   }
 
-  entriesFor(sym: Sym): TermSet {
+  entriesFor(sym: Sym): SymbolSet {
     if (sym.id in this.entries) {
       return this.entries[sym.id];
     } else {
-      const out = new TermSet(this.grammar);
+      const out = new SymbolSet(this.grammar);
       this.entries[sym.id] = out;
       return out;
     }
@@ -265,7 +288,7 @@ class SymTermSets {
  * For each symbol maps its label to a list of terminals that
  * start that non terminal.
  */
-export class FirstSets extends SymTermSets {
+export class FirstSets extends SymSymbolSets {
   readonly nullables: NullableSet;
 
   constructor(grammar: Grammar, nullables?: NullableSet) {
@@ -346,7 +369,7 @@ export class FirstSets extends SymTermSets {
  * For each symbol maps its label to a list of terminals that
  * start that non terminal.
  */
-export class FollowSets extends SymTermSets {
+export class FollowSets extends SymSymbolSets {
   readonly firstSets: FirstSets;
 
   constructor(grammar: Grammar, firstSets?: FirstSets) {
