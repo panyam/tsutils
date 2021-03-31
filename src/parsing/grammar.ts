@@ -581,9 +581,9 @@ export class Grammar {
     return "$" + this.auxNTCount++;
   }
 
-  newAuxNT(): Sym {
-    const ntName = this.newAuxNTName();
-    return this.newNT(ntName, true);
+  newAuxNT(name = ""): Sym {
+    if (name == "") name = this.newAuxNTName();
+    return this.newNT(name, true);
   }
 
   ensureAuxNT(...rules: Str[]): Sym {
@@ -691,7 +691,7 @@ export class Grammar {
   /**
    * Returns all cycles in this grammar.
    */
-  get cycles(): any {
+  get cycles(): ReadonlyArray<[Sym,any]> {
     /*
      * Returns the edge of the given nonterm
      * For a nt such that:

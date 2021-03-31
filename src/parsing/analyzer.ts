@@ -1,5 +1,7 @@
 import { Nullable, StringMap } from "../types";
-import { Str, Sym, Grammar } from "./grammar";
+import { Str, Sym, Rule, Grammar } from "./grammar";
+import { SymbolSet } from "./sets";
+import { assert } from "../utils/misc";
 
 /**
  * Returns symbols that do not derive any terminal strings or symbols
@@ -10,11 +12,15 @@ export function removeUselessSymbols(g: Grammar, fromSymbol: Nullable<Sym> = nul
   // Remove all symbols not deriving terminals
   const derives_terminal = g.terminalDerivingSymbols;
   // g.removeSymbols((s) => !derives_terminal.has(s));
-  g.removeRules(r => !derives_terminal.has(r.nt) || r.rhs.syms.findIndex(s => !s.isTerminal && !derives_terminal.has(s)) >= 0);
+  g.removeRules(
+    (r) => !derives_terminal.has(r.nt) || r.rhs.syms.findIndex((s) => !s.isTerminal && !derives_terminal.has(s)) >= 0,
+  );
   g.refresh();
   const reachable_symbols = g.reachableSymbols(fromSymbol);
   // g.removeSymbols((s) => !s.isTerminal && !reachable_symbols.has(s));
-  g.removeRules(r => !reachable_symbols.has(r.nt) || r.rhs.syms.findIndex(s => !s.isTerminal && !reachable_symbols.has(s)) >= 0);
+  g.removeRules(
+    (r) => !reachable_symbols.has(r.nt) || r.rhs.syms.findIndex((s) => !s.isTerminal && !reachable_symbols.has(s)) >= 0,
+  );
   g.refresh();
 
   // Remove all non reachable symbols
@@ -71,63 +77,105 @@ export function removeNullProductions(grammar: Grammar, nt: Nullable<Sym> = null
   }
 }
 
-export function removeCycles(grammar: Grammar): void {}
-
-export function removeLeftRecursion(grammar: Grammar): void {
+export function removeCycles(grammar: Grammar): void {
+  removeNullProductions(grammar);
   /*
-   * Removes direct left recursion for a particular non terminal if any.
-   * For the given terminal, A, replaces the productions of the form:
-   *
-   *    A -> A a1 | A a2 ... | A an | b1 | b2 | b3 ... bm
-   *
-   * with:
-   *
-   *    A -> b1 A' | b2 A' | ... bm A'
-   *    A' -> a1 A' | a2 A' | ... an A' | epsilon
-   */
-  /*
-        // First check if this NT has left recursive productions
-        isLeftRecursive = False
-        for prod in self.productionsFor(nonterm):
-            if prod.rhs[0].symbol == nonterm:
-                isLeftRecursive = True
-                break
-        if not isLeftRecursive:
-            return
+  while (true) {
+    const cycles = grammar.cycles;
+    if (cycles.length == 0) break;
+    for (const [start_sym,any] of cycles) {
+      // Find all non terminals in this cycle
+      const cycle_symbols = new SymbolSet(grammar);
+      for (const [sym for sym, rule] in cycle])
 
-        # Add a new nonterminal that will be right recursive
-        def default_newnamefunc(ntname):
-            count = 1
-            newname = nonterm.name + str(count)
-            while newname in self.nonTerminalsByName:
-                count += 1
-                newname = nonterm.name + str(count)
-            return newname
+      // Find the union of all production of all
+      // non terminals in cycle_symbols
+      prod_union = []
+      for sym in cycle_symbols:
+          for prod in self.productionsFor(sym):
+              if prod.rhs.numSymbols != 1 or prod.rhs[0].symbol not in cycle_symbols:
+                  prod_union.append(prod)
 
-        newnamefunc = newnamefunc or default_newnamefunc
-        newname = newnamefunc(nonterm.name)
-        newnonterm = Symbol(newname, nonterm.resultType)
-        self.addNonTerminal(newnonterm)
+      # For each non term in the cycle, add all productions in
+      # prod_union and remove all productions of the form:
+      # M -> N where M and N are BOTH in cycle_symbols
+      for rule, sym in cycle:
+          prodlist = self.productions[sym]
+          for index, prod in self.productionsFor(sym, indexed=True, reverse=True):
+              if prod.rhs.numSymbols == 1 or prod.rhs[0].symbol in cycle_symbols:
+                  prodlist.removeProduction(index)
 
-        prodlist = self.productions[nonterm]
-        for index, prod in enumeratex(prodlist, indexed=True, reverse=True):
-            if prod.rhs[0].symbol == nonterm:
-                # we have a left recursion:
-                # A -> A ax
-                # So change to:
-                # remove rule and add following to A'
-                # A' -> ax A'
-                prodlist.removeProduction(index)
-                prod.rhs.append(SymbolUsage(newnonterm, prod.rhs[0].varname))
-                del prod.rhs[0]
-                self.addProduction(newnonterm, prod)
-            else:
-                # We have non left recursive rule:
-                # A -> bk
-                # Replace rule with:
-                # A -> bk A'
-                prod.rhs.append(newnonterm)
-        # finally add the epsilon production
-        self.addProduction(newnonterm, Production(newnonterm, []))
-        */
+          for prod in prod_union:
+              prodlist.addProduction(prod.copy(self))
+    }
+  }
+  */
+}
+
+/**
+ * Returns true if a given symbol has direct left recursion. false otherwise.
+ */
+export function hasDirectLeftRecursion(sym: Sym, grammar: Grammar): boolean {
+  return false;
+}
+
+/**
+ * Removes direct recursion for a given non terminal if it exists.
+ * Removes direct left recursion for a particular non terminal if any.
+ * For the given terminal, A, replaces the productions of the form:
+ *
+ *    A -> A a1 | A a2 ... | A an | b1 | b2 | b3 ... bm
+ *
+ * with:
+ *
+ *    A -> b1 A' | b2 A' | ... bm A'
+ *    A' -> epsilon | a1 A' | a2 A' | ... an A'
+ */
+export function removeDirectLeftRecursion(grammar: Grammar, nt: Nullable<Sym> = null): void {
+  if (nt == null) {
+    grammar.forEachNT((nt) => removeDirectLeftRecursion(grammar, nt));
+  } else {
+    // Replace a rule:
+    // A -> A a1 | A a2 | ... | A an | b1 | b2 ... | bm
+    //
+    // with
+    //
+    // A -> b1 A' | b2 A' | ... | bm A'
+    // A' -> eps | a1 A' | a2 A' ... | an A'
+    //
+    // This clearly wont work for something like: A -> A A A B
+    const lrecRules: Str[] = [];
+    const betaRules: Str[] = [];
+    grammar.rulesForNT(nt).forEach((rule) => {
+      if (rule.rhs.length > 0 && rule.rhs.syms[0] == nt) {
+        // Remove the left recursion symbol and add it
+        lrecRules.push(rule.rhs.slice(1, rule.rhs.length));
+      } else {
+        betaRules.push(rule.rhs);
+      }
+    });
+    // Nothing to do if no left recursive rules
+    if (lrecRules.length == 0) return;
+
+    // remove all rules for a nt so we can replace them new rules
+    grammar.removeRules((r) => r.nt == nt);
+
+    // Add an auxiliary symbol A'
+    const auxSym = grammar.newAuxNT();
+
+    // Add all A -> bk A' rules
+    for (const rule of betaRules) {
+      grammar.add(nt, rule.copy().append(auxSym));
+    }
+
+    // Add all the A' -> eps and A' -> ak A' rules
+    grammar.add(auxSym, new Str()); // epsilon rule
+    for (const rule of lrecRules) {
+      grammar.add(auxSym, rule.copy().append(auxSym));
+    }
+  }
+}
+
+export function removeIndirectLeftRecursion(grammar: Grammar): void {
+  assert(false, "Not yet implemented");
 }
