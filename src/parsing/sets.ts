@@ -4,6 +4,54 @@ import { assert } from "../utils/misc";
 
 const defaultKeyFunc = (x: any) => x.key;
 
+export class Trie<T> {
+  protected keyFunc: (t: T) => string;
+  readonly root: TrieNode<T> = new TrieNode();
+
+  constructor(keyFunc: (t: T) => string) {
+    this.keyFunc = keyFunc;
+  }
+
+  add(values: T[], fromIndex = 0): TrieNode<T> {
+    // we are at the bottom
+    let curr = this.root;
+    for (let i = fromIndex; i < values.length; i++) {
+      const key = this.keyFunc(values[i]);
+      if (curr.children.has(key)) {
+        curr = curr.children.get(key)!;
+      } else {
+        const newNode = new TrieNode<T>();
+        newNode.value = values[i];
+        newNode.parent = curr;
+        curr.children.set(key, newNode);
+        curr = newNode;
+      }
+    }
+    curr.isLeaf = true;
+    return curr;
+  }
+
+  get debugValue(): any {
+    return this.root.debugValue;
+  }
+}
+
+export class TrieNode<T> {
+  isLeaf = false;
+  value: Nullable<T> = null;
+  parent: Nullable<TrieNode<T>> = null;
+  children = new Map<string, TrieNode<T>>();
+
+  get debugValue(): any {
+    const out = {value: this.value, children: {} as any} as any;
+    if (this.isLeaf) out["isLeaf"] = true;
+    for (const [key,value] of this.children.entries()) {
+      out.children[key] = value.debugValue;
+    }
+    return out;
+  }
+}
+
 export class IDSet<T extends { id: number }> {
   protected _entries: T[] = [];
   protected _entriesByKey: StringMap<T> = {};

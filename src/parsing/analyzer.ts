@@ -1,6 +1,6 @@
 import { Nullable, StringMap } from "../types";
 import { Str, Sym, Rule, Grammar } from "./grammar";
-import { SymbolSet } from "./sets";
+import { SymbolSet, Trie, TrieNode } from "./sets";
 import { assert } from "../utils/misc";
 
 /**
@@ -117,6 +117,61 @@ export function removeCycles(grammar: Grammar): void {
  */
 export function hasDirectLeftRecursion(sym: Sym, grammar: Grammar): boolean {
   return false;
+}
+
+/**
+ * Left factors a grammar (or particular non terminals) with common prefixes.
+ */
+export function leftFactor(grammar: Grammar, nt: Nullable<Sym> = null): void {
+  if (nt == null) {
+    grammar.forEachNT((nt) => leftFactor(grammar, nt));
+  } else {
+    const symTrie = new Trie<Sym>((s) => s.label);
+    grammar.forEachRule(nt, (rule) => {
+      symTrie.add(rule.rhs.syms);
+    });
+    const x = symTrie.debugValue;
+    // remove all rules for a nt so we can replace them new rules
+    grammar.removeRules((r) => r.nt == nt);
+
+    const lf = (curr: TrieNode<Sym>, nt: Sym, prefix: Str): void => {
+      if (curr.children.size == 0) {
+        // reached the end - nothing to do
+        const a = 3;
+        if (prefix.length > 0) grammar.add(nt, prefix.copy());
+      } else if (curr.children.size == 1 && !curr.isLeaf) {
+        const childNode = curr.children.values().next().value;
+        assert(childNode.value != null);
+        lf(childNode, nt, prefix.append(childNode.value));
+      } else {
+        // see if we need a new symbol
+        const newSym = curr.children.size > 0 ? grammar.newAuxNT() : null;
+        // add a rule with the prefix so far
+        prefix = prefix.copy();
+        grammar.add(nt, newSym == null ? prefix : prefix.append(newSym));
+        if (curr.isLeaf && newSym != null) {
+          // Add a null production if needed
+          grammar.add(newSym, new Str());
+        }
+        if (newSym != null) {
+          for (const child of curr.children.values()) {
+            assert(child.value != null);
+            lf(child, newSym, new Str(child.value));
+            //
+          }
+        }
+        // now visit child nodes but with a new prefix
+        // we have a fork so create a new suffix nt
+        // either a leaf or has forks or both
+      }
+      //
+    }
+    // Start for first level so we dont end up creating an unnecessary
+    // aux symbol to treat the "" as a common prefix
+    for (const child of symTrie.root.children.values()) {
+      lf(child, nt, new Str(child.value!));
+    }
+  }
 }
 
 /**
