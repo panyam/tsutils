@@ -1,7 +1,7 @@
 {
-  "name": "tsutils",
+  "name": "@panyam/tsutils",
   "version": "0.0.1",
-  "author": "",
+  "author": "Sriram Panyam",
   "homepage": "https://github.com/panyam/tsutils#readme",
   "license": "ISC",
   "description": "coding no more",
