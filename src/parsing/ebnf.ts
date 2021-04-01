@@ -79,8 +79,10 @@ export function EBNFTokenizer(input: string | CharTape): Tokenizer {
 export class EBNFParser {
   readonly grammar: Grammar;
   private tokenizer: Tokenizer;
-  constructor(input: string) {
+  private allowLeftRecursion = false;
+  constructor(input: string, config: any = {}) {
     this.grammar = this.parse(input);
+    this.allowLeftRecursion = config.allowLeftRecursion || false;
   }
 
   parse(input: string): Grammar {
@@ -183,9 +185,9 @@ export class EBNFParser {
       assert(curr != null);
 
       if (this.tokenizer.consumeIf(TokenType.STAR)) {
-        curr = grammar.atleast0(curr);
+        curr = grammar.atleast0(curr, this.allowLeftRecursion);
       } else if (this.tokenizer.consumeIf(TokenType.PLUS)) {
-        curr = grammar.atleast1(curr);
+        curr = grammar.atleast1(curr, this.allowLeftRecursion);
       } else if (this.tokenizer.consumeIf(TokenType.QMARK)) {
         curr = grammar.opt(curr);
       }

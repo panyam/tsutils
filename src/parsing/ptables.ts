@@ -1,13 +1,11 @@
 import { assert } from "../utils/misc";
 import { Grammar } from "./grammar";
-import { FirstSets, FollowSets } from "./sets";
 import { LRAction, ParseTable } from "./lrbase";
 import { LR0Item, LR0ItemGraph } from "./lr0";
 import { LR1Item, LR1ItemGraph } from "./lr1";
 
 export function makeSLRParseTable(grammar: Grammar): [ParseTable, LR0ItemGraph] {
   const ig = new LR0ItemGraph(grammar).refresh();
-  const followSets = new FollowSets(grammar);
   const parseTable = new ParseTable(grammar);
   for (const itemSet of ig.itemSets.entries) {
     // Look for transitions from this set
@@ -26,7 +24,7 @@ export function makeSLRParseTable(grammar: Grammar): [ParseTable, LR0ItemGraph] 
       } else {
         // if sym is in follows(nt) then add the rule
         // Reduce nt -> rule for all sym in follows(nt)
-        followSets.forEachTerm(rule.nt, (term) => {
+        grammar.followSets.forEachTerm(rule.nt, (term) => {
           if (term != null) {
             assert(term.isTerminal);
             parseTable.addAction(itemSet, term, LRAction.Reduce(rule));
@@ -55,7 +53,6 @@ export function makeSLRParseTable(grammar: Grammar): [ParseTable, LR0ItemGraph] 
  * A canonical LR1 parse table maker.
  */
 export function makeLRParseTable(grammar: Grammar): [ParseTable, LR1ItemGraph] {
-  const firstSets = new FirstSets(grammar);
   const ig = new LR1ItemGraph(grammar).refresh();
   const parseTable = new ParseTable(grammar);
   for (const itemSet of ig.itemSets.entries) {

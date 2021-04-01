@@ -381,7 +381,7 @@ export class ParseStack {
   }
 }
 
-export class LRParser extends ParserBase {
+export class Parser extends ParserBase {
   parseTable: ParseTable;
   stack: ParseStack;
   constructor(grammar: Grammar, parseTable: ParseTable) {
