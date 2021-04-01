@@ -1,7 +1,0 @@
-S -> NP VP ;
-S -> S PP ;
-NP -> n ;
-NP -> det n ;
-NP -> NP PP ;
-PP -> prep NP ;
-VP -> v NP ;
