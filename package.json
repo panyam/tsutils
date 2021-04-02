@@ -71,7 +71,12 @@
     "build": "tsc",
     "lint": "eslint './src' --quiet --ext .ts --resolve-plugins-relative-to .",
     "lintfix": "eslint 'src/**/*.ts' --quiet --fix --resolve-plugins-relative-to .",
-    "precommit-msg": "echo 'Pre-commit checks...' && exit 0"
+    "precommit-msg": "echo 'Pre-commit checks...' && exit 0",
+    "prepare" : "npm run build",
+    "prepublishOnly" : "npm test && npm run lint",
+    "preversion" : "npm run lint",
+    "version" : "npm run format && git add -A src",
+    "postversion" : "git push && git push --tags"
   },
   "devDependencies": {
     "@babel/core": "^7.12.16",
