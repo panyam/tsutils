@@ -1,6 +1,6 @@
 {
   "name": "@panyam/tsutils",
-  "version": "0.0.13",
+  "version": "0.0.14",
   "author": "Sriram Panyam",
   "description": "Some basic TS utils for personal use",
   "homepage": "https://github.com/panyam/tsutils#readme",
@@ -8,7 +8,9 @@
   "types": "lib/cjs/index.d.ts",
   "main": "./lib/cjs/index.js",
   "module": "./lib/esm/index.js",
-  "files": [ "lib/" ],
+  "files": [
+    "lib/"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/panyam/tsutils.git"
