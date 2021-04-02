@@ -1,4 +1,4 @@
-import { Undefined } from "../types";
+import { Undefined } from "./types";
 
 declare const $: any;
 const fontMetrics: { [key: string]: any } = {};

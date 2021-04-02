@@ -13,7 +13,7 @@
     "module": "ES2020",
     "noFallthroughCasesInSwitch": true,
     "noImplicitAny": true,
-    "outDir": "dist",
+    "outDir": "lib/esm",
     "plugins": [ { "name": "typescript-tslint-plugin" } ],
     "removeComments": true,
     "skipLibCheck": true,

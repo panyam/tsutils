@@ -1,4 +1,3 @@
-import parse from "parse-duration";
 import { Nullable } from "./types";
 
 export const ONE_MUS = 1000;
@@ -42,26 +41,4 @@ export function StrToDuration(value: string): number {
     return Seconds(intValue);
   }
   return intValue;
-}
-
-/**
- * Converts a string duration to numeric time. Default unit is ms.
- * @param value string duration eg: 10s, 1h
- * @param unit string unit eg: ms, ns, mus
- *
- * @returns null if unit is invalid, number otherwise
- */
-export function Duration(value: string, unit = "ms"): Nullable<number> {
-  switch (unit) {
-    case "s":
-      return parse(value, "s");
-    case "ms":
-      return parse(value);
-    case "ns":
-      return parse(value, "ns");
-    case "mus":
-      return parse(value, "us");
-    default:
-      return null;
-  }
 }

@@ -6,7 +6,9 @@
   "homepage": "https://github.com/panyam/tsutils#readme",
   "license": "ISC",
   "type": "commonjs",
-  "main": "./dist/index.js",
+  "main": "./lib/cjs/index.js",
+  "module": "./lib/esm/index.js",
+  "files": [ "lib/" ],
   "types": "./dist/index.d.ts",
   "repository": {
     "type": "git",
@@ -57,8 +59,8 @@
     "test"
   ],
   "scripts": {
-    "clean": "rm -Rf dist && jest --clearCache && rm -rf static/dist",
-    "build": "tsc",
+    "clean": "rm -Rf lib && jest --clearCache",
+    "build": "npm run  clean && tsc -p tsconfig.json && tsc -p tsconfig-cjs.json",
     "test": "jest --coverage --runInBand",
     "start": "webpack-dev-server --mode=development",
     "lint": "eslint './src' --quiet --ext .ts --resolve-plugins-relative-to .",

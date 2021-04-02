@@ -1,4 +1,4 @@
-import { Nullable } from "../types";
+import { Nullable } from "./types";
 
 export interface ListNode<V> {
   readonly parent: List<V>;
