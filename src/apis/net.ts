@@ -1,5 +1,3 @@
-import { Int } from "../types";
-
 /**
  * A helper for building URLs.
  */
@@ -36,7 +34,7 @@ export class URLBuilder {
     const path = this.path;
     const params = this.params;
     const paramString = params
-      .map((item: any, _index: Int) => {
+      .map((item: any, _index: number) => {
         const [key, value] = item;
         return encodeURIComponent(key) + "=" + encodeURIComponent(value);
       })
@@ -86,13 +84,13 @@ export class Request {
 }
 
 export class Response {
-  status: Int;
+  status: number;
   statusText: string;
   headers: any = {};
   data: any = null;
   error: any = null;
 
-  constructor(status: Int = 200, statusText = "", data: any = null) {
+  constructor(status: number = 200, statusText = "", data: any = null) {
     this.status = status;
     this.statusText = statusText;
     this.data = data;

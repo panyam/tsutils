@@ -1,9 +1,9 @@
-import { Int, Undefined } from "../types";
+import { Undefined } from "../types";
 
 declare const $: any;
 const fontMetrics: { [key: string]: any } = {};
 
-export function getFontMetrics(fontFamily: string, fontSize: Int): any {
+export function getFontMetrics(fontFamily: string, fontSize: number): any {
   if (!(fontFamily in fontMetrics)) {
     fontMetrics[fontFamily] = {};
   }
@@ -22,7 +22,7 @@ export function getFontMetrics(fontFamily: string, fontSize: Int): any {
   return familyMetrics[fontSize];
 }
 
-export function forEachChild(elem: Element, visitor: (child: Element, index: Int) => Undefined<boolean>) {
+export function forEachChild(elem: Element, visitor: (child: Element, index: number) => Undefined<boolean>) {
   const children = elem.children;
   const L = children.length;
   for (let i = 0; i < L; i++) {
@@ -31,7 +31,7 @@ export function forEachChild(elem: Element, visitor: (child: Element, index: Int
   }
 }
 
-export function forEachNode(elem: Element, visitor: (child: ChildNode, index: Int) => Undefined<boolean>) {
+export function forEachNode(elem: Element, visitor: (child: ChildNode, index: number) => Undefined<boolean>) {
   const children = elem.childNodes;
   const L = children.length;
   for (let i = 0; i < L; i++) {
@@ -179,7 +179,7 @@ export function setVisible(elem: Element, show = true): Element {
   return elem;
 }
 
-export function getcssint(elem: JQuery<HTMLElement>, attrib: string): Int {
+export function getcssint(elem: JQuery<HTMLElement>, attrib: string): number{
   return parseInt(elem.css(attrib).replace(/px/, ""));
 }
 

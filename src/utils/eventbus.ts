@@ -1,5 +1,6 @@
 import * as events from "events";
-import { Callback } from "../types";
+
+export type Callback = (eventName: string, data: any) => void;
 
 export class EventBus extends events.EventEmitter {
   private static instance: EventBus;

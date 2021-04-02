@@ -1,4 +1,4 @@
-import { Int, Nullable } from "../types";
+import { Nullable } from "../types";
 import { assert } from "../utils/misc";
 
 /**
