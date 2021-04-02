@@ -58,9 +58,8 @@ export class BoxLayout extends DefaultLayoutManager {
     this.validateRequests();
     const size = new Size(this.xTotal.minimum, this.yTotal.minimum);
 
-    const insets = target.insets;
-    size.width = Math.min(size.width + insets.left + insets.right, MAX_INT);
-    size.height = Math.min(size.height + insets.top + insets.bottom, MAX_INT);
+    size.width = Math.min(size.width, MAX_INT);
+    size.height = Math.min(size.height, MAX_INT);
     return size;
   }
 
@@ -69,9 +68,8 @@ export class BoxLayout extends DefaultLayoutManager {
     this.validateRequests();
     const size = new Size(this.xTotal.maximum, this.yTotal.maximum);
 
-    const insets = target.insets;
-    size.width = Math.min(size.width + insets.left + insets.right, MAX_INT);
-    size.height = Math.min(size.height + insets.top + insets.bottom, MAX_INT);
+    size.width = Math.min(size.width, MAX_INT);
+    size.height = Math.min(size.height, MAX_INT);
     return size;
   }
 
@@ -83,9 +81,8 @@ export class BoxLayout extends DefaultLayoutManager {
     this.validateRequests();
     const size = new Size(this.xTotal.preferred, this.yTotal.preferred);
 
-    const insets = target.insets;
-    size.width = Math.min(size.width + insets.left + insets.right, MAX_INT);
-    size.height = Math.min(size.height + insets.top + insets.bottom, MAX_INT);
+    size.width = Math.min(size.width, MAX_INT);
+    size.height = Math.min(size.height, MAX_INT);
     return size;
   }
 
@@ -113,9 +110,6 @@ export class BoxLayout extends DefaultLayoutManager {
     const ySpans: number[] = ArrayTimesN(nChildren, 0);
 
     const alloc = target.size;
-    const insets = target.insets;
-    alloc.width -= insets.left + insets.right;
-    alloc.height -= insets.top + insets.bottom;
 
     // Resolve axis to an absolute value (either X_AXIS or Y_AXIS)
     const absoluteAxis = this.resolveAxis(this.axis);
@@ -135,12 +129,7 @@ export class BoxLayout extends DefaultLayoutManager {
     // flush changes to the container
     for (let i = 0; i < nChildren; i++) {
       const c = target.childAtIndex(i);
-      c.setBounds(
-        Math.min(insets.left + xOffsets[i], MAX_INT),
-        Math.min(insets.top + yOffsets[i], MAX_INT),
-        xSpans[i],
-        ySpans[i],
-      );
+      c.setBounds(Math.min(xOffsets[i], MAX_INT), Math.min(yOffsets[i], MAX_INT), xSpans[i], ySpans[i]);
     }
   }
 

@@ -118,9 +118,8 @@ export class FlowLayout extends DefaultLayoutManager {
       dim.height = Math.max(maxAscent + maxDescent, dim.height);
     }
 
-    const insets = parentView.insets;
-    dim.width += insets.left + insets.right + this.hgap * 2;
-    dim.height += insets.top + insets.bottom + this.vgap * 2;
+    dim.width += this.hgap * 2;
+    dim.height += this.vgap * 2;
     return dim;
   }
 
@@ -158,9 +157,8 @@ export class FlowLayout extends DefaultLayoutManager {
     if (useBaseline) {
       dim.height = Math.max(maxAscent + maxDescent, dim.height);
     }
-    const insets = parentView.insets;
-    dim.width += insets.left + insets.right + this.hgap * 2;
-    dim.height += insets.top + insets.bottom + this.vgap * 2;
+    dim.width += this.hgap * 2;
+    dim.height += this.vgap * 2;
     return dim;
   }
 
@@ -168,11 +166,10 @@ export class FlowLayout extends DefaultLayoutManager {
    * Lays out the view and all its children.
    */
   layoutChildViews(parentView: View): void {
-    const insets = parentView.insets;
-    const maxwidth = parentView.width - (insets.left + insets.right + this.hgap * 2);
+    const maxwidth = parentView.width - this.hgap * 2;
     const nmembers = parentView.childViewCount;
     let x = 0,
-      y = insets.top + this.vgap;
+      y = this.vgap;
     let rowh = 0,
       start = 0;
 
@@ -205,7 +202,7 @@ export class FlowLayout extends DefaultLayoutManager {
         } else {
           rowh = this.moveComponents(
             parentView,
-            insets.left + this.hgap,
+            this.hgap,
             y,
             maxwidth - x,
             rowh,
@@ -225,7 +222,7 @@ export class FlowLayout extends DefaultLayoutManager {
     }
     this.moveComponents(
       parentView,
-      insets.left + this.hgap,
+      this.hgap,
       y,
       maxwidth - x,
       rowh,
