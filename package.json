@@ -5,7 +5,7 @@
   "description": "Some basic TS utils for personal use",
   "homepage": "https://github.com/panyam/tsutils#readme",
   "license": "ISC",
-  "types": "dist/index.d.ts",
+  "types": "lib/cjs/index.d.ts",
   "main": "./lib/cjs/index.js",
   "module": "./lib/esm/index.js",
   "files": [
