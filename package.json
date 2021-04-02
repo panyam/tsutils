@@ -48,7 +48,7 @@
     "precommit-msg": "echo 'Pre-commit checks...' && exit 0",
     "prepare": "npm run build",
     "prepublishOnly": "npm test && npm run lint",
-    "preversion": "npm run lint",
+    "preversion": "npm run build && npm run lint",
     "version": "npm run lintfix && git add -A src",
     "postversion": "git push && git push --tags"
   },
