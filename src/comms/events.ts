@@ -1,4 +1,4 @@
-import { Nullable, Timestamp, Undefined } from "../types";
+import { Nullable, Timestamp } from "../types";
 
 /**
  * Super class of all Events.
@@ -11,7 +11,7 @@ export class TEvent {
   /**
    * The event this event was spawned from (if any).
    */
-  private _spawnedFrom: Nullable<this> = null;
+  protected _spawnedFrom: Nullable<this> = null;
 
   /**
    * Name of the event.
@@ -103,7 +103,7 @@ export class State {
   }
 }
 
-export type EventCallback = (event: TEvent) => void;
+export type EventCallback = ((event: TEvent) => void) | ((event: TEvent) => Promise<void>);
 
 export class EventHub {
   private _handlers: { [key: string]: Array<EventCallback> } = {};

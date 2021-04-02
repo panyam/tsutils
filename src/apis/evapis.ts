@@ -28,7 +28,7 @@ export enum ResourceApiEvent {
   UPDATE_FAILED = "UPDATE_FAILED",
 }
 
-export abstract class ResourceApi<ResType> extends EventHub {
+export abstract class ResourceEvApi<ResType> extends EventHub {
   abstract urlForGet(resId: string, params: any): string;
   abstract urlForBatchGet(resIds: string[]): string;
   abstract urlForDelete(resId: string, params: any): string;

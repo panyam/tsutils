@@ -1,4 +1,5 @@
 export * from "./types";
+export * as Api from "./apis/index";
 export * as Constants from "./constants";
 export * as EventBus from "./eventbus";
 export * as Events from "./comms/events";
