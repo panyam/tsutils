@@ -1,5 +1,4 @@
-import { Nullable } from "../types";
-import { assert } from "../misc";
+import { Nullable, assert } from "../types";
 
 /**
  * Actors are the base classes of any physical entity that can

@@ -1,15 +1,10 @@
-import * as types from "./types";
-import * as EventBus from "./eventbus";
-import * as list from "./list";
-import * as streams from "./streams";
-import * as numberutils from "./numberutils";
-import * as timeutils from "./timeutils";
-
-export default {
-  Types: types,
-  EventBus: EventBus,
-  List: list,
-  NumberUtils: numberutils,
-  TimeUtils: timeutils,
-  Streams: streams,
-};
+export * from "./types";
+export * as Constants from "./constants";
+export * as EventBus from "./eventbus";
+export * as Lists from "./list";
+export * as Misc from "./misc";
+export * as Streams from "./streams";
+export * as DOM from "./dom";
+export * as Num from "./numberutils";
+export * as Time from "./timeutils";
+export * as Properties from "./properties";
