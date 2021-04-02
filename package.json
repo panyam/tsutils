@@ -5,13 +5,12 @@
   "description": "Some basic TS utils for personal use",
   "homepage": "https://github.com/panyam/tsutils#readme",
   "license": "ISC",
-  "type": "commonjs",
+  "types": "dist/index.d.ts",
   "main": "./lib/cjs/index.js",
   "module": "./lib/esm/index.js",
   "files": [
     "lib/"
   ],
-  "types": "./dist/index.d.ts",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/panyam/tsutils.git"
