@@ -1,6 +1,7 @@
 export * from "./types";
 export * as Constants from "./constants";
 export * as EventBus from "./eventbus";
+export * as Events from "./comms/events";
 export * as Lists from "./list";
 export * as Misc from "./misc";
 export * as Streams from "./streams";
