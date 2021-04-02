@@ -1,4 +1,3 @@
-
 export function encodeAs(value: number, alphabet: string): string {
   let out = "";
   const nDig = alphabet.length;
