@@ -90,7 +90,7 @@ export class Response {
   data: any = null;
   error: any = null;
 
-  constructor(status: number = 200, statusText = "", data: any = null) {
+  constructor(status = 200, statusText = "", data: any = null) {
     this.status = status;
     this.statusText = statusText;
     this.data = data;

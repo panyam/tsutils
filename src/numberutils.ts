@@ -1,4 +1,4 @@
-import { Nullable } from "../types";
+import { Nullable } from "./types";
 
 export function range(start: number, end: Nullable<number> = null, incr: Nullable<number> = 1): number[] {
   if (end == null) {

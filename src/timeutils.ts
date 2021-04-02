@@ -1,5 +1,5 @@
 import parse from "parse-duration";
-import { Nullable } from "../types";
+import { Nullable } from "./types";
 
 export const ONE_MUS = 1000;
 export const ONE_MS = 1000000;
