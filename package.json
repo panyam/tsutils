@@ -1,6 +1,6 @@
 {
   "name": "@panyam/tsutils",
-  "version": "0.0.16",
+  "version": "0.0.17",
   "author": "Sriram Panyam",
   "description": "Some basic TS utils for personal use",
   "homepage": "https://github.com/panyam/tsutils#readme",
@@ -18,8 +18,6 @@
   "keywords": [
     "tsutils"
   ],
-  "dependencies": {
-  },
   "bugs": {
     "url": "https://github.com/panyam/tsutils/issues"
   },
