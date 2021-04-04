@@ -2,8 +2,8 @@ import { Timestamp } from "./types";
 
 export class BaseEntity {
   isActive: boolean;
-  createdAt: TSU.Timestamp;
-  updatedAt: TSU.Timestamp;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
 
   constructor(config?: any) {
     config = config || {};
