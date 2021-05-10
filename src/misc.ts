@@ -9,6 +9,14 @@ export function encodeAs(value: number, alphabet: string): string {
   return out;
 }
 
+export function dictGet<T>(dict: { [key: string]: T }, key: string, onmissing: any | ((key: string) => T)): T | null {
+  if (!(key in dict)) {
+    if (typeof onmissing === "function") return onmissing(key);
+    else return onmissing;
+  }
+  return dict[key] || null;
+}
+
 export function ifDefined(value: any, elseVal = null): any {
   return typeof value === "undefined" ? elseVal : value;
 }
