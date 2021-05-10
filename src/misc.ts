@@ -9,7 +9,7 @@ export function encodeAs(value: number, alphabet: string): string {
   return out;
 }
 
-export function dictGet<T>(dict: { [key: string]: T }, key: string, onmissing: any | ((key: string) => T)): T | null {
+export function dictGet(dict: any, key: string, onmissing: any | ((key: string) => any)): any {
   if (!(key in dict)) {
     if (typeof onmissing === "function") return onmissing(key);
     else return onmissing;
