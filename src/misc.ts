@@ -14,7 +14,7 @@ export function dictGet(dict: any, key: string, onmissing: any | ((key: string) 
     if (typeof onmissing === "function") return onmissing(key);
     else return onmissing;
   }
-  return dict[key] || null;
+  return dict[key];
 }
 
 export function ifDefined(value: any, elseVal = null): any {
