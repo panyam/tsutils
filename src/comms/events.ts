@@ -159,6 +159,10 @@ export class EventHub {
     return this;
   }
 
+  emit(name: string, source: any, payload?: any): boolean {
+    return this.dispatchEvent(new TEvent(name, source, payload));
+  }
+
   dispatchEvent(event: TEvent): boolean {
     const evtCallbacks = this._handlers[event.name] || [];
     for (const callback of evtCallbacks) {
