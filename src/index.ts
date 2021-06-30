@@ -8,5 +8,5 @@ export * as Streams from "./streams";
 export * as DOM from "./dom";
 export * as Num from "./numberutils";
 export * as Time from "./timeutils";
-export * as Properties from "./properties";
+// export * as Properties from "./properties";
 export * as DAL from "./dal";

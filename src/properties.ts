@@ -1,5 +1,5 @@
 import { Nullable } from "./types";
-import { EventBus } from "./comms/events";
+import { EventBus } from "./comms/bus";
 import { ifDefined } from "./misc";
 
 export class PropertySchema {
