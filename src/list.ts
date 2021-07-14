@@ -61,20 +61,25 @@ export class List<V> {
     return this._lastChild;
   }
 
-  /** Helpers to iterate children in forward or reverse direction. */
-  *values(reverse = false): Generator<V> {
-    if (reverse) {
-      let tmp = this._lastChild;
-      while (tmp != null) {
-        yield tmp.value;
-        tmp = tmp.prev;
-      }
-    } else {
-      let tmp = this._firstChild;
-      while (tmp != null) {
-        yield tmp.value;
-        tmp = tmp.next;
-      }
+  /**
+   * Generator of values in reverse order.
+   */
+  *reversedValues(): Generator<V> {
+    let tmp = this._lastChild;
+    while (tmp != null) {
+      yield tmp.value;
+      tmp = tmp.prev;
+    }
+  }
+
+  /**
+   * Generator of values in forward order.
+   */
+  *values(): Generator<V> {
+    let tmp = this._firstChild;
+    while (tmp != null) {
+      yield tmp.value;
+      tmp = tmp.next;
     }
   }
 
