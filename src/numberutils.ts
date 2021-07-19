@@ -130,6 +130,26 @@ export class Fraction {
     return new Fraction(this.den * another, this.num);
   }
 
+  /**
+   * Returns this % another
+   */
+  mod(another: Fraction): Fraction {
+    // a (mod b) = a − b ⌊a / b⌋
+    const d = this.divby(another);
+    const floorOfD = Math.floor(d.num / d.den);
+    return this.minus(another.timesNum(floorOfD));
+  }
+
+  /*
+   * Returns this % another
+   */
+  modNum(another: number): Fraction {
+    // a (mod b) = a − b ⌊a / b⌋
+    const d = this.divbyNum(another);
+    const floorOfD = Math.floor(d.num / d.den);
+    return this.minusNum(another * floorOfD);
+  }
+
   get inverse(): Fraction {
     return new Fraction(this.den, this.num);
   }
