@@ -22,6 +22,14 @@ export class List<V> {
   protected _lastChild: Nullable<MutableListNode<V>> = null;
   protected _size = 0;
 
+  constructor(...values: V[]) {
+    for (const v of values) this.push(v);
+  }
+
+  toJSON(): V[] {
+    return Array.from(this.values());
+  }
+
   forEach(method: (val: V) => boolean | any): number {
     let tmp = this._firstChild;
     let count = 0;
