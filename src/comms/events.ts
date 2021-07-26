@@ -105,6 +105,21 @@ export class State {
 
 export type EventCallback = ((event: TEvent) => void) | ((event: TEvent) => Promise<void>);
 
+export class EventEmitter {
+  protected _eventHub: EventHub | null;
+  get eventHub(): EventHub | null {
+    return this._eventHub;
+  }
+  set eventHub(hub: EventHub | null) {
+    const oldHub = this._eventHub;
+    this._eventHub = hub;
+    this.eventHubChanged(oldHub);
+  }
+  protected eventHubChanged(oldHub: EventHub | null): void {
+    // Do nothing
+  }
+}
+
 export class EventHub {
   private _handlers: { [key: string]: Array<EventCallback> } = {};
   private _muted = false;
