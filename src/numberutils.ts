@@ -43,7 +43,7 @@ export function applyMixins(derivedCtor: any, baseCtors: any[]) {
 export function gcdof(x: number, y: number): number {
   x = Math.abs(x);
   y = Math.abs(y);
-  while (y) {
+  while (y > 0) {
     const t = y;
     y = x % y;
     x = t;
