@@ -2,14 +2,14 @@ import { Nullable } from "./types";
 
 export interface ListNode<V> {
   parentNode: any;
-  nextNode: Nullable<V>;
-  prevNode: Nullable<V>;
+  nextSibling: Nullable<V>;
+  prevSibling: Nullable<V>;
 }
 
 class MutableListNode<V> implements ListNode<MutableListNode<V>> {
   parentNode: any;
-  nextNode: Nullable<MutableListNode<V>> = null;
-  prevNode: Nullable<MutableListNode<V>> = null;
+  nextSibling: Nullable<MutableListNode<V>> = null;
+  prevSibling: Nullable<MutableListNode<V>> = null;
   constructor(public value: V) {}
 }
 
@@ -38,7 +38,7 @@ export class ValueList<V extends ListNode<V>> {
         break;
       }
       count++;
-      tmp = tmp.nextNode;
+      tmp = tmp.nextSibling;
     }
     return count;
   }
@@ -47,7 +47,7 @@ export class ValueList<V extends ListNode<V>> {
     if (this.size != another.size) return false;
     let tmp = this.first;
     let tmp2 = another.first;
-    for (; tmp != null && tmp2 != null; tmp = tmp.nextNode, tmp2 = tmp2.nextNode) {
+    for (; tmp != null && tmp2 != null; tmp = tmp.nextSibling, tmp2 = tmp2.nextSibling) {
       if (!eqlFunc(tmp, tmp2)) {
         return false;
       }
@@ -78,7 +78,7 @@ export class ValueList<V extends ListNode<V>> {
     let tmp = this._lastChild;
     while (tmp != null) {
       yield tmp;
-      tmp = tmp.prevNode;
+      tmp = tmp.prevSibling;
     }
   }
 
@@ -89,7 +89,7 @@ export class ValueList<V extends ListNode<V>> {
     let tmp = this._firstChild;
     while (tmp != null) {
       yield tmp;
-      tmp = tmp.nextNode;
+      tmp = tmp.nextSibling;
     }
   }
 
@@ -98,12 +98,12 @@ export class ValueList<V extends ListNode<V>> {
       throw new Error("No children");
     }
     const out = this._lastChild;
-    const prev = this._lastChild.prevNode;
+    const prev = this._lastChild.prevSibling;
     this._size--;
     if (prev == null) {
       this._firstChild = this._lastChild = null;
     } else {
-      prev.nextNode = null;
+      prev.nextSibling = null;
       this._lastChild = prev;
     }
     return out;
@@ -114,12 +114,12 @@ export class ValueList<V extends ListNode<V>> {
       throw new Error("No children");
     }
     const out = this._firstChild;
-    const next = this._firstChild.nextNode;
+    const next = this._firstChild.nextSibling;
     this._size--;
     if (next == null) {
       this._firstChild = this._lastChild = null;
     } else {
-      next.prevNode = null;
+      next.prevSibling = null;
       this._firstChild = next;
     }
     return out;
@@ -137,25 +137,25 @@ export class ValueList<V extends ListNode<V>> {
     if (this._firstChild == null || this._lastChild == null) {
       this._firstChild = this._lastChild = child;
     } else if (before == null) {
-      child.prevNode = this._lastChild;
-      child.nextNode = null;
-      this._lastChild.nextNode = child;
+      child.prevSibling = this._lastChild;
+      child.nextSibling = null;
+      this._lastChild.nextSibling = child;
       this._lastChild = child;
     } else if (before == this._firstChild) {
-      child.nextNode = before;
-      child.prevNode = null;
-      this._firstChild.prevNode = child;
+      child.nextSibling = before;
+      child.prevSibling = null;
+      this._firstChild.prevSibling = child;
       this._firstChild = child;
     } else {
-      const next = before.nextNode;
-      const prev = before.prevNode;
-      child.nextNode = next;
-      child.prevNode = prev;
+      const next = before.nextSibling;
+      const prev = before.prevSibling;
+      child.nextSibling = next;
+      child.prevSibling = prev;
       if (next != null) {
-        next.prevNode = child;
+        next.prevSibling = child;
       }
       if (prev != null) {
-        prev.nextNode = child;
+        prev.nextSibling = child;
       }
     }
     return this;
