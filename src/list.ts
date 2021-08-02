@@ -1,20 +1,18 @@
 import { Nullable } from "./types";
 
 export interface ListNode<V> {
-  parentNode: any;
   nextSibling: Nullable<V>;
   prevSibling: Nullable<V>;
 }
 
 class MutableListNode<V> implements ListNode<MutableListNode<V>> {
-  parentNode: any;
   nextSibling: Nullable<MutableListNode<V>> = null;
   prevSibling: Nullable<MutableListNode<V>> = null;
   constructor(public value: V) {}
 }
 
 /**
- * A list implementation where the value itself contains next, prev and parent pointers
+ * A list implementation where the value itself contains next and prev pointers
  * so we do not need to create wrapper classes.
  */
 export class ValueList<V extends ListNode<V>> {
@@ -126,13 +124,6 @@ export class ValueList<V extends ListNode<V>> {
   }
 
   add(child: V, before: Nullable<V> = null): this {
-    if (child.parentNode) {
-      throw new Error("Child has a parent.  Remove it first");
-    }
-    if (before && before.parentNode != this) {
-      throw new Error("Node to add before is not a child of this");
-    }
-    child.parentNode = this;
     this._size++;
     if (this._firstChild == null || this._lastChild == null) {
       this._firstChild = this._lastChild = child;
@@ -171,8 +162,8 @@ export class ValueList<V extends ListNode<V>> {
 }
 
 /**
- * A list implementation where the value itself contains next, prev and parent pointers
- * so we do not need to create wrapper classes.
+ * A list implementation where the values themselves need to be wrapper in a list node.
+ * If values already have sibling node properties they can be direclty used via ValueLists.
  */
 export class List<V> {
   private container: ValueList<MutableListNode<V>>;
