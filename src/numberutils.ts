@@ -187,16 +187,32 @@ export class Fraction {
     return this.cmp(another) < 0;
   }
 
+  isLTE(another: Fraction): boolean {
+    return this.cmp(another) <= 0;
+  }
+
   isLTNum(another: number): boolean {
     return this.cmpNum(another) < 0;
+  }
+
+  isLTENum(another: number): boolean {
+    return this.cmpNum(another) <= 0;
   }
 
   isGT(another: Fraction): boolean {
     return this.cmp(another) > 0;
   }
 
+  isGTE(another: Fraction): boolean {
+    return this.cmp(another) >= 0;
+  }
+
   isGTNum(another: number): boolean {
     return this.cmpNum(another) > 0;
+  }
+
+  isGTENum(another: number): boolean {
+    return this.cmpNum(another) >= 0;
   }
 
   toString(): string {
