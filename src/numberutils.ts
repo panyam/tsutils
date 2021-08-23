@@ -71,14 +71,6 @@ export class Fraction {
     return this.num % this.den == 0;
   }
 
-  get roundedUp(): number {
-    if (this.num % this.den == 0) {
-      return this.num / this.den;
-    } else {
-      return 1 + Math.floor(this.num / this.den);
-    }
-  }
-
   get isZero(): boolean {
     return this.num == 0;
   }
@@ -89,6 +81,22 @@ export class Fraction {
 
   get isOne(): boolean {
     return this.num == this.den;
+  }
+
+  get ceil(): number {
+    if (this.num % this.den == 0) {
+      return this.num / this.den;
+    } else {
+      return 1 + Math.floor(this.num / this.den);
+    }
+  }
+
+  get floor(): number {
+    if (this.num % this.den == 0) {
+      return this.num / this.den;
+    } else {
+      return Math.floor(this.num / this.den);
+    }
   }
 
   plus(another: Fraction): Fraction {

@@ -95,7 +95,7 @@ export function getAttrOrStyle(elem: Element, attribName: string, cssStyles: any
   return elem.getAttribute(attribName) || cssStyles[styleName];
 }
 
-export function createSVGNode<T extends SVGGraphicsElement>(nodename: string, config: any): any {
+export function createSVGNode<T extends SVGGraphicsElement>(nodename: string, config?: any): any {
   config = config || {};
   config.ns = "http://www.w3.org/2000/svg";
   return createNode(nodename, config) as T;
