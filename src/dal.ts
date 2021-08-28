@@ -9,7 +9,7 @@ export class BaseEntity {
     config = config || {};
     this.isActive = config.isActive == false ? false : true;
     this.createdAt = config.createdAt || Date.now();
-    this.updatedAt = config.createdAt || Date.now();
+    this.updatedAt = config.updatedAt || Date.now();
   }
 }
 

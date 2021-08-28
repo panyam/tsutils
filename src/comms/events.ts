@@ -107,6 +107,9 @@ export type EventCallback = ((event: TEvent) => void) | ((event: TEvent) => Prom
 
 export class EventEmitter {
   protected _eventHub: EventHub | null;
+  constructor() {
+    this._eventHub = new EventHub();
+  }
   get eventHub(): EventHub | null {
     return this._eventHub;
   }
@@ -117,6 +120,7 @@ export class EventEmitter {
   }
   protected eventHubChanged(oldHub: EventHub | null): void {
     // Do nothing
+    console.log("WARNING - EventHub Change Listener not implemented: ", this.constructor.name);
   }
 }
 
