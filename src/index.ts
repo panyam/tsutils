@@ -11,7 +11,7 @@ export * as Time from "./timeutils";
 // export * as Properties from "./properties";
 export * as DAL from "./dal";
 
-declare const navigator: any;
+declare let navigator: any;
 export class Browser {
   static IS_EXPLORER = navigator && navigator.userAgent.indexOf("MSIE") > -1;
   static IS_FIREFOX = navigator && navigator.userAgent.indexOf("Firefox") > -1;
