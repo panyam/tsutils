@@ -6,6 +6,6 @@ export class Browser {
 
   protected static UAHasChrome = () => navigator && navigator.userAgent.indexOf("Chrome") > -1;
   protected static UAHasSafari = () => navigator && navigator.userAgent.indexOf("Safari") > -1;
-  static IS_SAFARI = () => navigator && Browser.UAHasSafari && (!Browser.UAHasChrome || !Browser.UAHasSafari);
-  static IS_CHROME = () => navigator && Browser.UAHasChrome && (!Browser.UAHasChrome || !Browser.IS_OPERA);
+  static IS_SAFARI = () => navigator && Browser.UAHasSafari() && (!Browser.UAHasChrome() || !Browser.UAHasSafari());
+  static IS_CHROME = () => navigator && Browser.UAHasChrome() && (!Browser.UAHasChrome() || !Browser.IS_OPERA());
 }
