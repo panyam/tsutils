@@ -6,6 +6,7 @@ export * as Lists from "./list";
 export * as Misc from "./misc";
 export * as Streams from "./streams";
 export * as DOM from "./dom";
+export * as Geom from "./geom";
 export * as Num from "./numberutils";
 export * as Time from "./timeutils";
 // export * as Properties from "./properties";
