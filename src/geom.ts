@@ -39,14 +39,16 @@ export class Rect implements BBox {
   }
 
   union(another: BBox): this {
-    const minX = Math.min(this.x, another.x);
-    const minY = Math.min(this.y, another.y);
-    const maxX = Math.max(this.x + this.width, another.x + another.width);
-    const maxY = Math.max(this.y + this.height, another.y + another.height);
-    this.x = minX;
-    this.y = minY;
-    this.width = maxX - minX;
-    this.height = maxY - minY;
+    if (another) {
+      const minX = Math.min(this.x, another.x);
+      const minY = Math.min(this.y, another.y);
+      const maxX = Math.max(this.x + this.width, another.x + another.width);
+      const maxY = Math.max(this.y + this.height, another.y + another.height);
+      this.x = minX;
+      this.y = minY;
+      this.width = maxX - minX;
+      this.height = maxY - minY;
+    }
     return this;
   }
 }
