@@ -22,4 +22,18 @@ describe("Basic Tests", () => {
     expect(i.right).toBe(30);
     expect(i.bottom).toBe(40);
   });
+
+  test("Rect Unions", () => {
+    const r1 = new Rect(50, 50, 100, 100);
+    const r2 = new Rect(75, 75, 20, 20);
+    const r3 = new Rect(10, 60, 300, 50);
+    let r4 = r1.copy();
+    r4 = r4.union(r1);
+    r4 = r4.union(r2);
+    r4 = r4.union(r3);
+    expect(r4.x).toEqual(10);
+    expect(r4.y).toEqual(50);
+    expect(r4.width).toEqual(300);
+    expect(r4.height).toEqual(100);
+  });
 });
