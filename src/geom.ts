@@ -30,8 +30,12 @@ export interface BBox {
 export class Rect implements BBox {
   constructor(public x = 0, public y = 0, public width = 0, public height = 0) {}
 
+  static from(box: BBox): Rect {
+    return new Rect(box.x, box.y, box.width, box.height);
+  }
+
   copy(): Rect {
-    return new Rect(this.x, this.y, this.width, this.height);
+    return Rect.from(this);
   }
 
   union(another: BBox): this {
