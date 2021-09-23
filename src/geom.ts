@@ -38,7 +38,10 @@ export class Rect implements BBox {
     return Rect.from(this);
   }
 
-  union(another: BBox): this {
+  /**
+   * Returns union with another box.
+   */
+  union(another: BBox | null): this {
     if (another) {
       const minX = Math.min(this.x, another.x);
       const minY = Math.min(this.y, another.y);
@@ -49,6 +52,14 @@ export class Rect implements BBox {
       this.width = maxX - minX;
       this.height = maxY - minY;
     }
+    return this;
+  }
+
+  /**
+   * Returns union of multiple boxes.
+   */
+  unionAll(...boxes: (BBox | null)[]): this {
+    for (const b of boxes) this.union(b);
     return this;
   }
 }
