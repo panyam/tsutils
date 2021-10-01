@@ -1,7 +1,29 @@
 import { Undefined } from "./types";
+import * as Geom from "./geom";
+import { Browser } from "./browser";
 
 declare const $: any;
 const fontMetrics: { [key: string]: any } = {};
+
+/**
+ * Calculates the bounding box for an svg element in a consistent way across
+ * browsers.
+ */
+export function svgBBox(element: SVGGraphicsElement): Geom.Rect {
+  const bbox = Geom.Rect.from(element.getBBox());
+  // Due to safari bug which returns really crazy span widths!
+  if (Browser.IS_SAFARI()) {
+    const clientRect = element.getClientRects()[0];
+    if (clientRect) {
+      const parentClientRect = element.parentElement?.getBoundingClientRect();
+      bbox.x = bbox.x + clientRect.x - (parentClientRect?.x || 0);
+      // bbox.y = clientRect.y; //  - (parentClientRect?.y || 0);
+      bbox.width = clientRect.width;
+      bbox.height = clientRect.height;
+    }
+  }
+  return bbox;
+}
 
 export function getFontMetrics(fontFamily: string, fontSize: number): any {
   if (!(fontFamily in fontMetrics)) {
