@@ -21,7 +21,7 @@ export class Resource extends BaseEntity {
   userId: string;
 
   // Visibility status
-  visibility: "public" | "private" | "limited";
+  visibility: string;
 
   // Who can see this score
   visibleTo: string[];
