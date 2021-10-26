@@ -21,7 +21,7 @@ export class Resource extends BaseEntity {
   userId: string;
 
   // Visibility status
-  visibility: string;
+  visibility: "public" | "private" | "limited";
 
   // Who can see this score
   visibleTo: string[];
@@ -34,7 +34,7 @@ export class Resource extends BaseEntity {
     this.visibility = (config.visibility || "private").toLowerCase();
   }
 
-  isVisibleTo(userId: string): boolean {
+  isVisibleTo(userId: string | null): boolean {
     return this.userId == userId || this.visibility == "public";
   }
 
