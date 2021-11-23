@@ -61,10 +61,34 @@ export class Fraction {
 
   constructor(num = 0, den = 1) {
     if (isNaN(num) || isNaN(den)) {
-      throw new Error("Invalid numerator or denminator");
+      throw new Error(`Invalid numerator(${num}) or denminator(${den})`);
     }
     this.num = num;
     this.den = den;
+  }
+
+  static parse(val: string): Fraction {
+    const parts = val
+      .trim()
+      .split("/")
+      .map((x) => x.trim());
+    let num = 1;
+    let den = 1;
+    if (parts.length == 1) num = parseInt(parts[0]);
+    else if (parts.length != 2) {
+      throw new Error("Invalid fraction string: " + val);
+    } else {
+      if (parts[0].length > 0) {
+        num = parseInt(parts[0]);
+      }
+      if (parts[1].length > 0) {
+        den = parseInt(parts[1]);
+      }
+    }
+    if (isNaN(num) || isNaN(den)) {
+      throw new Error("Invalid fraction string: " + val);
+    }
+    return new Fraction(num, den);
   }
 
   get isWhole(): boolean {

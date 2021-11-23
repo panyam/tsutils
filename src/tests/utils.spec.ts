@@ -46,6 +46,12 @@ describe("Fraction Tests", () => {
     expectFracsEqual(Frac(2, 3), Frac(4, 6));
   });
 
+  test("Parsing", () => {
+    expectFracsEqual(Fraction.parse("2/3"), Frac(2, 3));
+    expectFracsEqual(Fraction.parse("/3"), Frac(1, 3));
+    expectFracsEqual(Fraction.parse("3/"), Frac(3, 1));
+  });
+
   test("Additions", () => {
     expectFracsEqual(Frac(2, 3).plusNum(1), Frac(5, 3));
     expectFracsEqual(Frac(4, 5).plus(Frac(10, 5)), Frac(14, 5));
