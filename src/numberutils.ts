@@ -64,7 +64,7 @@ export class Fraction {
       throw new Error(`Invalid numerator(${num}) or denminator(${den})`);
     }
     if (factorized) {
-      const gcd = gcdof(this.num, this.den);
+      const gcd = gcdof(num, den);
       num /= gcd;
       den /= gcd;
     }
