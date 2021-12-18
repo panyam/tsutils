@@ -44,6 +44,12 @@ describe("Fraction Tests", () => {
     expect(Frac(2, 3)).toEqual(new Fraction(2, 3));
     expectFracsEqual(Frac(2, 3), Frac(8, 12));
     expectFracsEqual(Frac(2, 3), Frac(4, 6));
+    const f2 = Frac(16, 24, false);
+    expect(f2.num).toEqual(16);
+    expect(f2.den).toEqual(24);
+    const f3 = Frac(16, 24, true);
+    expect(f3.num).toEqual(2);
+    expect(f3.den).toEqual(3);
   });
 
   test("Parsing", () => {

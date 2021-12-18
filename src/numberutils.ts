@@ -59,15 +59,20 @@ export class Fraction {
   static readonly ONE = new Fraction(1, 1);
   static readonly INFINITY = new Fraction(1, 0);
 
-  constructor(num = 0, den = 1) {
+  constructor(num = 0, den = 1, factorized = false) {
     if (isNaN(num) || isNaN(den)) {
       throw new Error(`Invalid numerator(${num}) or denminator(${den})`);
+    }
+    if (factorized) {
+      const gcd = gcdof(this.num, this.den);
+      num /= gcd;
+      den /= gcd;
     }
     this.num = num;
     this.den = den;
   }
 
-  static parse(val: string): Fraction {
+  static parse(val: string, factorized = false): Fraction {
     const parts = val
       .trim()
       .split("/")
@@ -88,7 +93,7 @@ export class Fraction {
     if (isNaN(num) || isNaN(den)) {
       throw new Error("Invalid fraction string: " + val);
     }
-    return new Fraction(num, den);
+    return new Fraction(num, den, factorized);
   }
 
   get isWhole(): boolean {
@@ -123,43 +128,43 @@ export class Fraction {
     }
   }
 
-  plus(another: Fraction): Fraction {
-    return new Fraction(this.num * another.den + this.den * another.num, this.den * another.den);
+  plus(another: Fraction, factorized = false): Fraction {
+    return new Fraction(this.num * another.den + this.den * another.num, this.den * another.den, factorized);
   }
 
-  plusNum(another: number): Fraction {
-    return new Fraction(this.num + this.den * another, this.den);
+  plusNum(another: number, factorized = false): Fraction {
+    return new Fraction(this.num + this.den * another, this.den, factorized);
   }
 
-  minus(another: Fraction): Fraction {
-    return new Fraction(this.num * another.den - this.den * another.num, this.den * another.den);
+  minus(another: Fraction, factorized = false): Fraction {
+    return new Fraction(this.num * another.den - this.den * another.num, this.den * another.den, factorized);
   }
 
-  minusNum(another: number): Fraction {
-    return new Fraction(this.num - this.den * another, this.den);
+  minusNum(another: number, factorized = false): Fraction {
+    return new Fraction(this.num - this.den * another, this.den, factorized);
   }
 
-  times(another: Fraction): Fraction {
-    return new Fraction(this.num * another.num, this.den * another.den);
+  times(another: Fraction, factorized = false): Fraction {
+    return new Fraction(this.num * another.num, this.den * another.den, factorized);
   }
 
-  timesNum(another: number): Fraction {
-    return new Fraction(this.num * another, this.den);
+  timesNum(another: number, factorized = false): Fraction {
+    return new Fraction(this.num * another, this.den, factorized);
   }
 
-  divby(another: Fraction): Fraction {
-    return new Fraction(this.num * another.den, this.den * another.num);
+  divby(another: Fraction, factorized = false): Fraction {
+    return new Fraction(this.num * another.den, this.den * another.num, factorized);
   }
 
-  divbyNum(another: number): Fraction {
-    return new Fraction(this.num, this.den * another);
+  divbyNum(another: number, factorized = false): Fraction {
+    return new Fraction(this.num, this.den * another, factorized);
   }
 
   /**
    * Returns another / this.
    */
-  numDivby(another: number): Fraction {
-    return new Fraction(this.den * another, this.num);
+  numDivby(another: number, factorized = false): Fraction {
+    return new Fraction(this.den * another, this.num, factorized);
   }
 
   /**
@@ -253,4 +258,4 @@ export class Fraction {
 }
 
 // Shortcut helper
-export const Frac = (a = 0, b = 1): Fraction => new Fraction(a, b);
+export const Frac = (a = 0, b = 1, factorized = false): Fraction => new Fraction(a, b, factorized);
