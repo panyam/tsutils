@@ -1,5 +1,11 @@
 import * as L from "../list";
 
+class Value {
+  nextSibling: Value;
+  prevSibling: Value;
+  constructor(public value: number) {}
+}
+
 describe("LinkedList tests", () => {
   test("Create List and basic Accessors", () => {
     const l1 = new L.List(1, 2, 3, 4, 5);
@@ -54,12 +60,6 @@ describe("LinkedList tests", () => {
   });
 
   test("Additions", () => {
-    class Value {
-      nextSibling: Value;
-      prevSibling: Value;
-      constructor(public value: number) {}
-    }
-
     const v1 = new Value(1);
     const v2 = new Value(2);
     const v3 = new Value(3);
@@ -94,12 +94,6 @@ describe("LinkedList tests", () => {
   });
 
   test("Removal", () => {
-    class Value {
-      nextSibling: Value;
-      prevSibling: Value;
-      constructor(public value: number) {}
-    }
-
     const v1 = new Value(1);
     const v2 = new Value(2);
     const v3 = new Value(3);

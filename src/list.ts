@@ -21,7 +21,7 @@ export class ValueList<V extends ListNode<V>> {
   protected _size = 0;
 
   constructor(...values: V[]) {
-    for (const v of values) this.push(v);
+    for (const v of values) this.pushBack(v);
   }
 
   toJSON(): V[] {
@@ -91,38 +91,6 @@ export class ValueList<V extends ListNode<V>> {
     }
   }
 
-  popBack(): V {
-    if (this._lastChild == null) {
-      throw new Error("No children");
-    }
-    const out = this._lastChild;
-    const prev = this._lastChild.prevSibling;
-    this._size--;
-    if (prev == null) {
-      this._firstChild = this._lastChild = null;
-    } else {
-      prev.nextSibling = null;
-      this._lastChild = prev;
-    }
-    return out;
-  }
-
-  popFront(): V {
-    if (this._firstChild == null) {
-      throw new Error("No children");
-    }
-    const out = this._firstChild;
-    const next = this._firstChild.nextSibling;
-    this._size--;
-    if (next == null) {
-      this._firstChild = this._lastChild = null;
-    } else {
-      next.prevSibling = null;
-      this._firstChild = next;
-    }
-    return out;
-  }
-
   add(child: V, before: Nullable<V> = null): this {
     // Ensure that this node is not added anywhere else
     if (child.nextSibling != null || child.prevSibling != null) {
@@ -158,7 +126,7 @@ export class ValueList<V extends ListNode<V>> {
     return this.add(value, this._firstChild);
   }
 
-  push(value: V): this {
+  pushBack(value: V): this {
     return this.add(value);
   }
 
@@ -190,6 +158,24 @@ export class ValueList<V extends ListNode<V>> {
 
     child.prevSibling = child.nextSibling = null;
     return this;
+  }
+
+  popBack(): V {
+    if (this._lastChild == null) {
+      throw new Error("No children");
+    }
+    const out = this._lastChild;
+    this.remove(out);
+    return out;
+  }
+
+  popFront(): V {
+    if (this._firstChild == null) {
+      throw new Error("No children");
+    }
+    const out = this._firstChild;
+    this.remove(out);
+    return out;
   }
 }
 
