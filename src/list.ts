@@ -124,6 +124,11 @@ export class ValueList<V extends ListNode<V>> {
   }
 
   add(child: V, before: Nullable<V> = null): this {
+    // Ensure that this node is not added anywhere else
+    if (child.nextSibling != null || child.prevSibling != null) {
+      throw new Error("New node already added to a list.  Remove it first");
+    }
+    child.nextSibling = child.prevSibling = null;
     this._size++;
     if (this._firstChild == null || this._lastChild == null) {
       this._firstChild = this._lastChild = child;
@@ -138,13 +143,10 @@ export class ValueList<V extends ListNode<V>> {
       this._firstChild.prevSibling = child;
       this._firstChild = child;
     } else {
-      const next = before.nextSibling;
       const prev = before.prevSibling;
-      child.nextSibling = next;
+      child.nextSibling = before;
+      before.prevSibling = child;
       child.prevSibling = prev;
-      if (next != null) {
-        next.prevSibling = child;
-      }
       if (prev != null) {
         prev.nextSibling = child;
       }
@@ -159,11 +161,42 @@ export class ValueList<V extends ListNode<V>> {
   push(value: V): this {
     return this.add(value);
   }
+
+  /**
+   * Removes a child node from this list.
+   * It is upto the caller to ensure that this node indeed belongs
+   * to this list otherwise deletion of a non belonging node could result
+   * in undefined behaviour.
+   */
+  remove(child: V): this {
+    const next = child.nextSibling;
+    const prev = child.prevSibling;
+
+    if (next == null) {
+      this._lastChild = prev;
+      if (prev == null) this._firstChild = null;
+    } else {
+      next.prevSibling = prev;
+    }
+
+    if (prev == null) {
+      this._firstChild = next;
+      if (next == null) this._lastChild = null;
+    } else {
+      prev.nextSibling = next;
+    }
+
+    if (next != null || prev != null) this._size--;
+
+    child.prevSibling = child.nextSibling = null;
+    return this;
+  }
 }
 
 /**
  * A list implementation where the values themselves need to be wrapper in a list node.
- * If values already have sibling node properties they can be direclty used via ValueLists.
+ * If values already have sibling node properties they can be direclty used
+ * via ValueLists.
  */
 export class List<V> {
   private container: ValueList<MutableListNode<V>>;
@@ -183,6 +216,15 @@ export class List<V> {
 
   equals(another: List<V>, eqlFunc: (val1: V, val2: V) => boolean): boolean {
     return this.container.equals(another.container, (a, b) => eqlFunc(a.value, b.value));
+  }
+
+  find(target: V): Nullable<MutableListNode<V>> {
+    for (const v of this.container.values()) {
+      if (target == v.value) {
+        return v;
+      }
+    }
+    return null;
   }
 
   get isEmpty(): boolean {
