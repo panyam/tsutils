@@ -19,6 +19,14 @@ describe("LinkedList tests", () => {
   });
 
   test("Test pops", () => {
+    const l0 = new L.List(1);
+    expect(l0.popFront()).toEqual(1);
+    expect(l0.size).toEqual(0);
+
+    const la = new L.List(1);
+    expect(la.popBack()).toEqual(1);
+    expect(la.size).toEqual(0);
+
     const l1 = new L.List(1, 2, 3, 4, 5);
     expect(l1.popFront()).toEqual(1);
     expect(l1.popBack()).toEqual(5);
@@ -115,7 +123,7 @@ describe("LinkedList tests", () => {
     expect(v2.prevSibling).toBe(v1);
     expect(v1.nextSibling).toBe(v2);
     expect(v1.prevSibling).toBe(null);
-    l.remove(v1);
+    l.popFront();
     expect(l.size).toBe(3);
     expect(l.first).toBe(v2);
     expect(l.last).toBe(v5);
@@ -124,7 +132,7 @@ describe("LinkedList tests", () => {
     expect(v2.prevSibling).toBe(null);
 
     // remove from last
-    l.remove(v5);
+    l.popBack();
     expect(l.size).toBe(2);
     expect(l.last).toBe(v4);
     expect(v5.prevSibling).toBe(null);

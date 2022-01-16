@@ -154,7 +154,7 @@ export class ValueList<V extends ListNode<V>> {
       prev.nextSibling = next;
     }
 
-    if (next != null || prev != null) this._size--;
+    this._size--;
 
     child.prevSibling = child.nextSibling = null;
     return this;
