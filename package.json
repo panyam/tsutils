@@ -79,6 +79,6 @@
     "typescript-tslint-plugin": "^1.0.1"
   },
   "dependencies": {
-    "axios": "^0.21.1"
+    "axios": "^0.26.0"
   }
 }
