@@ -126,19 +126,6 @@ export class EventEmitter {
 
 export class EventHub {
   private _handlers: { [key: string]: Array<EventCallback> } = {};
-  private _muted = false;
-
-  get isMuted(): boolean {
-    return this._muted;
-  }
-
-  mute(): void {
-    this._muted = true;
-  }
-
-  unmute(): void {
-    this._muted = false;
-  }
 
   on(names: Array<string> | string, callback: EventCallback): this {
     return this._addHandler(names, this._handlers, callback);
@@ -179,7 +166,13 @@ export class EventHub {
   }
 
   emit(name: string, source: any, payload?: any): boolean {
-    return this.dispatchEvent(new TEvent(name, source, payload));
+    const evt = new TEvent(name, source, payload);
+    if (this._inBatchMode) {
+      this._events.push(evt);
+      return true;
+    } else {
+      return this.dispatchEvent(evt);
+    }
   }
 
   dispatchEvent(event: TEvent): boolean {
@@ -189,6 +182,30 @@ export class EventHub {
       if (event.cancelled) return false;
     }
     return true;
+  }
+
+  // Support for transactional/batch event handling, where
+  // the user can allow a bunch of events to first collect
+  // before triggering a batch dispatch
+  public static BATCH_EVENTS = "BatchEvents";
+  protected _events: TEvent[] = [];
+  protected _inBatchMode = false;
+  startBatchMode(): this {
+    if (!this._inBatchMode) {
+      this._inBatchMode = true;
+    }
+    return this;
+  }
+
+  cancelBatch(): void {
+    this._inBatchMode = false;
+    this._events = [];
+  }
+
+  commitBatch(): void {
+    this._inBatchMode = false;
+    this.emit(EventHub.BATCH_EVENTS, this, this._events);
+    this._events = [];
   }
 }
 
