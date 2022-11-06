@@ -29,17 +29,6 @@ export function range(start: number, end: Nullable<number> = null, incr: Nullabl
   return out;
 }
 
-/*
-export function applyMixins(derivedCtor: any, baseCtors: any[]) {
-    baseCtors.forEach(baseCtor => {
-        Object.getOwnPropertyNames(baseCtor.prototype).forEach(name => {
-            Object.defineProperty(derivedCtor.prototype, name,
-                Object.getOwnPropertyDescriptor(baseCtor.prototype, name));
-        });
-    });
-}
-*/
-
 export function gcdof(x: number, y: number): number {
   x = Math.abs(x);
   y = Math.abs(y);

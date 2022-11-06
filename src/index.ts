@@ -9,6 +9,5 @@ export * as DOM from "./dom";
 export * as Geom from "./geom";
 export * as Num from "./numberutils";
 export * as Time from "./timeutils";
-// export * as Properties from "./properties";
 export * as DAL from "./dal";
 export { Browser } from "./browser";
