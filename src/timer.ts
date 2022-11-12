@@ -1,6 +1,6 @@
 type StepFunc = (ts: number) => void;
 
-export default class Timer {
+export class Timer {
   private refreshInterval = 1000;
   private lastRefreshAt = 0;
   private updateLoop: number | null = null;
