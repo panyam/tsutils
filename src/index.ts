@@ -10,4 +10,6 @@ export * as Geom from "./geom";
 export * as Num from "./numberutils";
 export * as Time from "./timeutils";
 export * as DAL from "./dal";
+export * as Scrolling from "./scrolling";
+export * as Timer from "./timer";
 export { Browser } from "./browser";
