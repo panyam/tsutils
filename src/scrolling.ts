@@ -14,7 +14,6 @@ import { Timer } from "./timer";
  * a scroll group is synchronized
  */
 
-type EventHandler = (evt: any) => void;
 export interface Scrollable {
   // Set or get the current scroll offset
   scrollOffset: number;
