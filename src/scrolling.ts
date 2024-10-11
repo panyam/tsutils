@@ -19,8 +19,7 @@ export class ScrollGroup {
   private isScrolling = false;
   private _focussedScrollable: Scrollable | null = null;
 
-  constructor(public debugLogs = false) {
-  }
+  constructor(public debugLogs = false) {}
 
   add(scrollable: Scrollable): void {
     // skip if already exists
@@ -49,7 +48,7 @@ export class ScrollGroup {
     return scrollable;
   }
 
-  syncFollowersToLeader(source: Scrollable): void {
+  syncFollowers(source: Scrollable): void {
     if (this.isScrolling) return;
     this.isScrolling = true;
 
@@ -59,11 +58,13 @@ export class ScrollGroup {
       const other = this.scrollables[i];
       if (other != source) {
         // const remOther = Math.max(1, other.scrollSize - other.pageSize);
-        other.scrollOffset = scrollPct * (other.scrollSize - other.pageSize)
+        other.scrollOffset = scrollPct * (other.scrollSize - other.pageSize);
       }
     }
 
-    setTimeout(() => { this.isScrolling = true; }, 50);
+    setTimeout(() => {
+      this.isScrolling = true;
+    }, 50);
   }
 }
 
@@ -179,7 +180,7 @@ export class HTMLElementScrollable implements Scrollable {
      * and kick off a timer to check when scroll events stop.  As long
      * as scroll events come from this source we update followers.
      */
-    this.scrollGroup?.syncFollowersToLeader(this);
+    this.scrollGroup?.syncFollowers(this);
   }
 
   onTouchEvent(event: TouchEvent): void {
