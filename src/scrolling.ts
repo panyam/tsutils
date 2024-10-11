@@ -19,10 +19,7 @@ export class ScrollGroup {
   private isScrolling = false;
   private _focussedScrollable: Scrollable | null = null;
 
-  constructor(
-    public scrollStopDelay = 50,
-    public debugLogs = false,
-  ) {}
+  constructor(public scrollStopDelay = 50) {}
 
   add(scrollable: Scrollable): void {
     // skip if already exists
