@@ -15,6 +15,7 @@ import { Timer } from "./timer";
  */
 
 export class ScrollGroup {
+  public scrollStopDelay = 50;
   private scrollables: Scrollable[] = [];
   private isScrolling = false;
   private _focussedScrollable: Scrollable | null = null;
@@ -63,8 +64,8 @@ export class ScrollGroup {
     }
 
     setTimeout(() => {
-      this.isScrolling = true;
-    }, 50);
+      this.isScrolling = false;
+    }, this.scrollStopDelay);
   }
 }
 
