@@ -14,6 +14,59 @@ import { Timer } from "./timer";
  * a scroll group is synchronized
  */
 
+export class ScrollGroup {
+  private scrollables: Scrollable[] = [];
+  private isScrolling = false;
+  private _focussedScrollable: Scrollable | null = null;
+
+  constructor(public debugLogs = false) {
+  }
+
+  add(scrollable: Scrollable): void {
+    // skip if already exists
+    const index = this.scrollables.indexOf(scrollable);
+    if (index >= 0) return;
+    scrollable.attach(this);
+    this.scrollables.push(scrollable);
+  }
+
+  remove(scrollable: Scrollable): void {
+    const index = this.scrollables.indexOf(scrollable);
+    if (index < 0) return;
+    this.detachAtIndex(index);
+  }
+
+  clear(): void {
+    for (let i = this.scrollables.length - 1; i >= 0; i--) {
+      this.detachAtIndex(i);
+    }
+  }
+
+  detachAtIndex(index: number): Scrollable {
+    const scrollable = this.scrollables[index];
+    scrollable.detach();
+    this.scrollables.splice(index, 1);
+    return scrollable;
+  }
+
+  syncFollowersToLeader(source: Scrollable): void {
+    if (this.isScrolling) return;
+    this.isScrolling = true;
+
+    const remScroll = Math.max(1, source.scrollSize - source.pageSize);
+    const scrollPct = source.scrollOffset / remScroll;
+    for (let i = this.scrollables.length - 1; i >= 0; i--) {
+      const other = this.scrollables[i];
+      if (other != source) {
+        // const remOther = Math.max(1, other.scrollSize - other.pageSize);
+        other.scrollOffset = scrollPct * (other.scrollSize - other.pageSize)
+      }
+    }
+
+    setTimeout(() => { this.isScrolling = true; }, 50);
+  }
+}
+
 export interface Scrollable {
   // Set or get the current scroll offset
   scrollOffset: number;
@@ -126,13 +179,13 @@ export class HTMLElementScrollable implements Scrollable {
      * and kick off a timer to check when scroll events stop.  As long
      * as scroll events come from this source we update followers.
      */
-    this.scrollGroup?.onScroll(this, event.timeStamp);
+    this.scrollGroup?.syncFollowersToLeader(this);
   }
 
   onTouchEvent(event: TouchEvent): void {
     // console.log(`Touched Eeent(${event.type}): `, event);
     if (event.type == "touchstart" && this.scrollGroup) {
-      this.scrollGroup.focussedScrollable = this;
+      // this.scrollGroup.focussedScrollable = this;
       // this.setLeadScrollable(this.focussedElement);
     }
   }
@@ -142,149 +195,13 @@ export class HTMLElementScrollable implements Scrollable {
     const element = event.target;
     if (this.scrollGroup) {
       if (event.type == "mouseenter") {
-        this.scrollGroup.focussedScrollable = this;
+        // this.scrollGroup.focussedScrollable = this;
       } else if (event.type == "mouseleave") {
-        this.scrollGroup.focussedScrollable = null;
+        // this.scrollGroup.focussedScrollable = null;
       } else if (event.type == "mousedown") {
-        this.scrollGroup.focussedScrollable = this;
+        // this.scrollGroup.focussedScrollable = this;
         // this.setLeadScrollable(this.focussedElement);
       }
     }
-  }
-}
-
-export class ScrollGroup {
-  private scrollables: Scrollable[] = [];
-  private _focussedScrollable: Scrollable | null = null;
-  private leadScrollable: Scrollable | null = null;
-  private lastScrolledAt = -1;
-  private lastScrollOffset = 0;
-  private scrollTimer: Timer;
-
-  // If there has been no change in scroll offset within this
-  // time then we can assume scrolling has completed and this
-  // can be used to infer that scrolling has finished.
-  private idleThreshold = 300;
-
-  // Apply sync to followers if we have a scroll distance of atleast
-  // this much or time between last even has crossed the
-  // `eventDeltaThreshold`.
-  private offsetDeltaThreshold = 5;
-  private eventDeltaThreshold = 50;
-
-  constructor(public debugLogs = false) {
-    this.scrollTimer = new Timer(500, this.onTimer.bind(this));
-  }
-
-  add(scrollable: Scrollable): void {
-    // skip if already exists
-    const index = this.scrollables.indexOf(scrollable);
-    if (index >= 0) return;
-    scrollable.attach(this);
-    this.scrollables.push(scrollable);
-  }
-
-  remove(scrollable: Scrollable): void {
-    const index = this.scrollables.indexOf(scrollable);
-    if (index < 0) return;
-    this.detachAtIndex(index);
-  }
-
-  clear(): void {
-    for (let i = this.scrollables.length - 1; i >= 0; i--) {
-      this.detachAtIndex(i);
-    }
-  }
-
-  detachAtIndex(index: number): Scrollable {
-    const scrollable = this.scrollables[index];
-    scrollable.detach();
-    this.scrollables.splice(index, 1);
-    return scrollable;
-  }
-
-  syncFollowersToLeader(): void {
-    const scrollable = this.leadScrollable;
-    if (scrollable != null) {
-      this.lastScrollOffset = scrollable.scrollOffset;
-      // console.log("Scrolled: ", scrollable.scrollOffset, event);
-
-      // set the scroll position of all others
-      // TODO - should this happen in this handler itself?
-      const remScroll = Math.max(1, scrollable.scrollSize - scrollable.pageSize);
-      for (let i = this.scrollables.length - 1; i >= 0; i--) {
-        const other = this.scrollables[i];
-        const remOther = Math.max(1, other.scrollSize - other.pageSize);
-        /*
-        console.log("Scrollable: ", i, other);
-        console.log(
-          "scrollOffset, scrollSize, pageSize: ",
-          other.scrollOffset,
-          other.scrollSize,
-          other.pageSize,
-          remOther,
-        );
-        */
-        if (other != scrollable) {
-          other.scrollOffset = (scrollable.scrollOffset * remOther) / remScroll;
-        }
-      }
-    }
-  }
-
-  set focussedScrollable(scrollable: Scrollable | null) {
-    this._focussedScrollable = scrollable;
-  }
-
-  onScroll(scrollable: Scrollable, timestamp: number): void {
-    if (this.leadScrollable == null) {
-      this.setLeadScrollable(scrollable);
-    }
-    const leader = this.leadScrollable;
-    if (leader != null) {
-      // update followers
-      const offsetDelta = Math.abs(leader.scrollOffset - this.lastScrollOffset);
-      const timeDelta = Math.abs(timestamp - this.lastScrolledAt);
-      if (offsetDelta > this.offsetDeltaThreshold || timeDelta > this.eventDeltaThreshold) {
-        this.lastScrolledAt = timestamp;
-        this.syncFollowersToLeader();
-      }
-    }
-  }
-
-  /**
-   * Sets the active scrollable to the focussed element.
-   */
-  public setLeadScrollable(scrollable: Scrollable): Scrollable | null {
-    if (this.leadScrollable == null) {
-      // scrolling has not begun yet so set it as the "root" scroller
-      this.leadScrollable = scrollable;
-      if (this.debugLogs) console.log("Scrolling started with: ", scrollable);
-      this.scrollTimer.start();
-    } else {
-      // What if there was an already active scrollable?
-      // This can happen if:
-      throw new Error("This should now happen");
-    }
-    return this.leadScrollable;
-  }
-
-  onTimer(ts: number): void {
-    // Called with our timer
-    if (this.leadScrollable != null && ts - this.lastScrolledAt > this.idleThreshold) {
-      const offsetDelta = Math.abs(this.leadScrollable.scrollOffset - this.lastScrollOffset);
-      if (offsetDelta == 0) {
-        // No change in delta within a time window
-        this.scrollingFinished(ts);
-      }
-    }
-  }
-
-  protected scrollingFinished(ts: number): void {
-    if (this.debugLogs) console.log("Scrolling Finished at: ", ts);
-    // TODO - See if this can have a jerking effect
-    this.syncFollowersToLeader();
-    this.leadScrollable = null;
-    this.scrollTimer.stop();
   }
 }
