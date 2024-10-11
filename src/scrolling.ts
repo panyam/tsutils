@@ -15,12 +15,14 @@ import { Timer } from "./timer";
  */
 
 export class ScrollGroup {
-  public scrollStopDelay = 50;
   private scrollables: Scrollable[] = [];
   private isScrolling = false;
   private _focussedScrollable: Scrollable | null = null;
 
-  constructor(public debugLogs = false) {}
+  constructor(
+    public scrollStopDelay = 50,
+    public debugLogs = false,
+  ) {}
 
   add(scrollable: Scrollable): void {
     // skip if already exists
