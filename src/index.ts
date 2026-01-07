@@ -1,5 +1,4 @@
 export * from "./types";
-export * as Api from "./apis/index";
 export * as Constants from "./constants";
 export * as Events from "./comms/events";
 export * as Lists from "./list";

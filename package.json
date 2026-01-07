@@ -1,6 +1,6 @@
 {
   "name": "@panyam/tsutils",
-  "version": "0.0.71",
+  "version": "1.0.0",
   "author": "Sriram Panyam",
   "description": "Some basic TS utils for personal use",
   "homepage": "https://github.com/panyam/tsutils#readme",
@@ -79,6 +79,5 @@
     "typescript-tslint-plugin": "^1.0.2"
   },
   "dependencies": {
-    "axios": "^1.7.7"
   }
 }
